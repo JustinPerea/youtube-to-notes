@@ -7,6 +7,7 @@ import PresentationSlides from './PresentationSlides';
 import { VideoPreview } from './VideoPreview';
 import SimplePdfDownload from './SimplePdfDownload';
 import { extractVideoInfo, isValidYouTubeUrl } from '../lib/utils/youtube';
+import { useSession } from 'next-auth/react';
 
 interface ProcessingResult {
   title: string;
@@ -33,6 +34,7 @@ interface VideoUploadProps {
 }
 
 export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadProps) {
+  const { data: session } = useSession();
   const [videoUrl, setVideoUrl] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ProcessingResult | null>(null);
@@ -41,6 +43,8 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
   const [videoInfo, setVideoInfo] = useState<ReturnType<typeof extractVideoInfo> | null>(null);
   const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('comprehensive');
   const [isAdjustingVerbosity, setIsAdjustingVerbosity] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [saveNoteMessage, setSaveNoteMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (videoUrl.trim()) {
@@ -95,6 +99,42 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+  };
+
+  const saveNote = async () => {
+    if (!session?.user?.id || !result || !videoInfo) return;
+
+    setIsSavingNote(true);
+    setSaveNoteMessage(null);
+
+    try {
+      const response = await fetch('/api/notes/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: result.title,
+          content: result.content,
+          templateId: selectedTemplate,
+          tags: ['youtube', 'ai-generated'],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSaveNoteMessage('Note saved successfully!');
+        setTimeout(() => setSaveNoteMessage(null), 3000);
+      } else {
+        setSaveNoteMessage(data.error || 'Failed to save note');
+      }
+    } catch (error) {
+      setSaveNoteMessage('Failed to save note');
+      console.error('Error saving note:', error);
+    } finally {
+      setIsSavingNote(false);
+    }
   };
 
   const adjustVerbosity = async (newVerbosity: 'brief' | 'standard' | 'comprehensive') => {
@@ -330,6 +370,27 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
                   template={result.template}
                 />
               </div>
+
+              {/* Save Note Button */}
+              {session?.user?.id && (
+                <div className="mt-4 flex flex-col items-center space-y-2">
+                  <button
+                    onClick={saveNote}
+                    disabled={isSavingNote}
+                    className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {isSavingNote ? 'Saving...' : 'Save Note'}
+                  </button>
+                  {saveNoteMessage && (
+                    <div className={`text-sm ${saveNoteMessage.includes('successfully') ? 'text-green-400' : saveNoteMessage.includes('not configured') ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {saveNoteMessage}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </>

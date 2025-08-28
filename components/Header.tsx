@@ -2,9 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useSession, signIn, signOut } from 'next-auth/react';
+import UserProfile from './UserProfile';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { data: session, status } = useSession();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-lg border-b border-white/10">
@@ -23,6 +26,11 @@ export function Header() {
             <Link href="/" className="text-gray-300 hover:text-white transition-colors">
               Home
             </Link>
+            {session && (
+              <Link href="/notes" className="text-gray-300 hover:text-white transition-colors">
+                My Notes
+              </Link>
+            )}
             <Link href="/roadmap" className="text-gray-300 hover:text-white transition-colors">
               Roadmap
             </Link>
@@ -35,10 +43,16 @@ export function Header() {
             <a href="#about" className="text-gray-300 hover:text-white transition-colors">
               About
             </a>
-            <button className="glass-button px-4 py-2 text-white font-semibold opacity-50 cursor-not-allowed relative" disabled>
-              Sign In
-              <span className="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs px-1 py-0.5 rounded-full text-xs">SOON</span>
-            </button>
+            {session ? (
+              <UserProfile />
+            ) : (
+              <button 
+                onClick={() => signIn('google')}
+                className="glass-button px-4 py-2 text-white font-semibold hover:bg-white/10 transition-colors"
+              >
+                Sign In
+              </button>
+            )}
           </nav>
 
           {/* Mobile Menu Button */}
@@ -59,6 +73,11 @@ export function Header() {
               <Link href="/" className="text-gray-300 hover:text-white transition-colors">
                 Home
               </Link>
+              {session && (
+                <Link href="/notes" className="text-gray-300 hover:text-white transition-colors">
+                  My Notes
+                </Link>
+              )}
               <Link href="/roadmap" className="text-gray-300 hover:text-white transition-colors">
                 Roadmap
               </Link>
@@ -71,10 +90,24 @@ export function Header() {
               <a href="#about" className="text-gray-300 hover:text-white transition-colors">
                 About
               </a>
-              <button className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-lg border border-white/20 rounded-xl px-4 py-2 text-white font-semibold transition-all duration-300 opacity-50 cursor-not-allowed relative" disabled>
-                Sign In
-                <span className="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs px-1 py-0.5 rounded-full text-xs">SOON</span>
-              </button>
+              {session ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-white text-sm">{session.user?.name}</span>
+                  <button 
+                    onClick={() => signOut()}
+                    className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-lg border border-white/20 rounded-xl px-4 py-2 text-white font-semibold transition-all duration-300"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => signIn('google')}
+                  className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-lg border border-white/20 rounded-xl px-4 py-2 text-white font-semibold transition-all duration-300"
+                >
+                  Sign In
+                </button>
+              )}
             </nav>
           </div>
         )}

@@ -1,19 +1,24 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { VideoUpload } from '../components/VideoUpload';
 import { TemplateSelector } from '../components/TemplateSelector';
 import { FeatureSection } from '../components/FeatureSection';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
+import UserProfile from '../components/UserProfile';
 
 export default function Home() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('basic-summary');
+  const { data: session, status } = useSession();
 
   return (
     <main className="min-h-screen">
       {/* Header */}
       <Header />
+      
+
       
       {/* Hero Section */}
       <section className="relative px-4 py-20 lg:py-32">

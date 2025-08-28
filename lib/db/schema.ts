@@ -8,13 +8,15 @@ import { pgTable, text, timestamp, integer, boolean, json, uuid } from 'drizzle-
 import { relations } from 'drizzle-orm';
 
 // =============================================================================
-// USERS TABLE
+// USERS TABLE (Updated with OAuth fields)
 // =============================================================================
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
   name: text('name'),
   image: text('image'),
+  oauthId: text('oauth_id'),
+  oauthProvider: text('oauth_provider').default('google'),
   emailVerified: timestamp('email_verified', { mode: 'date' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -87,6 +89,21 @@ export const processingResults = pgTable('processing_results', {
 });
 
 // =============================================================================
+// NOTES TABLE (New table for storing user notes)
+// =============================================================================
+export const notes = pgTable('notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  videoId: uuid('video_id').references(() => videos.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  templateId: text('template_id'),
+  tags: text('tags').array(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =============================================================================
 // PROCESSING QUEUE TABLE
 // =============================================================================
 export const processingQueue = pgTable('processing_queue', {
@@ -107,34 +124,28 @@ export const processingQueue = pgTable('processing_queue', {
   errorMessage: text('error_message'),
   
   // Job data
-  jobData: json('job_data').$type<{
-    attempt: number;
-    delay?: number;
-    backoff?: boolean;
-  }>(),
+  jobData: json('job_data'),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // =============================================================================
 // TEMPLATES TABLE
 // =============================================================================
 export const templates = pgTable('templates', {
-  id: text('id').primaryKey(), // e.g., 'basic-summary', 'study-notes'
-  name: text('name').notNull(),
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
   description: text('description'),
-  category: text('category', { enum: ['summary', 'educational', 'professional', 'creative'] }).notNull(),
-  isPremium: boolean('is_premium').default(false),
-  isActive: boolean('is_active').default(true),
+  prompt: text('prompt').notNull(),
   
   // Template configuration
-  promptTemplate: text('prompt_template').notNull(),
-  outputFormat: text('output_format', { enum: ['markdown', 'html', 'json', 'text'] }).default('markdown'),
-  estimatedTokens: integer('estimated_tokens'),
-  estimatedCost: integer('estimated_cost'), // in cents
+  isActive: boolean('is_active').default(true),
+  category: text('category'),
+  tags: text('tags').array(),
   
-  // Usage statistics
+  // Usage tracking
   usageCount: integer('usage_count').default(0),
-  averageRating: integer('average_rating'), // 1-5 scale
-  totalRatings: integer('total_ratings').default(0),
   
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -190,6 +201,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   videos: many(videos),
   usageHistory: many(userUsageHistory),
   exports: many(exports),
+  notes: many(notes),
 }));
 
 export const videosRelations = relations(videos, ({ one, many }) => ({
@@ -200,6 +212,7 @@ export const videosRelations = relations(videos, ({ one, many }) => ({
   processingResults: many(processingResults),
   processingQueue: many(processingQueue),
   usageHistory: many(userUsageHistory),
+  notes: many(notes),
 }));
 
 export const processingResultsRelations = relations(processingResults, ({ one, many }) => ({
@@ -213,6 +226,17 @@ export const processingResultsRelations = relations(processingResults, ({ one, m
 export const templatesRelations = relations(templates, ({ many }) => ({
   processingResults: many(processingResults),
   usageHistory: many(userUsageHistory),
+}));
+
+export const notesRelations = relations(notes, ({ one }) => ({
+  user: one(users, {
+    fields: [notes.userId],
+    references: [users.id],
+  }),
+  video: one(videos, {
+    fields: [notes.videoId],
+    references: [videos.id],
+  }),
 }));
 
 // =============================================================================
@@ -238,3 +262,6 @@ export type NewUserUsageHistory = typeof userUsageHistory.$inferInsert;
 
 export type Export = typeof exports.$inferSelect;
 export type NewExport = typeof exports.$inferInsert;
+
+export type Note = typeof notes.$inferSelect;
+export type NewNote = typeof notes.$inferInsert;

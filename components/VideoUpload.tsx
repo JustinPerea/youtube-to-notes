@@ -7,17 +7,24 @@ import PresentationSlides from './PresentationSlides';
 import { VideoPreview } from './VideoPreview';
 import { parseYouTubeUrl, isValidYouTubeUrl } from '../lib/utils/youtube';
 
-
-
-
-
 interface ProcessingResult {
-  success: boolean;
+  title: string;
   content: string;
   template: string;
-  title: string;
-  videoUrl: string;
+  contentAnalysis?: {
+    type: string;
+    complexity: string;
+    confidence: number;
 
+    cognitiveLoad?: string;
+    readabilityLevel?: string;
+  };
+  quality?: {
+    formatCompliance: number;
+    nonConversationalScore: number;
+    contentAdaptation: string;
+    cognitiveOptimization?: string;
+  };
 }
 
 interface VideoUploadProps {
@@ -31,8 +38,9 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
   const [error, setError] = useState<string | null>(null);
   const [showMarkdown, setShowMarkdown] = useState(true);
   const [videoInfo, setVideoInfo] = useState<ReturnType<typeof parseYouTubeUrl> | null>(null);
+  const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('comprehensive');
+  const [isAdjustingVerbosity, setIsAdjustingVerbosity] = useState(false);
 
-  // Parse video URL and extract info when URL changes
   useEffect(() => {
     if (videoUrl.trim()) {
       const info = parseYouTubeUrl(videoUrl.trim());
@@ -49,7 +57,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
     setIsProcessing(true);
     setError(null);
     setResult(null);
-    
+
     try {
       const response = await fetch('/api/videos/process', {
         method: 'POST',
@@ -58,7 +66,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
         },
         body: JSON.stringify({
           videoUrl: videoUrl.trim(),
-          template: selectedTemplate
+          selectedTemplate
         }),
       });
 
@@ -68,24 +76,13 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
         throw new Error(data.error || 'Failed to process video');
       }
 
-      // Add safety check for result data before setting
-      if (data && (!data.content || typeof data.content !== 'string')) {
-        console.error('Invalid result data:', data);
-        throw new Error('Invalid response from server');
-      }
-      
       setResult(data);
-    } catch (error) {
-      console.error('Error processing video:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      setCurrentVerbosity('comprehensive'); // Reset to comprehensive when new result is generated
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while processing the video');
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const isValidYouTubeUrl = (url: string) => {
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
-    return youtubeRegex.test(url);
   };
 
   const handleClearVideo = () => {
@@ -95,15 +92,56 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
     setError(null);
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const adjustVerbosity = async (newVerbosity: 'brief' | 'standard' | 'comprehensive') => {
+    if (!videoUrl.trim() || !result) return;
+    
+    setIsAdjustingVerbosity(true);
+    setCurrentVerbosity(newVerbosity);
+    
+    try {
+      const response = await fetch('/api/videos/adjust-verbosity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoUrl: videoUrl.trim(),
+          selectedTemplate,
+          currentContent: result.content,
+          newVerbosity
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to adjust verbosity');
+      }
+
+      setResult({
+        ...result,
+        content: data.content
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to adjust verbosity level');
+    } finally {
+      setIsAdjustingVerbosity(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold text-white mb-6 text-center">
         Upload Your YouTube Video
       </h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-300 mb-2">
+          <label htmlFor="videoUrl" className="sr-only">
             YouTube Video URL
           </label>
           <input
@@ -112,20 +150,21 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
             placeholder="https://www.youtube.com/watch?v=..."
-            className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl w-full px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-purple-500/50 focus:shadow-lg transition-all duration-300"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
             required
           />
-          {videoUrl && !isValidYouTubeUrl(videoUrl) && (
-            <p className="text-red-400 text-sm mt-1">Please enter a valid YouTube URL</p>
-          )}
         </div>
 
-        {/* Video Preview */}
+        {videoUrl && !isValidYouTubeUrl(videoUrl) && (
+          <p className="text-red-400 text-sm mt-1">Please enter a valid YouTube URL</p>
+        )}
+
+
+
         {videoInfo && videoInfo.isValid && (
           <VideoPreview videoInfo={videoInfo} onClear={handleClearVideo} />
         )}
 
-        {/* Convert Button - only show if video is valid */}
         {videoInfo && videoInfo.isValid && (
           <div className="text-center">
             <div className="space-y-4">
@@ -143,7 +182,6 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
                   'Convert to Notes'
                 )}
               </button>
-              
               {isProcessing && (
                 <div className="text-center">
                   <div className="inline-flex items-center space-x-2 text-sm text-gray-400">
@@ -156,7 +194,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
           </div>
         )}
       </form>
-      
+
       {!videoInfo && (
         <div className="mt-6 text-center text-sm text-gray-400">
           <p>Paste any YouTube video URL to get started</p>
@@ -164,14 +202,12 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
         </div>
       )}
 
-      {/* Error Display */}
       {error && (
-        <div className="mt-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl">
+        <div className="mt-6 p-4 bg-red-500/20 backdrop-blur-lg border border-red-500/30 rounded-xl">
           <p className="text-red-400 text-sm">{error}</p>
         </div>
       )}
 
-      {/* Result Display */}
       {result && result.content && (
         <>
           {result.template === 'presentation-slides' ? (
@@ -189,7 +225,6 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
               </div>
               <PresentationSlides 
                 content={result.content}
-                videoUrl={result.videoUrl}
               />
             </div>
           ) : (
@@ -233,6 +268,40 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
                   </pre>
                 )}
               </div>
+              {/* Verbosity Adjustment Controls */}
+              <div className="mt-4 p-4 bg-black/10 rounded-xl border border-white/10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-gray-300">Adjust Detail Level</span>
+                  <span className="text-xs text-gray-400">Current: {currentVerbosity}</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => adjustVerbosity('brief')}
+                    disabled={currentVerbosity === 'brief' || isAdjustingVerbosity}
+                    className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-lg text-xs text-red-300 hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {isAdjustingVerbosity && currentVerbosity === 'brief' ? 'Processing...' : 'Brief'}
+                  </button>
+                  <button
+                    onClick={() => adjustVerbosity('standard')}
+                    disabled={currentVerbosity === 'standard' || isAdjustingVerbosity}
+                    className="px-3 py-1.5 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-300 hover:bg-yellow-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {isAdjustingVerbosity && currentVerbosity === 'standard' ? 'Processing...' : 'Standard'}
+                  </button>
+                  <button
+                    onClick={() => adjustVerbosity('comprehensive')}
+                    disabled={currentVerbosity === 'comprehensive' || isAdjustingVerbosity}
+                    className="px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-xs text-green-300 hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {isAdjustingVerbosity && currentVerbosity === 'comprehensive' ? 'Processing...' : 'Comprehensive'}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Brief: 50-75 words | Standard: 100-150 words | Comprehensive: 200-300 words per concept
+                </p>
+              </div>
+
               <div className="mt-4 flex justify-between items-center text-sm text-gray-400">
                 <span>Template: {result.template}</span>
                 <div className="flex items-center space-x-4">
@@ -243,7 +312,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
                     {showMarkdown ? 'Show Raw' : 'Show Preview'}
                   </button>
                   <button
-                    onClick={() => navigator.clipboard.writeText(result.content)}
+                    onClick={() => copyToClipboard(result.content)}
                     className="text-purple-400 hover:text-purple-300 transition-colors"
                   >
                     Copy to Clipboard
@@ -254,7 +323,6 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
           )}
         </>
       )}
-
 
     </div>
   );

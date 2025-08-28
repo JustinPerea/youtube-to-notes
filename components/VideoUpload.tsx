@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import PresentationSlides from './PresentationSlides';
+import { VideoPreview } from './VideoPreview';
+import { parseYouTubeUrl, isValidYouTubeUrl } from '../lib/utils/youtube';
 
 
 
@@ -28,11 +30,21 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
   const [result, setResult] = useState<ProcessingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showMarkdown, setShowMarkdown] = useState(true);
+  const [videoInfo, setVideoInfo] = useState<ReturnType<typeof parseYouTubeUrl> | null>(null);
 
+  // Parse video URL and extract info when URL changes
+  useEffect(() => {
+    if (videoUrl.trim()) {
+      const info = parseYouTubeUrl(videoUrl.trim());
+      setVideoInfo(info.isValid ? info : null);
+    } else {
+      setVideoInfo(null);
+    }
+  }, [videoUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!videoUrl.trim()) return;
+    if (!videoUrl.trim() || !videoInfo?.isValid) return;
 
     setIsProcessing(true);
     setError(null);
@@ -76,6 +88,13 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
     return youtubeRegex.test(url);
   };
 
+  const handleClearVideo = () => {
+    setVideoUrl('');
+    setVideoInfo(null);
+    setResult(null);
+    setError(null);
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold text-white mb-6 text-center">
@@ -101,41 +120,49 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
           )}
         </div>
 
+        {/* Video Preview */}
+        {videoInfo && videoInfo.isValid && (
+          <VideoPreview videoInfo={videoInfo} onClear={handleClearVideo} />
+        )}
 
-        
-        <div className="text-center">
-          <div className="space-y-4">
-            <button
-              type="submit"
-              disabled={isProcessing || !videoUrl.trim() || !isValidYouTubeUrl(videoUrl)}
-              className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-lg border border-white/20 rounded-xl px-8 py-4 text-white font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto transition-all duration-300 hover:from-purple-500 hover:to-pink-500 hover:shadow-2xl hover:-translate-y-0.5"
-            >
-              {isProcessing ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Processing...
-                </>
-              ) : (
-                'Convert to Notes'
-              )}
-            </button>
-            
-            {isProcessing && (
-              <div className="text-center">
-                <div className="inline-flex items-center space-x-2 text-sm text-gray-400">
-                  <div className="animate-pulse">⏳</div>
-                  <span>Analyzing video content...</span>
+        {/* Convert Button - only show if video is valid */}
+        {videoInfo && videoInfo.isValid && (
+          <div className="text-center">
+            <div className="space-y-4">
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-lg border border-white/20 rounded-xl px-8 py-4 text-white font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto transition-all duration-300 hover:from-purple-500 hover:to-pink-500 hover:shadow-2xl hover:-translate-y-0.5"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Processing...
+                  </>
+                ) : (
+                  'Convert to Notes'
+                )}
+              </button>
+              
+              {isProcessing && (
+                <div className="text-center">
+                  <div className="inline-flex items-center space-x-2 text-sm text-gray-400">
+                    <div className="animate-pulse">⏳</div>
+                    <span>Analyzing video content...</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </form>
       
-      <div className="mt-6 text-center text-sm text-gray-400">
-        <p>Paste any YouTube video URL to get started</p>
-        <p className="mt-1">Free tier: 3 videos per month</p>
-      </div>
+      {!videoInfo && (
+        <div className="mt-6 text-center text-sm text-gray-400">
+          <p>Paste any YouTube video URL to get started</p>
+          <p className="mt-1">Free tier: 3 videos per month</p>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -10,15 +11,21 @@ export function Header() {
       <div className="container mx-auto max-w-6xl px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">YN</span>
             </div>
             <span className="text-white font-bold text-xl">YouTube to Notes</span>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
+            <Link href="/" className="text-gray-300 hover:text-white transition-colors">
+              Home
+            </Link>
+            <Link href="/roadmap" className="text-gray-300 hover:text-white transition-colors">
+              Roadmap
+            </Link>
             <a href="#features" className="text-gray-300 hover:text-white transition-colors">
               Features
             </a>
@@ -49,6 +56,12 @@ export function Header() {
         {isMenuOpen && (
           <div className="md:hidden glass-dark mt-4 p-4 rounded-lg">
             <nav className="flex flex-col space-y-4">
+              <Link href="/" className="text-gray-300 hover:text-white transition-colors">
+                Home
+              </Link>
+              <Link href="/roadmap" className="text-gray-300 hover:text-white transition-colors">
+                Roadmap
+              </Link>
               <a href="#features" className="text-gray-300 hover:text-white transition-colors">
                 Features
               </a>

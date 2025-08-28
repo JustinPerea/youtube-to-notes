@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 const features = [
   {
     icon: '🤖',
@@ -81,6 +83,12 @@ export function FeatureSection() {
               Start Free Trial
               <span className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-2 py-1 rounded-full">COMING SOON</span>
             </button>
+            <p className="mt-4 text-gray-400">
+              Want to see what's coming next? Check out our{' '}
+              <Link href="/roadmap" className="text-purple-400 hover:text-purple-300 transition-colors underline">
+                product roadmap
+              </Link>
+            </p>
           </div>
         </div>
       </div>

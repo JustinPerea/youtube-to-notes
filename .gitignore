@@ -29,6 +29,14 @@ build/
 .DS_Store
 Thumbs.db
 
+# Documentation and research files
+docs/
+
+# Development and debugging files
+DEBUG_*.md
+BASIC_SUMMARY_CONVERSATIONAL_LANGUAGE_ISSUE.md
+ROADMAP.md
+
 # Logs
 logs
 *.log

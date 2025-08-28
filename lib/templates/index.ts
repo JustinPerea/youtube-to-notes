@@ -146,28 +146,100 @@ Format in clean markdown with clear headings and bullet points. Ensure the conte
     color: 'purple',
     prompt: `STRICT OUTPUT FORMAT - NO INTRODUCTORY TEXT:
 
-**Slide 1: Title Slide**
-- **[Video Title]**
-- **[Brief subtitle explaining topic]**
-- [Date]
+# Presentation Slides: [Video Topic]
 
-**Slide 2: Overview**
-- **Main Topic:** [What the video covers]
-- **Key Points:** [3-4 bullet points]
+## Slide 1: Title Slide
+**[Video Title]**
+[Brief, compelling subtitle that captures the main value proposition]
 
-**Slide 3-4: Content Slides**
-- **Point 1:** [Key concept with explanation]
-- **Point 2:** [Key concept with explanation]
+[Current date or video date]
+[Channel name or presenter name]
 
-**Slide 5-6: Examples & Applications**
-- **Real-world applications:** [Examples]
-- **Implementation steps:** [Practical steps]
+---
 
-**Slide 7: Summary**
-- **Key takeaways:** [3-4 main points]
-- **Next steps:** [What to do with this information]
+## Slide 2: The Problem We're Solving
+**Challenge:** [Main problem or pain point addressed in the video]
 
-**Speaker Notes:** [Brief notes for each slide]`,
+**Why This Matters:** [2-3 compelling reasons why this topic is important]
+
+**What You'll Learn:** [3 specific things viewers will gain from this content]
+
+---
+
+## Slide 3: Key Concepts Overview
+**Three Main Strategies:**
+1. [First strategy/concept name]
+2. [Second strategy/concept name]  
+3. [Third strategy/concept name]
+
+**The Big Picture:** [How these concepts work together]
+
+---
+
+## Slide 4: Strategy 1 - [First Strategy Name]
+**What It Is:** [Clear definition and explanation]
+
+**How It Works:** [Step-by-step breakdown]
+- [Step 1]
+- [Step 2]
+- [Step 3]
+
+**Real Examples:** [Specific apps or companies using this approach]
+
+---
+
+## Slide 5: Strategy 2 - [Second Strategy Name]
+**What It Is:** [Clear definition and explanation]
+
+**How It Works:** [Step-by-step breakdown]
+- [Step 1]
+- [Step 2]
+- [Step 3]
+
+**Real Examples:** [Specific apps or companies using this approach]
+
+---
+
+## Slide 6: Strategy 3 - [Third Strategy Name]
+**What It Is:** [Clear definition and explanation]
+
+**How It Works:** [Step-by-step breakdown]
+- [Step 1]
+- [Step 2]
+- [Step 3]
+
+**Real Examples:** [Specific apps or companies using this approach]
+
+---
+
+## Slide 7: Implementation Guide
+**Getting Started:** [3 actionable steps to implement these strategies]
+
+**Common Mistakes to Avoid:** [2-3 pitfalls and how to avoid them]
+
+**Success Metrics:** [How to measure if these strategies are working]
+
+---
+
+## Slide 8: Summary & Action Plan
+**Key Takeaways:**
+• [First main takeaway]
+• [Second main takeaway]
+• [Third main takeaway]
+
+**Your Next Steps:**
+1. [Immediate action item]
+2. [Short-term goal]
+3. [Long-term objective]
+
+**Questions?** [How to get help or continue learning]
+
+**Speaker Notes:** 
+For each slide, provide:
+- Opening statement (15-20 seconds)
+- Key talking points (1-2 minutes per point)
+- Transition to next slide (10-15 seconds)
+- Expected audience questions and responses`,
     outputFormat: 'markdown',
     features: [
       'Research-optimized structure (TED 4-step framework)',

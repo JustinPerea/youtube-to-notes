@@ -29,27 +29,32 @@ export const TEMPLATES: Template[] = [
     category: 'summary',
     icon: '📝',
     color: 'blue',
-    prompt: `STRICT OUTPUT FORMAT - NO INTRODUCTORY TEXT:
+    prompt: `Generate a structured video summary following this EXACT format:
 
 **Video Summary**
 
-**Main Topic**: [Video topic]
+**Main Topic**: [Single sentence describing the core subject]
 
 **Key Points**: 
-- [Point 1]
-- [Point 2]
-- [Point 3]
+- [First main point from the video]
+- [Second main point from the video]
+- [Third main point from the video]
 
 **Important Details**: 
-- [Detail 1]
-- [Detail 2]
-- [Detail 3]
+- [Supporting detail or example 1]
+- [Supporting detail or example 2]
+- [Supporting detail or example 3]
 
-**Structure**: [Content organization]
+**Structure**: [How the video content was organized]
 
-**Conclusion**: [Main message]
+**Conclusion**: [Main takeaway or final message]
 
-DO NOT ADD ANY TEXT BEFORE "**Video Summary**". START IMMEDIATELY WITH "**Video Summary**".`,
+RULES:
+- Start output with "**Video Summary**" on first line
+- Use only the sections listed above
+- Write in third-person, factual tone
+- No preambles, introductions, or meta-commentary
+- Format as clean markdown with bullet points`,
     outputFormat: 'markdown',
     features: [
       'Quick overview',

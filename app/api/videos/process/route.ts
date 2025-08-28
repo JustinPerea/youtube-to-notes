@@ -107,7 +107,15 @@ function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLe
 
   const adaptation = contentAdaptations[contentAnalysis.type] || contentAdaptations.lecture;
 
-  return `${template.prompt}
+      // Handle Basic Summary template specifically
+    let startInstruction = '';
+    if (template.id === 'basic-summary') {
+      startInstruction = 'Ensure the first characters of your response must be "**Video Summary**" with no text before it.';
+    } else {
+      startInstruction = `Ensure the first characters of your response must be "**${template.name}**" with no text before it.`;
+    }
+
+    return `${template.prompt}
 
 CONTENT ANALYSIS:
 - Type: ${contentAnalysis.type}
@@ -128,7 +136,7 @@ TECHNICAL WRITING REQUIREMENTS:
 - Eliminate contractions and colloquial expressions
 - Maintain professional, non-conversational tone
 
-Ensure the first characters of your response must be "**${template.name}**" with no text before it.`;
+${startInstruction}`;
 }
 
 // Chunked processing function to reduce token usage

@@ -34,21 +34,23 @@ const phases: Phase[] = [
       'Quick reference panels',
       'Custom templates',
       'Export functionality',
-      'User accounts'
+      'User accounts',
+      'Verbosity controls'
     ],
     status: 'in-progress',
     color: 'bg-blue-500'
   },
   {
     id: 'phase-3',
-    title: 'Phase 3: AI Optimization',
-    description: 'Advanced AI capabilities and personalization',
+    title: 'Phase 3: AI Chat & Pro Features',
+    description: 'AI-powered Q&A and advanced capabilities',
     features: [
-      'Content-aware note generation',
-      'Learning style adaptation',
-      'Smart summarization',
-      'Multi-language support',
-      'Voice-to-text integration'
+      'AI Chat Bot for video Q&A (Pro)',
+      'Video transcript generation',
+      'Source attribution system',
+      'Timestamp linking',
+      'Chat history & export',
+      'Content-aware note generation'
     ],
     status: 'planned',
     color: 'bg-purple-500'

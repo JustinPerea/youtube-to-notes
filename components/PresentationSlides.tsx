@@ -78,11 +78,19 @@ const PresentationSlides: React.FC<PresentationSlidesProps> = ({ content, videoU
 
   return (
     <div className={styles.presentationViewer}>
+      {/* Beta Notice */}
+      <div className="bg-yellow-500 text-yellow-900 px-4 py-2 text-center text-sm font-medium">
+        🚧 This feature is in Beta. We're actively improving the slide generation and formatting.
+      </div>
+      
       {/* Navigation Header */}
       <div className={styles.presentationNav}>
         <div className={styles.navLeft}>
           <h2>Professional Presentation Slides</h2>
-          <span>Slide {currentSlide + 1} of {slides.length}</span>
+          <div className="flex items-center gap-2">
+            <span>Slide {currentSlide + 1} of {slides.length}</span>
+            <span className="px-2 py-1 bg-yellow-500 text-yellow-900 text-xs font-medium rounded-full">Beta</span>
+          </div>
         </div>
         
         <div className={styles.navCenter}>
@@ -116,6 +124,8 @@ const PresentationSlides: React.FC<PresentationSlidesProps> = ({ content, videoU
           </button>
         </div>
       </div>
+
+
 
       {/* Main Presentation Area */}
       <div className={styles.presentationMain}>

@@ -5,7 +5,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import PresentationSlides from './PresentationSlides';
 import { VideoPreview } from './VideoPreview';
-import { parseYouTubeUrl, isValidYouTubeUrl } from '../lib/utils/youtube';
+import SimplePdfDownload from './SimplePdfDownload';
+import { extractVideoInfo, isValidYouTubeUrl } from '../lib/utils/youtube';
 
 interface ProcessingResult {
   title: string;
@@ -37,13 +38,13 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
   const [result, setResult] = useState<ProcessingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showMarkdown, setShowMarkdown] = useState(true);
-  const [videoInfo, setVideoInfo] = useState<ReturnType<typeof parseYouTubeUrl> | null>(null);
+  const [videoInfo, setVideoInfo] = useState<ReturnType<typeof extractVideoInfo> | null>(null);
   const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('comprehensive');
   const [isAdjustingVerbosity, setIsAdjustingVerbosity] = useState(false);
 
   useEffect(() => {
     if (videoUrl.trim()) {
-      const info = parseYouTubeUrl(videoUrl.trim());
+      const info = extractVideoInfo(videoUrl.trim());
       setVideoInfo(info.isValid ? info : null);
     } else {
       setVideoInfo(null);
@@ -225,6 +226,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
               </div>
               <PresentationSlides 
                 content={result.content}
+                videoUrl={videoUrl}
               />
             </div>
           ) : (
@@ -318,6 +320,15 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
                     Copy to Clipboard
                   </button>
                 </div>
+              </div>
+              
+              {/* PDF Download */}
+              <div className="mt-4 flex justify-center">
+                <SimplePdfDownload
+                  content={typeof result.content === 'string' ? result.content : String(result.content || '')}
+                  title={result.title}
+                  template={result.template}
+                />
               </div>
             </div>
           )}

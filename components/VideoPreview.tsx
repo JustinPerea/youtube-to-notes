@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface VideoInfo {
-  videoId: string;
+  videoId: string | null;
   title: string;
   channel: string;
   thumbnail: string;
@@ -16,7 +16,7 @@ interface VideoPreviewProps {
 }
 
 export function VideoPreview({ videoInfo, onClear }: VideoPreviewProps) {
-  const thumbnailUrl = `https://img.youtube.com/vi/${videoInfo.videoId}/maxresdefault.jpg`;
+  const thumbnailUrl = videoInfo.videoId ? `https://img.youtube.com/vi/${videoInfo.videoId}/maxresdefault.jpg` : '';
 
   return (
     <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl p-6">
@@ -38,7 +38,9 @@ export function VideoPreview({ videoInfo, onClear }: VideoPreviewProps) {
             className="w-32 h-20 object-cover rounded-lg"
             onError={(e) => {
               // Fallback to lower quality thumbnail if maxresdefault fails
-              e.currentTarget.src = `https://img.youtube.com/vi/${videoInfo.videoId}/hqdefault.jpg`;
+              if (videoInfo.videoId) {
+                e.currentTarget.src = `https://img.youtube.com/vi/${videoInfo.videoId}/hqdefault.jpg`;
+              }
             }}
           />
         </div>

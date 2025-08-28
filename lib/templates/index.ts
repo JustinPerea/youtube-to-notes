@@ -145,7 +145,7 @@ Format in clean markdown with clear headings and bullet points. Ensure the conte
   {
     id: 'presentation-slides',
     name: 'Presentation Slides',
-    description: 'Key points formatted for presentation slides with speaker notes',
+    description: 'Key points formatted for presentation slides with speaker notes (Beta - Still improving)',
     category: 'professional',
     icon: '📊',
     color: 'purple',

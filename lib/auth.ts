@@ -1,5 +1,5 @@
-import { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
 import { db } from "./db/connection";
 import { users } from "./db/schema";
 import { eq, and } from "drizzle-orm";
@@ -107,20 +107,20 @@ async function getOrCreateUser(oauthId: string, email: string, name?: string | n
   }
 }
 
-export const authOptions: NextAuthOptions = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    GoogleProvider({
+    Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider === 'google') {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'google' && profile) {
         try {
           // Ensure user exists in database
           await getOrCreateUser(
-            account.providerAccountId,
+            profile.sub || account.providerAccountId,
             user.email!,
             user.name,
             user.image
@@ -153,9 +153,9 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user, account }) {
-      if (account && user) {
-        token.sub = account.providerAccountId; // Store OAuth ID in token
+    async jwt({ token, user, account, profile }) {
+      if (account && profile) {
+        token.sub = profile.sub || account.providerAccountId; // Store OAuth ID in token
       }
       return token;
     },
@@ -168,7 +168,7 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   secret: process.env.NEXTAUTH_SECRET,
-};
+});
 
 // Update the Session type
 declare module 'next-auth' {

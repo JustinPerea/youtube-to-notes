@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { TEMPLATES } from '@/lib/templates';
+import { videoProcessingRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
+import { validateVideoUrl } from '@/lib/validation';
 
 // Enhanced content analysis with hybrid deep learning approach
 async function analyzeVideoContent(videoUrl: string) {
@@ -228,7 +230,35 @@ const getModel = (useAlternative = false) => {
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const clientId = getClientIdentifier(request);
+    const rateLimitResult = applyRateLimit(request, videoProcessingRateLimiter, clientId);
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded. Please try again later.',
+          retryAfter: rateLimitResult.retryAfter 
+        }, 
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': rateLimitResult.retryAfter?.toString() || '3600',
+            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(Date.now() + (rateLimitResult.retryAfter || 3600) * 1000).toISOString()
+          }
+        }
+      );
+    }
+
     const { videoUrl, selectedTemplate = 'basic-summary' } = await request.json();
+
+    // Validate video URL
+    const urlValidation = validateVideoUrl(videoUrl);
+    if (!urlValidation.isValid) {
+      return NextResponse.json({ error: urlValidation.error }, { status: 400 });
+    }
 
     if (!videoUrl) {
       return NextResponse.json({ error: 'Video URL is required' }, { status: 400 });

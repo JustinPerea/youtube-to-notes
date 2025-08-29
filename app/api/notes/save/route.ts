@@ -2,9 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { NotesService } from '@/lib/services/notes';
+import { apiRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
+import { validateNoteData } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const clientId = getClientIdentifier(request);
+    const rateLimitResult = applyRateLimit(request, apiRateLimiter, clientId);
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded. Please try again later.',
+          retryAfter: rateLimitResult.retryAfter 
+        }, 
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': rateLimitResult.retryAfter?.toString() || '900',
+            'X-RateLimit-Limit': '100',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(Date.now() + (rateLimitResult.retryAfter || 900) * 1000).toISOString()
+          }
+        }
+      );
+    }
+
     // Check authentication
     const session = await getServerSession(authOptions);
     
@@ -15,11 +39,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json();
     
+    // Validate note data
+    const validationResult = validateNoteData(body);
+    if (!validationResult.isValid) {
+      return NextResponse.json(
+        { error: validationResult.error || 'Invalid note data.' },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedData = validationResult.sanitizedData;
+    
     // Validate required fields
-    if (!body.content) {
+    if (!sanitizedData.content) {
       return NextResponse.json(
         { error: 'Content is required.' },
         { status: 400 }
@@ -27,21 +62,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate a title from the content if not provided
-    let title = body.title;
-    if (!title && body.content) {
+    let title = sanitizedData.title;
+    if (!title && sanitizedData.content) {
       // Extract first line or first 50 characters as title
-      const firstLine = body.content.split('\n')[0].trim();
+      const firstLine = sanitizedData.content.split('\n')[0].trim();
       title = firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine;
     }
 
     // Save the note using the UUID from session
     const result = await NotesService.saveNote({
       userId: session.user.id, // This is now the UUID from database
-      videoId: body.videoId,
+      videoId: sanitizedData.videoId,
       title: title || 'Untitled Note',
-      content: body.content,
-      templateId: body.templateId,
-      tags: body.tags || [],
+      content: sanitizedData.content,
+      templateId: sanitizedData.templateId,
+      tags: sanitizedData.tags || [],
     });
 
     if (!result.success) {

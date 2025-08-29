@@ -4,12 +4,6 @@ const nextConfig = {
     serverComponentsExternalPackages: ['@google/generative-ai'],
   },
   images: {
-    domains: [
-      'i.ytimg.com',
-      'yt3.googleusercontent.com',
-      'lh3.googleusercontent.com',
-      'avatars.githubusercontent.com',
-    ],
     remotePatterns: [
       {
         protocol: 'https',
@@ -19,6 +13,16 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'yt3.googleusercontent.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
         pathname: '/**',
       },
     ],
@@ -59,7 +63,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://generativelanguage.googleapis.com https://*.supabase.co;`
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: https://i.ytimg.com https://yt3.googleusercontent.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com; connect-src 'self' https://generativelanguage.googleapis.com https://*.supabase.co https://accounts.google.com https://www.googleapis.com; frame-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self';"
           },
           {
             key: 'Permissions-Policy',

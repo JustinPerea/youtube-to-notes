@@ -52,7 +52,7 @@
     "katex": "^0.16.22",
     "lucide-react": "^0.303.0",
     "next": "^14.2.32",
-    "next-auth": "^4.24.7",
+    "next-auth": "^5.0.0-beta.15",
     "postgres": "^3.4.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { TEMPLATES } from '../../../../lib/templates';
+import { TEMPLATES } from '@/lib/templates';
 
 // Enhanced content analysis with hybrid deep learning approach
 async function analyzeVideoContent(videoUrl: string) {

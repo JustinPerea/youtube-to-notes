@@ -5,6 +5,9 @@ import { NotesService } from '@/lib/services/notes';
 import { apiRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateNoteData } from '@/lib/validation';
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Apply rate limiting

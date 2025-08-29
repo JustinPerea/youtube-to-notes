@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { TEMPLATES } from '@/lib/templates';
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic';
+
 function getModel(useAlternative: boolean = false) {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
   return genAI.getGenerativeModel({ 

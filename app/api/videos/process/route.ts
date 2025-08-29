@@ -4,6 +4,9 @@ import { TEMPLATES } from '@/lib/templates';
 import { videoProcessingRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateVideoUrl } from '@/lib/validation';
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic';
+
 // Enhanced content analysis with hybrid deep learning approach
 async function analyzeVideoContent(videoUrl: string) {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);

@@ -1,24 +1,31 @@
 'use client';
 
-import { signIn, getSession } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function SignIn() {
   const router = useRouter();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     // Check if user is already signed in
-    getSession().then((session) => {
-      if (session) {
-        router.push('/');
-      }
-    });
-  }, [router]);
+    if (session) {
+      router.push('/');
+    }
+  }, [session, router]);
 
   const handleGoogleSignIn = () => {
     signIn('google', { callbackUrl: '/' });
   };
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../../lib/auth';
-import { NotesService } from '../../../../lib/services/notes';
+import { authOptions } from '@/lib/auth';
+import { NotesService } from '@/lib/services/notes';
 
 export async function POST(request: NextRequest) {
   try {

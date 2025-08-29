@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { TEMPLATES } from '../../../../lib/templates';
+import { TEMPLATES } from '@/lib/templates';
 
 function getModel(useAlternative: boolean = false) {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);

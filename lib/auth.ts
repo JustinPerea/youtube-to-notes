@@ -3,6 +3,24 @@ import Google from "next-auth/providers/google";
 import { db } from "./db/connection";
 import { users } from "./db/schema";
 import { eq, and } from "drizzle-orm";
+import crypto from 'crypto';
+
+// Helper function to generate a consistent UUID from OAuth ID
+function generateUUIDFromOAuthId(oauthId: string): string {
+  // Create a hash of the OAuth ID
+  const hash = crypto.createHash('sha256').update(oauthId).digest();
+  
+  // Use the first 16 bytes to create a UUID v5-like structure
+  const uuid = [
+    hash.toString('hex').slice(0, 8),
+    hash.toString('hex').slice(8, 12),
+    hash.toString('hex').slice(12, 16),
+    hash.toString('hex').slice(16, 20),
+    hash.toString('hex').slice(20, 32)
+  ].join('-');
+  
+  return uuid;
+}
 
 // Helper function to get or create user
 async function getOrCreateUser(oauthId: string, email: string, name?: string | null, image?: string | null) {
@@ -149,7 +167,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           session.user.oauthId = dbUser.oauthId; // Keep OAuth ID for reference if needed
         } catch (error) {
           console.error('Error in session callback:', error);
+          // Fallback: generate a consistent UUID from OAuth ID
+          session.user.id = generateUUIDFromOAuthId(token.sub);
+          session.user.oauthId = token.sub;
         }
+      } else if (session.user && token.sub) {
+        // Fallback for cases where database is not available
+        session.user.id = generateUUIDFromOAuthId(token.sub);
+        session.user.oauthId = token.sub;
       }
       return session;
     },

@@ -33,11 +33,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
 });
 
-// Update the Session type
+// Update the Session type to match the global types
 declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
+      oauthId?: string;
       email?: string | null;
       name?: string | null;
       image?: string | null;

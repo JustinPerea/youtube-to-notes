@@ -5,7 +5,7 @@ interface TemplateSelectorProps {
   onTemplateChange: (template: string) => void;
 }
 
-import { TEMPLATES } from '../lib/templates';
+import { TEMPLATES } from '../lib/templates/index';
 
 const templates = TEMPLATES.map(template => ({
   id: template.id,

@@ -42,6 +42,7 @@
     "@radix-ui/react-toast": "^1.1.5",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.38.5",
+    "@upstash/context7-mcp": "^1.0.16",
     "bull": "^4.12.2",
     "bullmq": "^5.0.7",
     "class-variance-authority": "^0.7.0",

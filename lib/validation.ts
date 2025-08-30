@@ -27,7 +27,7 @@ export const noteSchema = z.object({
     .transform(str => str.trim()),
   content: z.string()
     .min(1, 'Content is required')
-    .max(10000, 'Content must be less than 10,000 characters')
+    .max(100000, 'Content must be less than 100,000 characters')
     .transform(str => str.trim()),
   videoId: z.string().optional(),
   templateId: z.string().optional(),
@@ -106,8 +106,8 @@ export function validateNoteContent(content: string): { isValid: boolean; saniti
       return { isValid: false, error: 'Content cannot be empty after sanitization' };
     }
     
-    if (sanitized.length > 10000) {
-      return { isValid: false, error: 'Content is too long (max 10,000 characters)' };
+    if (sanitized.length > 100000) {
+      return { isValid: false, error: 'Content is too long (max 100,000 characters)' };
     }
     
     return { isValid: true, sanitizedContent: sanitized };

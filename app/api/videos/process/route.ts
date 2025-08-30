@@ -7,6 +7,9 @@ import { validateVideoUrl } from '@/lib/validation';
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
 
+// Configure maximum execution timeout for long video processing (300 seconds = 5 minutes)
+export const maxDuration = 300;
+
 // Enhanced content analysis with hybrid deep learning approach
 async function analyzeVideoContent(videoUrl: string) {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
@@ -47,7 +50,7 @@ Return ONLY the JSON object. No markdown formatting, no explanations, no code bl
       analysisPrompt,
       {
         fileData: {
-          mimeType: 'text/plain',
+          mimeType: 'video/*',
           fileUri: videoUrl
         }
       }
@@ -162,7 +165,7 @@ async function processVideoInChunks(videoUrl: string, prompt: string, template: 
       overviewPrompt,
       {
         fileData: {
-          mimeType: 'text/plain',
+          mimeType: 'video/*',
           fileUri: videoUrl
         }
       }
@@ -176,7 +179,7 @@ async function processVideoInChunks(videoUrl: string, prompt: string, template: 
       fullPrompt,
       {
         fileData: {
-          mimeType: 'text/plain',
+          mimeType: 'video/*',
           fileUri: videoUrl
         }
       }
@@ -206,7 +209,7 @@ async function processVideoInChunks(videoUrl: string, prompt: string, template: 
       prompt,
       {
         fileData: {
-          mimeType: 'text/plain',
+          mimeType: 'video/*',
           fileUri: videoUrl
         }
       }
@@ -298,7 +301,7 @@ export async function POST(request: NextRequest) {
           enhancedPrompt,
           {
             fileData: {
-              mimeType: 'text/plain',
+              mimeType: 'video/*',
               fileUri: videoUrl
             }
           }
@@ -311,7 +314,7 @@ export async function POST(request: NextRequest) {
             enhancedPrompt,
             {
               fileData: {
-                mimeType: 'text/plain',
+                mimeType: 'video/*',
                 fileUri: videoUrl
               }
             }
@@ -341,7 +344,7 @@ export async function POST(request: NextRequest) {
             enhancedPrompt,
             {
               fileData: {
-                mimeType: 'text/plain',
+                mimeType: 'video/*',
                 fileUri: videoUrl
               }
             }
@@ -355,7 +358,7 @@ export async function POST(request: NextRequest) {
               enhancedPrompt,
               {
                 fileData: {
-                  mimeType: 'text/plain',
+                  mimeType: 'video/*',
                   fileUri: videoUrl
                 }
               }
@@ -398,23 +401,60 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Video processing error:', error);
     
+    // Enhanced error handling for different timeout scenarios
+    if (error.message.includes('timeout') || error.message.includes('deadline')) {
+      return NextResponse.json({ 
+        error: 'Video processing timeout - video may be too long for standard processing',
+        details: error.message,
+        suggestion: 'Try using the async processing endpoint: /api/videos/process-async',
+        retryAfter: 300
+      }, { 
+        status: 408,
+        headers: { 'Retry-After': '300' }
+      });
+    }
+    
     if (error.message.includes('quota') || error.message.includes('429')) {
       return NextResponse.json({ 
         error: 'API quota exceeded. Please try again later or upgrade your plan.',
-        details: error.message 
-      }, { status: 429 });
+        details: error.message,
+        retryAfter: 3600
+      }, { 
+        status: 429,
+        headers: { 'Retry-After': '3600' }
+      });
     }
     
-    if (error.message.includes('400')) {
+    if (error.message.includes('400') || error.message.includes('invalid')) {
       return NextResponse.json({ 
         error: 'Invalid video URL or content not supported.',
-        details: error.message 
+        details: error.message,
+        suggestion: 'Ensure the YouTube URL is valid and the video is publicly accessible'
       }, { status: 400 });
+    }
+
+    // Handle large file errors
+    if (error.message.includes('size') || error.message.includes('too large')) {
+      return NextResponse.json({ 
+        error: 'Video file is too large for processing',
+        details: error.message,
+        suggestion: 'Try using the async processing endpoint for long videos: /api/videos/process-async'
+      }, { status: 413 });
+    }
+
+    // Handle pattern matching errors
+    if (error.message.includes('pattern') || error.message.includes('string did not match')) {
+      return NextResponse.json({ 
+        error: 'Video content parsing failed',
+        details: 'The video content could not be properly analyzed. This may be due to video length, format, or content restrictions.',
+        suggestion: 'Try a shorter video or use the async processing endpoint'
+      }, { status: 422 });
     }
     
     return NextResponse.json({ 
       error: 'Failed to process video',
-      details: error.message 
+      details: error.message,
+      timestamp: new Date().toISOString()
     }, { status: 500 });
   }
 }

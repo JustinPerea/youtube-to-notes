@@ -10,37 +10,37 @@ export function Header() {
   const { data: session, status } = useSession();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass-panel-dark backdrop-blur-lg border-b border-white/20 shadow-lg">
-      <div className="container mx-auto max-w-6xl px-4">
+    <header className="navbar fixed top-0 left-0 right-0 z-[999] bg-[var(--navbar-bg)] backdrop-blur-[20px] border-b border-[var(--card-border)] transition-all duration-300">
+      <div className="nav-container max-w-[1200px] mx-auto px-5">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded-lg flex items-center justify-center text-lg">
+          <Link href="/" className="nav-logo flex items-center gap-3">
+            <div className="shiba-icon w-9 h-9 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF8FB3] rounded-[10px] flex items-center justify-center text-xl shadow-[0_2px_8px_rgba(255,107,157,0.2)]">
               🐕
             </div>
-            <span className="text-high-contrast font-bold text-xl">Kyoto Scribe</span>
+            <span className="text-xl font-bold text-[var(--text-primary)]">Kyoto Scribe</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+          <nav className="nav-links hidden md:flex items-center gap-8">
+            <Link href="/" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Home
             </Link>
             {session && (
-              <Link href="/notes" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+              <Link href="/notes" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
                 My Notes
               </Link>
             )}
-            <Link href="/roadmap" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+            <Link href="/roadmap" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Roadmap
             </Link>
-            <a href="#features" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+            <a href="#features" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Features
             </a>
-            <a href="#pricing" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+            <a href="#pricing" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Pricing
             </a>
-            <a href="#about" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+            <a href="#about" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               About
             </a>
             {session ? (
@@ -48,7 +48,7 @@ export function Header() {
             ) : (
               <button 
                 onClick={() => signIn('google')}
-                className="glass-button px-4 py-2 text-high-contrast font-semibold hover:bg-white/10 transition-colors"
+                className="sign-in-btn px-6 py-2 bg-[var(--accent-pink)] text-white border-none rounded-[50px] font-semibold cursor-pointer transition-all duration-300 hover:transform hover:translate-y-[-2px] hover:shadow-[0_4px_12px_rgba(255,107,157,0.3)] shadow-[0_2px_8px_rgba(255,107,157,0.2)]"
               >
                 Sign In
               </button>
@@ -57,7 +57,7 @@ export function Header() {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden text-high-contrast"
+            className="md:hidden text-[var(--text-primary)]"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,34 +68,34 @@ export function Header() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden glass-panel-dark mt-4 p-4 rounded-lg">
+          <div className="md:hidden bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] mt-4 p-4 rounded-lg">
             <nav className="flex flex-col space-y-4">
-              <Link href="/" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+              <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
                 Home
               </Link>
               {session && (
-                <Link href="/notes" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+                <Link href="/notes" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
                   My Notes
                 </Link>
               )}
-              <Link href="/roadmap" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+              <Link href="/roadmap" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
                 Roadmap
               </Link>
-              <a href="#features" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+              <a href="#features" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
                 Features
               </a>
-              <a href="#pricing" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+              <a href="#pricing" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
                 Pricing
               </a>
-              <a href="#about" className="text-gray-100 hover:text-high-contrast transition-colors font-medium">
+              <a href="#about" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
                 About
               </a>
               {session ? (
                 <div className="flex items-center gap-3">
-                  <span className="text-high-contrast text-sm font-medium">{session.user?.name}</span>
+                  <span className="text-[var(--text-primary)] text-sm font-medium">{session.user?.name}</span>
                   <button 
                     onClick={() => signOut()}
-                    className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-lg border border-white/20 rounded-xl px-4 py-2 text-white font-semibold transition-all duration-300"
+                    className="bg-[var(--accent-pink)] text-white border-none rounded-xl px-4 py-2 font-semibold transition-all duration-300"
                   >
                     Sign Out
                   </button>
@@ -103,7 +103,7 @@ export function Header() {
               ) : (
                 <button 
                   onClick={() => signIn('google')}
-                  className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-lg border border-white/20 rounded-xl px-4 py-2 text-white font-semibold transition-all duration-300"
+                  className="bg-[var(--accent-pink)] text-white border-none rounded-xl px-4 py-2 font-semibold transition-all duration-300"
                 >
                   Sign In
                 </button>

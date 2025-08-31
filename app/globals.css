@@ -2,6 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables for Theme System */
+:root {
+  /* Light Mode Variables */
+  --bg-primary: #fafafa;
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --card-border: rgba(0, 0, 0, 0.06);
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  --text-primary: #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --text-muted: #6a6a6a;
+  --accent-pink: #FF6B9D;
+  --accent-pink-soft: #FFE5ED;
+  --accent-lavender: #E6E6FA;
+  --accent-coral: #FFE0E0;
+  --success: #4ECDC4;
+  --navbar-bg: rgba(255, 255, 255, 0.98);
+  
+  /* Orb colors for light mode */
+  --orb-1: rgba(247, 202, 201, 0.3);
+  --orb-2: rgba(230, 230, 250, 0.3);
+  --orb-3: rgba(255, 182, 193, 0.25);
+  --orb-4: rgba(255, 218, 185, 0.2);
+  --orb-5: rgba(221, 160, 221, 0.2);
+  --orb-opacity: 0.4;
+}
+
+[data-theme="dark"] {
+  /* Dark Mode Variables */
+  --bg-primary: #0a0a0a;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --text-primary: #f5f5f5;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  --accent-pink: #FF8FB3;
+  --accent-pink-soft: rgba(255, 143, 179, 0.1);
+  --accent-lavender: rgba(230, 230, 250, 0.1);
+  --accent-coral: rgba(255, 224, 224, 0.1);
+  --success: #4ECDC4;
+  --navbar-bg: rgba(10, 10, 10, 0.95);
+  
+  /* Orb colors for dark mode - more vibrant */
+  --orb-1: rgba(255, 107, 157, 0.15);
+  --orb-2: rgba(147, 112, 219, 0.15);
+  --orb-3: rgba(78, 205, 196, 0.12);
+  --orb-4: rgba(255, 179, 71, 0.1);
+  --orb-5: rgba(162, 155, 254, 0.12);
+  --orb-opacity: 0.6;
+}
+
+/* Base body styles with theme support */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
 /* Glass Morphism Utilities */
 @layer components {
   .glass-button {
@@ -163,6 +225,10 @@
   .animate-slide-down {
     animation: slideDown 0.3s ease-out;
   }
+
+  .animate-fadeInUp {
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
 }
 
 @keyframes shimmer {
@@ -178,6 +244,17 @@
   from {
     opacity: 0;
     transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
   }
   to {
     opacity: 1;

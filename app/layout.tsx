@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import AuthProvider from '../components/AuthProvider'
+import { ThemeProvider } from '../components/ui/ThemeProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,12 +19,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+      </head>
       <body className={inter.className}>
-        <AuthProvider>
-          <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-violet-800">
+        <ThemeProvider>
+          <AuthProvider>
             {children}
-          </div>
-        </AuthProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -87,7 +87,7 @@ export default function Home() {
             
             {/* Video Preview */}
             {videoInfo && videoInfo.isValid && (
-              <div className="mb-10">
+              <div className="max-w-[700px] mx-auto mb-10">
                 <VideoPreview 
                   videoInfo={videoInfo} 
                   onClear={() => {

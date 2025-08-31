@@ -98,20 +98,14 @@ export function extractVideoInfo(url: string) {
   if (!isValid || !videoId) {
     return {
       videoId: null,
-      title: '',
-      channel: '',
       thumbnail: '',
-      duration: '',
       isValid: false
     };
   }
 
   return {
     videoId,
-    title: 'Video Title', // Would need API call to get actual title
-    channel: 'Channel Name', // Would need API call to get actual channel
     thumbnail: getThumbnailUrl(videoId),
-    duration: '--:--', // Would need API call to get actual duration
     isValid: true
   };
 }

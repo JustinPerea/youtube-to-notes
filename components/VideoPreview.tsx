@@ -3,10 +3,7 @@ import React from 'react';
 
 interface VideoInfo {
   videoId: string | null;
-  title: string;
-  channel: string;
   thumbnail: string;
-  duration: string;
   isValid: boolean;
 }
 
@@ -66,7 +63,7 @@ export function VideoPreview({ videoInfo, onClear }: VideoPreviewProps) {
           </div>
           <img
             src={thumbnailUrl}
-            alt={videoInfo.title}
+            alt="Video thumbnail"
             className="w-32 h-20 object-cover rounded-lg relative z-10"
             style={{ borderColor: 'var(--card-border)', borderWidth: '1px', borderStyle: 'solid' }}
             onLoad={(e) => {
@@ -81,29 +78,14 @@ export function VideoPreview({ videoInfo, onClear }: VideoPreviewProps) {
           />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <h4 
-            className="font-medium text-sm mb-1 truncate"
+        <div className="flex-1 flex items-center">
+          <span 
+            className="flex items-center gap-2 text-sm font-medium"
             style={{ color: 'var(--text-primary)' }}
           >
-            {videoInfo.title}
-          </h4>
-          <p 
-            className="text-xs mb-2"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            {videoInfo.channel}
-          </p>
-          <div 
-            className="flex items-center gap-4 text-xs"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            <span>Duration: {videoInfo.duration}</span>
-            <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              Ready to process
-            </span>
-          </div>
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            Ready to process
+          </span>
         </div>
       </div>
     </div>

@@ -21,17 +21,19 @@ export default function SignIn() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-pearl via-cream to-digital-lavender flex items-center justify-center">
+      <div className="absolute inset-0 bg-gradient-to-br from-warm-tan/5 via-kyoto-pink/10 to-digital-lavender/20"></div>
         <div className="text-white">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-      <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 max-w-md w-full mx-4">
+    <div className="min-h-screen bg-gradient-to-br from-pearl via-cream to-digital-lavender flex items-center justify-center relative">
+      <div className="absolute inset-0 bg-gradient-to-br from-warm-tan/5 via-kyoto-pink/10 to-digital-lavender/20"></div>
+      <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 max-w-md w-full mx-4 relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome to YouTube-to-Notes</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Welcome to Kyoto Scribe 🐕</h1>
           <p className="text-gray-300">Sign in to save your notes and access your history</p>
         </div>
 

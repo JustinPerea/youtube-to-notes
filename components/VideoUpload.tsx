@@ -8,6 +8,7 @@ import { VideoPreview } from './VideoPreview';
 import SimplePdfDownload from './SimplePdfDownload';
 import { extractVideoInfo, isValidYouTubeUrl } from '../lib/utils/youtube';
 import { useSession } from 'next-auth/react';
+import { TEMPLATES } from '../lib/templates/index';
 
 interface ProcessingResult {
   title: string;
@@ -31,9 +32,10 @@ interface ProcessingResult {
 
 interface VideoUploadProps {
   selectedTemplate?: string;
+  onTemplateChange?: (template: string) => void;
 }
 
-export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadProps) {
+export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChange }: VideoUploadProps) {
   const { data: session } = useSession();
   const [videoUrl, setVideoUrl] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -176,7 +178,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-white mb-6 text-center">
+      <h2 className="text-2xl font-bold text-high-contrast mb-6 text-center">
         Upload Your YouTube Video
       </h2>
 
@@ -191,7 +193,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
             placeholder="https://www.youtube.com/watch?v=..."
-            className="w-full px-4 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+            className="w-full px-4 py-3 glass-input rounded-xl text-high-contrast placeholder-gray-300 focus:outline-none transition-all duration-300"
             required
           />
         </div>
@@ -209,6 +211,25 @@ export function VideoUpload({ selectedTemplate = 'basic-summary' }: VideoUploadP
         {videoInfo && videoInfo.isValid && (
           <div className="text-center">
             <div className="space-y-4">
+              {/* Template Dropdown */}
+              <div className="mb-4">
+                <label htmlFor="templateSelect" className="block text-sm font-medium text-gray-300 mb-2">
+                  Output Format:
+                </label>
+                <select
+                  id="templateSelect"
+                  value={selectedTemplate}
+                  onChange={(e) => onTemplateChange && onTemplateChange(e.target.value)}
+                  className="mx-auto block w-64 px-3 py-2 glass-input rounded-xl text-high-contrast focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
+                >
+                  {TEMPLATES.filter(template => !template.isPremium).map((template) => (
+                    <option key={template.id} value={template.id} className="bg-gray-800 text-white">
+                      {template.icon} {template.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <button
                 type="submit"
                 disabled={isProcessing}

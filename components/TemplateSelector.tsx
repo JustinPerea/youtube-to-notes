@@ -19,7 +19,7 @@ const templates = TEMPLATES.map(template => ({
 export function TemplateSelector({ selectedTemplate, onTemplateChange }: TemplateSelectorProps) {
   return (
     <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-white mb-6 text-center">
+      <h2 className="text-2xl font-bold text-high-contrast mb-6 text-center">
         Choose Your Output Format
       </h2>
       
@@ -28,7 +28,7 @@ export function TemplateSelector({ selectedTemplate, onTemplateChange }: Templat
           <div
             key={template.id}
             onClick={() => !template.comingSoon && onTemplateChange(template.id)}
-            className={`bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 transition-all duration-300 ${
+            className={`glass-panel rounded-2xl p-6 transition-all duration-300 ${
               template.comingSoon
                 ? 'cursor-not-allowed opacity-60'
                 : selectedTemplate === template.id
@@ -40,7 +40,7 @@ export function TemplateSelector({ selectedTemplate, onTemplateChange }: Templat
               <div className="text-3xl">{template.icon}</div>
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
-                  <h3 className="font-semibold text-white">{template.name}</h3>
+                  <h3 className="font-semibold text-high-contrast">{template.name}</h3>
                   {!template.free && !template.comingSoon && (
                     <span className="px-2 py-1 bg-gradient-to-r from-purple-400 to-pink-400 text-white text-xs rounded-full">
                       PRO
@@ -52,7 +52,7 @@ export function TemplateSelector({ selectedTemplate, onTemplateChange }: Templat
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-300 mt-1">{template.description}</p>
+                <p className="text-sm text-gray-100 mt-1">{template.description}</p>
                 {template.free && !template.comingSoon && (
                   <span className="inline-block mt-2 text-xs text-green-400">
                     ✓ Free tier available
@@ -72,7 +72,7 @@ export function TemplateSelector({ selectedTemplate, onTemplateChange }: Templat
         ))}
       </div>
       
-      <div className="mt-6 text-center text-sm text-gray-400">
+      <div className="mt-6 text-center text-sm text-gray-200">
         <p>Upgrade to Pro for unlimited access to all templates</p>
       </div>
     </div>

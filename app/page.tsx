@@ -24,13 +24,13 @@ export default function Home() {
       <section className="relative px-4 py-20 lg:py-32">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 animate-fadeInUp">
+            <h1 className="text-4xl md:text-6xl font-bold text-high-contrast mb-6 animate-fadeInUp">
               Transform YouTube Videos Into
-              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                {' '}Smart Content
+              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent block" style={{textShadow: 'none'}}>
+                Smart Content
               </span>
             </h1>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 animate-fadeInUp" style={{animationDelay: '0.2s'}}>
+            <p className="text-xl text-gray-100 max-w-3xl mx-auto mb-8 animate-fadeInUp" style={{animationDelay: '0.2s'}}>
               Use AI to convert any YouTube video into notes, study guides, presentations, and tutorials instantly.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fadeInUp" style={{animationDelay: '0.4s'}}>
@@ -46,12 +46,15 @@ export default function Home() {
           </div>
           
           {/* Video Upload Section */}
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 mb-8 animate-fadeInUp" style={{animationDelay: '0.6s'}}>
-            <VideoUpload selectedTemplate={selectedTemplate} />
+          <div className="glass-panel rounded-2xl p-8 mb-8 animate-fadeInUp" style={{animationDelay: '0.6s'}}>
+            <VideoUpload 
+              selectedTemplate={selectedTemplate} 
+              onTemplateChange={setSelectedTemplate}
+            />
           </div>
           
           {/* Template Selection */}
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 mb-16 animate-fadeInUp" style={{animationDelay: '0.8s'}}>
+          <div className="glass-panel rounded-2xl p-8 mb-16 animate-fadeInUp" style={{animationDelay: '0.8s'}}>
             <TemplateSelector 
               selectedTemplate={selectedTemplate}
               onTemplateChange={setSelectedTemplate}

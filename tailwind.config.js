@@ -17,6 +17,30 @@ module.exports = {
     },
     extend: {
       colors: {
+        // Kyoto Scribe Brand Colors - Harmonized Palette
+        'kyoto-pink': '#F2C2C1',        // Refined from #F7CAC9 for better harmony
+        'digital-lavender': '#D4D4F4',   // Enhanced from #E6E6FA (increased saturation)
+        'warm-tan': '#E8B882',           // Refined from #D4A574 for smoother transitions
+        'cream': '#F8F3E8',              // Refined from #FFF8E7 for better glass morphism
+        'deep-violet': '#7B52D4',        // Refined from #6B46C1 for better balance
+        'coral-accent': '#FF9B9B',       // Softened from #FF6B6B (reduced intensity)
+        'mint-fresh': '#6EC5BC',         // Refined from #4ECDC4 for better harmony
+        'sunrise-gold': '#F4E4A6',       // Toned down from #FFD93D (major fix)
+        'charcoal': '#334145',           // Refined from #2D3436 for better contrast
+        'silver-mist': '#B2BEC3',        // Maintained - works well
+        'pearl': '#F5F5F7',              // Maintained - good neutral
+        
+        // Temperature Bridge Colors (new additions)
+        'warm-bridge': '#E8D5C4',        // Soft beige - connects warm/cool
+        'cool-bridge': '#D5E8E8',        // Soft sage - neutral bridge
+        'cool-neutral': '#E8F0F2',       // Cool neutral for glass surfaces
+        
+        // Glass Morphism Optimized Colors
+        'glass-warm': '#F8F3E8',         // Warm background for glass
+        'glass-cool': '#E8F0F2',         // Cool background for glass
+        'glass-text': '#334145',         // Optimized text contrast
+        
+        // Shadcn UI Colors (maintained for compatibility)
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -55,6 +79,9 @@ module.exports = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        'glass-lg': '20px',
+        'glass-md': '12px',
+        'glass-sm': '8px',
       },
       keyframes: {
         "accordion-down": {

@@ -3,12 +3,10 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { VideoUpload } from '../components/VideoUpload';
-import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { OrbBackground } from '../components/ui/OrbBackground';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { FormatCards } from '../components/ui/FormatCards';
-import { StatsSection } from '../components/ui/StatsSection';
 import { FeaturesGrid } from '../components/ui/FeaturesGrid';
 import { HowItWorks } from '../components/ui/HowItWorks';
 import { extractVideoInfo, isValidYouTubeUrl } from '../lib/utils/youtube';
@@ -62,15 +60,10 @@ export default function Home() {
         {/* Theme Toggle */}
         <ThemeToggle />
         {/* Header */}
-        <Header />
-        
         {/* Main Container */}
         <div className="container max-w-[1200px] mx-auto pt-[100px] pb-10 px-5">
           {/* Hero Section */}
           <section className="hero text-center py-20">
-            <div className="hero-badge inline-block px-4 py-1.5 bg-[var(--accent-pink-soft)] text-[var(--accent-pink)] rounded-[50px] text-xs font-semibold uppercase tracking-wide mb-5">
-              AI-Powered by Gemini
-            </div>
             <h1 className="hero-title text-6xl font-extrabold leading-tight mb-6 bg-gradient-to-br from-[var(--text-primary)] to-[var(--accent-pink)] bg-clip-text text-transparent">
               Transform YouTube Videos<br />Into Smart Notes
             </h1>
@@ -135,10 +128,6 @@ export default function Home() {
               onTemplateChange={setSelectedTemplate}
             />
           </div>
-          
-          {/* Stats Section */}
-          <StatsSection />
-          
           {/* Features Grid */}
           <div id="features">
             <FeaturesGrid />

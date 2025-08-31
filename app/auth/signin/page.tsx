@@ -21,25 +21,93 @@ export default function SignIn() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pearl via-cream to-digital-lavender flex items-center justify-center">
-      <div className="absolute inset-0 bg-gradient-to-br from-warm-tan/5 via-kyoto-pink/10 to-digital-lavender/20"></div>
-        <div className="text-white">Loading...</div>
+      <div 
+        className="min-h-screen flex items-center justify-center relative"
+        style={{
+          background: `var(--bg-primary)`,
+        }}
+      >
+        {/* Animated background orbs using theme system */}
+        <div className="absolute inset-0">
+          <div 
+            className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse-slow"
+            style={{ background: `var(--orb-1)` }}
+          ></div>
+          <div 
+            className="absolute top-1/3 right-1/3 w-80 h-80 rounded-full blur-3xl animate-pulse-slow"
+            style={{ background: `var(--orb-2)`, animationDelay: '1s' }}
+          ></div>
+          <div 
+            className="absolute bottom-1/4 left-1/3 w-72 h-72 rounded-full blur-3xl animate-pulse-slow"
+            style={{ background: `var(--orb-3)`, animationDelay: '2s' }}
+          ></div>
+        </div>
+        <div 
+          className="text-lg font-medium animate-pulse"
+          style={{ color: `var(--text-primary)` }}
+        >
+          Loading...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pearl via-cream to-digital-lavender flex items-center justify-center relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-warm-tan/5 via-kyoto-pink/10 to-digital-lavender/20"></div>
-      <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 max-w-md w-full mx-4 relative z-10">
+    <div 
+      className="min-h-screen flex items-center justify-center relative px-4"
+      style={{
+        background: `var(--bg-primary)`,
+      }}
+    >
+      {/* Animated background orbs using theme system */}
+      <div className="absolute inset-0">
+        <div 
+          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse-slow"
+          style={{ background: `var(--orb-1)` }}
+        ></div>
+        <div 
+          className="absolute top-1/3 right-1/3 w-80 h-80 rounded-full blur-3xl animate-pulse-slow"
+          style={{ background: `var(--orb-2)`, animationDelay: '1s' }}
+        ></div>
+        <div 
+          className="absolute bottom-1/4 left-1/3 w-72 h-72 rounded-full blur-3xl animate-pulse-slow"
+          style={{ background: `var(--orb-3)`, animationDelay: '2s' }}
+        ></div>
+      </div>
+
+      {/* Sign-in card with glass morphism */}
+      <div className="glass-card max-w-md w-full relative z-10 p-8 animate-fade-in">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome to Kyoto Scribe 🐕</h1>
-          <p className="text-gray-300">Sign in to save your notes and access your history</p>
+          <h1 
+            className="text-3xl font-bold mb-2"
+            style={{ color: `var(--text-primary)` }}
+          >
+            Welcome to Kyoto Scribe 🐕
+          </h1>
+          <p 
+            className="text-base"
+            style={{ color: `var(--text-secondary)` }}
+          >
+            Sign in to save your notes and access your history
+          </p>
         </div>
 
         <button
           onClick={handleGoogleSignIn}
-          className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors duration-200"
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-medium transition-all duration-300 hover:scale-105 focus:scale-105"
+          style={{
+            background: 'white',
+            color: '#1f2937',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#f9fafb';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'white';
+            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1)';
+          }}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -51,7 +119,10 @@ export default function SignIn() {
         </button>
 
         <div className="mt-6 text-center">
-          <p className="text-gray-400 text-sm">
+          <p 
+            className="text-sm"
+            style={{ color: `var(--text-muted)` }}
+          >
             By signing in, you agree to our Terms of Service and Privacy Policy
           </p>
         </div>

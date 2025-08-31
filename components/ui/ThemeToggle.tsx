@@ -12,21 +12,21 @@ export function ThemeToggle() {
       <div className="theme-toggle fixed top-20 right-5 z-[1000] bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-[50px] p-1.5 flex gap-1 shadow-[var(--card-shadow)]">
         <button
           onClick={() => setTheme('light')}
-          className={`theme-btn px-4 py-2 border-none bg-transparent text-[var(--text-secondary)] rounded-[50px] cursor-pointer transition-all duration-300 text-sm flex items-center gap-1.5 ${
+          className={`theme-btn w-10 h-10 border-none bg-transparent text-[var(--text-secondary)] rounded-full cursor-pointer transition-all duration-300 text-lg flex items-center justify-center ${
             theme === 'light' ? 'bg-[var(--accent-pink)] text-white active' : ''
           }`}
+          title="Light mode"
         >
-          <span>☀️</span>
-          <span>Light</span>
+          ☀️
         </button>
         <button
           onClick={() => setTheme('dark')}
-          className={`theme-btn px-4 py-2 border-none bg-transparent text-[var(--text-secondary)] rounded-[50px] cursor-pointer transition-all duration-300 text-sm flex items-center gap-1.5 ${
+          className={`theme-btn w-10 h-10 border-none bg-transparent text-[var(--text-secondary)] rounded-full cursor-pointer transition-all duration-300 text-lg flex items-center justify-center ${
             theme === 'dark' ? 'bg-[var(--accent-pink)] text-white active' : ''
           }`}
+          title="Dark mode"
         >
-          <span>🌙</span>
-          <span>Dark</span>
+          🌙
         </button>
       </div>
     );

@@ -31,11 +31,22 @@ export function VideoPreview({ videoInfo, onClear }: VideoPreviewProps) {
       </div>
       
       <div className="flex gap-4">
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 relative">
+          {/* Shiba placeholder during loading */}
+          <div className="absolute inset-0 w-32 h-20 bg-white/5 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
+              <span className="text-2xl opacity-60 filter grayscale">🐕</span>
+            </div>
+          </div>
           <img
             src={thumbnailUrl}
             alt={videoInfo.title}
-            className="w-32 h-20 object-cover rounded-lg"
+            className="w-32 h-20 object-cover rounded-lg relative z-10"
+            onLoad={(e) => {
+              // Hide Shiba placeholder when thumbnail loads
+              const placeholder = e.currentTarget.previousElementSibling as HTMLElement;
+              if (placeholder) placeholder.style.display = 'none';
+            }}
             onError={(e) => {
               // Fallback to lower quality thumbnail if maxresdefault fails
               if (videoInfo.videoId) {

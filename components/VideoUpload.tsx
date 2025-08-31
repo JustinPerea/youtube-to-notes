@@ -28,6 +28,12 @@ interface ProcessingResult {
     contentAdaptation: string;
     cognitiveOptimization?: string;
   };
+  // Pre-generated content at all verbosity levels
+  verbosityVersions?: {
+    brief: string;
+    standard: string;
+    comprehensive: string;
+  };
 }
 
 interface VideoUploadProps {
@@ -43,8 +49,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
   const [error, setError] = useState<string | null>(null);
   const [showMarkdown, setShowMarkdown] = useState(true);
   const [videoInfo, setVideoInfo] = useState<ReturnType<typeof extractVideoInfo> | null>(null);
-  const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('comprehensive');
-  const [isAdjustingVerbosity, setIsAdjustingVerbosity] = useState(false);
+  const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('standard');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [saveNoteMessage, setSaveNoteMessage] = useState<string | null>(null);
 
@@ -84,7 +89,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
       }
 
       setResult(data);
-      setCurrentVerbosity('comprehensive'); // Reset to comprehensive when new result is generated
+      setCurrentVerbosity('standard'); // Reset to standard when new result is generated
     } catch (err: any) {
       setError(err.message || 'An error occurred while processing the video');
     } finally {
@@ -139,41 +144,16 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
     }
   };
 
-  const adjustVerbosity = async (newVerbosity: 'brief' | 'standard' | 'comprehensive') => {
-    if (!videoUrl.trim() || !result) return;
+  const adjustVerbosity = (newVerbosity: 'brief' | 'standard' | 'comprehensive') => {
+    if (!result || !result.verbosityVersions) return;
     
-    setIsAdjustingVerbosity(true);
     setCurrentVerbosity(newVerbosity);
     
-    try {
-      const response = await fetch('/api/videos/adjust-verbosity', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          videoUrl: videoUrl.trim(),
-          selectedTemplate,
-          currentContent: result.content,
-          newVerbosity
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to adjust verbosity');
-      }
-
-      setResult({
-        ...result,
-        content: data.content
-      });
-    } catch (err: any) {
-      setError(err.message || 'Failed to adjust verbosity level');
-    } finally {
-      setIsAdjustingVerbosity(false);
-    }
+    // Use pre-generated content for instant switching
+    setResult({
+      ...result,
+      content: result.verbosityVersions[newVerbosity]
+    });
   };
 
   return (
@@ -340,24 +320,24 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={() => adjustVerbosity('brief')}
-                    disabled={currentVerbosity === 'brief' || isAdjustingVerbosity}
+                    disabled={currentVerbosity === 'brief'}
                     className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-lg text-xs text-red-300 hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
-                    {isAdjustingVerbosity && currentVerbosity === 'brief' ? 'Processing...' : 'Brief'}
+                    Brief
                   </button>
                   <button
                     onClick={() => adjustVerbosity('standard')}
-                    disabled={currentVerbosity === 'standard' || isAdjustingVerbosity}
+                    disabled={currentVerbosity === 'standard'}
                     className="px-3 py-1.5 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-300 hover:bg-yellow-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
-                    {isAdjustingVerbosity && currentVerbosity === 'standard' ? 'Processing...' : 'Standard'}
+                    Standard ⭐
                   </button>
                   <button
                     onClick={() => adjustVerbosity('comprehensive')}
-                    disabled={currentVerbosity === 'comprehensive' || isAdjustingVerbosity}
+                    disabled={currentVerbosity === 'comprehensive'}
                     className="px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-xs text-green-300 hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
-                    {isAdjustingVerbosity && currentVerbosity === 'comprehensive' ? 'Processing...' : 'Comprehensive'}
+                    Comprehensive
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 mt-2">

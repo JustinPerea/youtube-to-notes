@@ -79,9 +79,11 @@ export function FeatureSection() {
             <p className="text-gray-100 mb-6">
               Start converting YouTube videos into smart content today. Free tier includes 3 videos per month.
             </p>
-                          <button className="bg-gradient-to-r from-kyoto-pink to-warm-tan backdrop-blur-lg border border-white/20 rounded-xl px-8 py-4 text-white font-semibold text-lg transition-all duration-300 opacity-50 cursor-not-allowed relative" disabled>
-              Start Free Trial
-              <span className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-2 py-1 rounded-full">COMING SOON</span>
+                          <button 
+              onClick={() => document.getElementById('video-upload')?.scrollIntoView({ behavior: 'smooth' })}
+              className="bg-gradient-to-r from-kyoto-pink to-warm-tan backdrop-blur-lg border border-white/20 rounded-xl px-8 py-4 text-white font-semibold text-lg transition-all duration-300 hover:shadow-lg hover:scale-105"
+            >
+              Start Converting Videos
             </button>
             <p className="mt-4 text-gray-200">
               Want to see what's coming next? Check out our{' '}

@@ -10,6 +10,100 @@ export const dynamic = 'force-dynamic';
 // Configure maximum execution timeout for long video processing (300 seconds = 5 minutes)
 export const maxDuration = 300;
 
+// Generate all verbosity levels for instant switching
+async function generateAllVerbosityLevels(videoUrl: string, template: any, originalContent: string) {
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
+  
+  const verbosityInstructions = {
+    brief: 'Condense the content to 50-75 words per concept. Remove examples, detailed explanations, and keep only essential information. Use bullet points and concise language.',
+    standard: 'Balance the content to 100-150 words per concept. Include some examples and key details, but remove excessive elaboration.',
+    comprehensive: 'Expand the content to 200-300 words per concept. Add examples, contextual background, detailed explanations, and supporting information.'
+  };
+
+  const generatePrompt = (verbosity: keyof typeof verbosityInstructions) => `
+You are adjusting the verbosity level of video notes. 
+
+CURRENT CONTENT:
+${originalContent}
+
+TASK: Adjust this content to ${verbosity} verbosity level.
+
+VERBOSITY RULES:
+${verbosityInstructions[verbosity]}
+
+FORMATTING REQUIREMENTS:
+- Maintain the same section structure as the original
+- Use consistent markdown formatting
+- Keep the same headings and organization
+- Start with "**${template.name}**" as the title
+
+OUTPUT: Return only the adjusted content, no explanations or meta-commentary.`;
+
+  const generateWithFallback = async (verbosity: keyof typeof verbosityInstructions) => {
+    // Try primary model first
+    let model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.0-flash-exp',
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 4000,
+      }
+    });
+
+    try {
+      const result = await model.generateContent(generatePrompt(verbosity));
+      return await result.response.text();
+    } catch (error: any) {
+      if (error.status === 429 || error.message?.includes('quota')) {
+        console.log(`Quota exceeded for ${verbosity}, trying alternative model...`);
+        
+        // Use alternative model
+        model = genAI.getGenerativeModel({ 
+          model: 'gemini-1.5-flash',
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 3000,
+          }
+        });
+        
+        try {
+          const result = await model.generateContent(generatePrompt(verbosity));
+          return await result.response.text();
+        } catch (fallbackError) {
+          console.error(`Fallback failed for ${verbosity}:`, fallbackError);
+          throw fallbackError;
+        }
+      } else {
+        throw error;
+      }
+    }
+  };
+
+  try {
+    // Generate sequentially instead of parallel to reduce quota pressure
+    console.log('Generating verbosity levels sequentially...');
+    const brief = await generateWithFallback('brief');
+    const standard = await generateWithFallback('standard');
+    const comprehensive = await generateWithFallback('comprehensive');
+
+    return {
+      brief,
+      standard,
+      comprehensive
+    };
+  } catch (error) {
+    console.error('Error generating verbosity levels:', error);
+    
+    // Create simple text-based variations as fallback
+    const lines = originalContent.split('\n').filter(line => line.trim());
+    
+    return {
+      brief: lines.slice(0, Math.ceil(lines.length * 0.4)).join('\n'),
+      standard: originalContent, // Keep original as standard
+      comprehensive: originalContent + '\n\n' + lines.map(line => line.startsWith('- ') ? line + ' [More details available in video]' : line).join('\n')
+    };
+  }
+}
+
 // Enhanced content analysis with hybrid deep learning approach
 async function analyzeVideoContent(videoUrl: string) {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
@@ -377,10 +471,14 @@ export async function POST(request: NextRequest) {
       throw new Error('Generated content is empty');
     }
 
+    // Step 4.5: Generate all verbosity levels for instant switching
+    console.log('Step 3: Generating all verbosity levels...');
+    const verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result);
+
     // Step 5: Return structured response (preserving existing frontend structure)
     return NextResponse.json({
       title: `Notes from ${videoUrl}`,
-      content: result,
+      content: verbosityVersions.standard, // Default to standard verbosity
       template: selectedTemplate,
       contentAnalysis: {
         type: contentAnalysis.type,
@@ -395,7 +493,8 @@ export async function POST(request: NextRequest) {
         contentAdaptation: contentAnalysis.confidence > 0.7 ? 'optimized' : 'standard',
         cognitiveOptimization: contentAnalysis.cognitiveLoad === 'medium' ? 'balanced' : 
                               contentAnalysis.cognitiveLoad === 'low' ? 'enhanced' : 'simplified'
-      }
+      },
+      verbosityVersions
     });
 
   } catch (error: any) {

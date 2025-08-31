@@ -34,19 +34,23 @@ export default function Home() {
               Use AI to convert any YouTube video into notes, study guides, presentations, and tutorials instantly.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fadeInUp" style={{animationDelay: '0.4s'}}>
-              <button className="glass-button px-8 py-4 text-white font-semibold text-lg opacity-50 cursor-not-allowed relative" disabled>
+              <button 
+                onClick={() => document.getElementById('video-upload')?.scrollIntoView({ behavior: 'smooth' })}
+                className="glass-button px-8 py-4 text-white font-semibold text-lg hover:shadow-lg hover:scale-105 transition-all duration-300"
+              >
                 Start Converting
-                <span className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-2 py-1 rounded-full">COMING SOON</span>
               </button>
-              <button className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-lg border border-white/20 rounded-xl px-8 py-4 text-white font-semibold text-lg transition-all duration-300 opacity-50 cursor-not-allowed relative" disabled>
-                Watch Demo
-                <span className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-2 py-1 rounded-full">COMING SOON</span>
+              <button 
+                onClick={() => document.getElementById('video-upload')?.scrollIntoView({ behavior: 'smooth' })}
+                className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-lg border border-white/20 rounded-xl px-8 py-4 text-white font-semibold text-lg transition-all duration-300 hover:shadow-lg hover:scale-105"
+              >
+                Try it Now
               </button>
             </div>
           </div>
           
           {/* Video Upload Section */}
-          <div className="glass-panel rounded-2xl p-8 mb-8 animate-fadeInUp" style={{animationDelay: '0.6s'}}>
+          <div id="video-upload" className="glass-panel rounded-2xl p-8 mb-8 animate-fadeInUp" style={{animationDelay: '0.6s'}}>
             <VideoUpload 
               selectedTemplate={selectedTemplate} 
               onTemplateChange={setSelectedTemplate}

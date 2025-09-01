@@ -6,12 +6,22 @@ import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-interface UserNote {
-  id: string;
+interface VideoWithNotes {
   videoId: string;
+  title: string;
   youtubeUrl: string;
-  title?: string;
   thumbnailUrl?: string;
+  noteFormats: {
+    noteId: string;
+    templateId: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+  }[];
+}
+
+interface FormatContent {
+  noteId: string;
   templateId: string;
   content: string;
   createdAt: string;
@@ -21,27 +31,60 @@ interface UserNote {
 export default function NotesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [notes, setNotes] = useState<UserNote[]>([]);
+  const [videos, setVideos] = useState<VideoWithNotes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedNote, setSelectedNote] = useState<UserNote | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<VideoWithNotes | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<string>('');
+  const [selectedFormatContent, setSelectedFormatContent] = useState<FormatContent | null>(null);
+
+  // Helper function to deduplicate formats by templateId, keeping the most recent one
+  const getUniqueFormats = (noteFormats: FormatContent[]) => {
+    const formatMap = new Map<string, FormatContent>();
+    
+    // Group by templateId, keeping the most recent note for each template
+    noteFormats.forEach(format => {
+      const existing = formatMap.get(format.templateId);
+      if (!existing || new Date(format.createdAt) > new Date(existing.createdAt)) {
+        formatMap.set(format.templateId, format);
+      }
+    });
+    
+    return Array.from(formatMap.values()).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/');
     } else if (status === 'authenticated' && session?.user?.id) {
-      fetchNotes();
+      fetchVideos();
     }
   }, [status, session, router]);
 
-  const fetchNotes = async () => {
+  // Auto-select first format when video changes
+  useEffect(() => {
+    if (selectedVideo && selectedVideo.noteFormats.length > 0) {
+      const uniqueFormats = getUniqueFormats(selectedVideo.noteFormats);
+      if (uniqueFormats.length > 0) {
+        setSelectedFormat(uniqueFormats[0].templateId);
+        setSelectedFormatContent(uniqueFormats[0]);
+      }
+    } else {
+      setSelectedFormat('');
+      setSelectedFormatContent(null);
+    }
+  }, [selectedVideo]);
+
+  const fetchVideos = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/notes/list');
       const data = await response.json();
 
       if (data.success) {
-        setNotes(data.notes);
+        setVideos(data.videos || []);
       } else {
         setError(data.error || 'Failed to fetch notes');
       }
@@ -53,8 +96,8 @@ export default function NotesPage() {
     }
   };
 
-  const deleteNote = async (noteId: string) => {
-    if (!confirm('Are you sure you want to delete this note?')) return;
+  const deleteNote = async (noteId: string, templateId: string) => {
+    if (!confirm('Are you sure you want to delete this note format?')) return;
 
     try {
       const response = await fetch(`/api/notes/${noteId}`, {
@@ -63,9 +106,40 @@ export default function NotesPage() {
       const data = await response.json();
 
       if (data.success) {
-        setNotes(notes.filter(note => note.id !== noteId));
-        if (selectedNote?.id === noteId) {
-          setSelectedNote(null);
+        // Update videos state by removing the deleted note format
+        setVideos(prevVideos => 
+          prevVideos.map(video => ({
+            ...video,
+            noteFormats: video.noteFormats.filter(format => format.noteId !== noteId)
+          })).filter(video => video.noteFormats.length > 0) // Remove videos with no formats
+        );
+        
+        // Reset selection if current format was deleted
+        if (selectedVideo && selectedFormat === templateId) {
+          const updatedVideo = videos.find(v => v.videoId === selectedVideo.videoId);
+          if (updatedVideo) {
+            const remainingFormats = updatedVideo.noteFormats.filter(f => f.noteId !== noteId);
+            if (remainingFormats.length === 0) {
+              setSelectedVideo(null);
+              setSelectedFormat('');
+              setSelectedFormatContent(null);
+            } else {
+              const updatedVideoData = {
+                ...updatedVideo,
+                noteFormats: remainingFormats
+              };
+              setSelectedVideo(updatedVideoData);
+              
+              const uniqueFormats = getUniqueFormats(remainingFormats);
+              if (uniqueFormats.length > 0) {
+                setSelectedFormat(uniqueFormats[0].templateId);
+                setSelectedFormatContent(uniqueFormats[0]);
+              } else {
+                setSelectedFormat('');
+                setSelectedFormatContent(null);
+              }
+            }
+          }
         }
       } else {
         setError(data.error || 'Failed to delete note');
@@ -74,6 +148,22 @@ export default function NotesPage() {
       setError('Failed to delete note');
       console.error('Error deleting note:', error);
     }
+  };
+
+  const formatTemplateName = (templateId: string) => {
+    return templateId
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const getSelectedFormatContent = () => {
+    return selectedFormatContent;
+  };
+
+  const handleVideoSelect = (video: VideoWithNotes) => {
+    setSelectedVideo(video);
+    // Auto-select first format is handled by useEffect
   };
 
   if (status === 'loading') {
@@ -111,7 +201,7 @@ export default function NotesPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="text-[var(--text-primary)] text-lg">Loading your notes...</div>
+            <div className="text-[var(--text-primary)] text-lg">Loading your videos...</div>
           </div>
         ) : error && error.includes('not configured') ? (
           <div className="text-center py-12">
@@ -126,7 +216,7 @@ export default function NotesPage() {
               </button>
             </div>
           </div>
-        ) : notes.length === 0 ? (
+        ) : videos.length === 0 ? (
           <div className="text-center py-12">
             <div className="bg-[var(--card-bg)] backdrop-blur-md border border-[var(--card-border)] rounded-2xl p-8 max-w-md mx-auto shadow-[var(--card-shadow)]">
               <div className="text-[var(--text-secondary)] text-lg mb-4">No notes yet</div>
@@ -140,149 +230,194 @@ export default function NotesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Notes List */}
+            {/* Videos List */}
             <div className="lg:col-span-1">
-              <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Notes ({notes.length})</h2>
+              <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Videos ({videos.length})</h2>
               <div className="space-y-3">
-                {notes.map((note) => (
+                {videos.map((video) => (
                   <div
-                    key={note.id}
+                    key={video.videoId || 'no-video'}
                     className={`bg-[var(--card-bg)] backdrop-blur-md border border-[var(--card-border)] rounded-xl p-4 cursor-pointer transition-all duration-300 hover:transform hover:translate-y-[-1px] shadow-[var(--card-shadow)] ${
-                      selectedNote?.id === note.id 
+                      selectedVideo?.videoId === video.videoId 
                         ? 'ring-2 ring-[var(--accent-pink)] bg-[var(--accent-pink-soft)] border-[var(--accent-pink)]' 
                         : 'hover:bg-[var(--accent-pink-soft)] hover:border-[var(--accent-pink)]'
                     }`}
-                    onClick={() => setSelectedNote(note)}
+                    onClick={() => handleVideoSelect(video)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-[var(--text-primary)] font-medium truncate">
-                          {note.title || 'Untitled Video'}
+                          {video.title || 'Untitled Video'}
                         </h3>
                         <p className="text-[var(--text-secondary)] text-sm mt-1">
-                          {new Date(note.createdAt).toLocaleDateString()}
+                          {new Date(video.noteFormats[0]?.createdAt || Date.now()).toLocaleDateString()}
                         </p>
-                        <p className="text-[var(--accent-pink)] text-xs mt-1 capitalize font-medium">
-                          {note.templateId.replace('-', ' ')}
-                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="bg-[var(--accent-pink)] text-white text-xs px-2 py-1 rounded-full font-medium">
+                            {getUniqueFormats(video.noteFormats).length} format{getUniqueFormats(video.noteFormats).length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNote(note.id);
-                        }}
-                        className="ml-2 text-red-500 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
-                        title="Delete note"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Note Content */}
+            {/* Video Content */}
             <div className="lg:col-span-2">
-              {selectedNote ? (
+              {selectedVideo ? (
                 <div className="bg-[var(--card-bg)] backdrop-blur-md border border-[var(--card-border)] rounded-2xl p-6 shadow-[var(--card-shadow)]">
+                  {/* Video Header */}
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
-                        {selectedNote.title || 'Untitled Video'}
+                        {selectedVideo.title || 'Untitled Video'}
                       </h2>
-                      <p className="text-[var(--text-secondary)]">
-                        {new Date(selectedNote.createdAt).toLocaleDateString()} • <span className="text-[var(--accent-pink)] font-medium capitalize">{selectedNote.templateId.replace('-', ' ')}</span>
-                      </p>
                     </div>
-                    <a
-                      href={selectedNote.youtubeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[var(--accent-pink)] hover:text-[var(--accent-pink)] font-medium transition-colors hover:underline"
-                    >
-                      Watch Video →
-                    </a>
+                    {selectedVideo.youtubeUrl && (
+                      <a
+                        href={selectedVideo.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--accent-pink)] hover:text-[var(--accent-pink)] font-medium transition-colors hover:underline"
+                      >
+                        Watch Video →
+                      </a>
+                    )}
                   </div>
-                  
-                  <div className="prose prose-lg max-w-none text-[var(--text-primary)]">
-                    <style jsx>{`
-                      :global(.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6) {
-                        color: var(--text-primary);
-                        margin-bottom: 0.5rem;
-                        margin-top: 1.5rem;
-                      }
-                      :global(.prose h1:first-child, .prose h2:first-child, .prose h3:first-child) {
-                        margin-top: 0;
-                      }
-                      :global(.prose p) {
-                        color: var(--text-primary);
-                        margin-bottom: 1rem;
-                        line-height: 1.6;
-                      }
-                      :global(.prose ul, .prose ol) {
-                        color: var(--text-primary);
-                        margin-bottom: 1rem;
-                      }
-                      :global(.prose li) {
-                        color: var(--text-primary);
-                        margin-bottom: 0.25rem;
-                      }
-                      :global(.prose strong) {
-                        color: var(--text-primary);
-                        font-weight: 600;
-                      }
-                      :global(.prose em) {
-                        color: var(--text-secondary);
-                      }
-                      :global(.prose code) {
-                        background-color: var(--accent-pink-soft);
-                        color: var(--text-primary);
-                        padding: 0.125rem 0.25rem;
-                        border-radius: 0.25rem;
-                        font-size: 0.875em;
-                      }
-                      :global(.prose pre) {
-                        background-color: var(--accent-pink-soft);
-                        color: var(--text-primary);
-                        padding: 1rem;
-                        border-radius: 0.5rem;
-                        overflow-x: auto;
-                      }
-                      :global(.prose blockquote) {
-                        border-left: 3px solid var(--accent-pink);
-                        background-color: var(--accent-pink-soft);
-                        padding: 1rem;
-                        margin: 1rem 0;
-                        border-radius: 0 0.5rem 0.5rem 0;
-                      }
-                      :global(.prose blockquote p) {
-                        margin: 0;
-                      }
-                      :global(.prose table) {
-                        border-collapse: collapse;
-                        width: 100%;
-                        margin: 1rem 0;
-                      }
-                      :global(.prose th, .prose td) {
-                        border: 1px solid var(--card-border);
-                        padding: 0.5rem;
-                        text-align: left;
-                      }
-                      :global(.prose th) {
-                        background-color: var(--accent-pink-soft);
-                        font-weight: 600;
-                      }
-                    `}</style>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedNote.content}</ReactMarkdown>
+
+                  {/* Format Buttons */}
+                  <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-[var(--card-border)]">
+                    {getUniqueFormats(selectedVideo.noteFormats).length > 0 ? getUniqueFormats(selectedVideo.noteFormats).map((format) => (
+                      <button
+                        key={format.templateId}
+                        onClick={() => {
+                          setSelectedFormat(format.templateId);
+                          setSelectedFormatContent(format);
+                        }}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                          selectedFormat === format.templateId
+                            ? 'bg-[var(--accent-pink)] text-white shadow-lg'
+                            : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-primary)] hover:bg-[var(--accent-pink-soft)] hover:border-[var(--accent-pink)]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {formatTemplateName(format.templateId)}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNote(format.noteId, format.templateId);
+                            }}
+                            className="ml-1 text-red-500 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
+                            title="Delete this format"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </button>
+                    )) : (
+                      <div className="text-[var(--text-secondary)] text-sm">
+                        No formats available for this video.
+                      </div>
+                    )}
                   </div>
+
+                  {/* Selected Format Content */}
+                  {selectedFormat && getSelectedFormatContent() ? (
+                    <div>
+                      <div className="mb-4">
+                        <p className="text-[var(--text-secondary)] text-sm">
+                          {formatTemplateName(selectedFormat)} • {new Date(getSelectedFormatContent()!.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      
+                      <div className="prose prose-lg max-w-none text-[var(--text-primary)]">
+                        <style jsx>{`
+                          :global(.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6) {
+                            color: var(--text-primary);
+                            margin-bottom: 0.5rem;
+                            margin-top: 1.5rem;
+                          }
+                          :global(.prose h1:first-child, .prose h2:first-child, .prose h3:first-child) {
+                            margin-top: 0;
+                          }
+                          :global(.prose p) {
+                            color: var(--text-primary);
+                            margin-bottom: 1rem;
+                            line-height: 1.6;
+                          }
+                          :global(.prose ul, .prose ol) {
+                            color: var(--text-primary);
+                            margin-bottom: 1rem;
+                          }
+                          :global(.prose li) {
+                            color: var(--text-primary);
+                            margin-bottom: 0.25rem;
+                          }
+                          :global(.prose strong) {
+                            color: var(--text-primary);
+                            font-weight: 600;
+                          }
+                          :global(.prose em) {
+                            color: var(--text-secondary);
+                          }
+                          :global(.prose code) {
+                            background-color: var(--accent-pink-soft);
+                            color: var(--text-primary);
+                            padding: 0.125rem 0.25rem;
+                            border-radius: 0.25rem;
+                            font-size: 0.875em;
+                          }
+                          :global(.prose pre) {
+                            background-color: var(--accent-pink-soft);
+                            color: var(--text-primary);
+                            padding: 1rem;
+                            border-radius: 0.5rem;
+                            overflow-x: auto;
+                          }
+                          :global(.prose blockquote) {
+                            border-left: 3px solid var(--accent-pink);
+                            background-color: var(--accent-pink-soft);
+                            padding: 1rem;
+                            margin: 1rem 0;
+                            border-radius: 0 0.5rem 0.5rem 0;
+                          }
+                          :global(.prose blockquote p) {
+                            margin: 0;
+                          }
+                          :global(.prose table) {
+                            border-collapse: collapse;
+                            width: 100%;
+                            margin: 1rem 0;
+                          }
+                          :global(.prose th, .prose td) {
+                            border: 1px solid var(--card-border);
+                            padding: 0.5rem;
+                            text-align: left;
+                          }
+                          :global(.prose th) {
+                            background-color: var(--accent-pink-soft);
+                            font-weight: 600;
+                          }
+                        `}</style>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{getSelectedFormatContent()!.content}</ReactMarkdown>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-center text-[var(--text-secondary)]">
+                        <p className="text-lg">Select a format to view content</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="bg-[var(--card-bg)] backdrop-blur-md border border-[var(--card-border)] rounded-2xl p-6 flex items-center justify-center shadow-[var(--card-shadow)]">
                   <div className="text-center text-[var(--text-secondary)]">
-                    <p className="text-lg">Select a note to view its content</p>
+                    <p className="text-lg">Select a video to view its content</p>
                   </div>
                 </div>
               )}

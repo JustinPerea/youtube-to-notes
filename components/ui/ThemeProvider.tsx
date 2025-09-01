@@ -93,14 +93,14 @@ export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
     // Return a default theme context instead of throwing an error
-    console.warn('useTheme called outside of ThemeProvider, using default values');
+    // Don't warn during SSR or initial hydration - this is expected behavior
     return {
       theme: 'light' as Theme,
       setTheme: (theme: Theme) => {
-        console.warn('setTheme called but ThemeProvider is not available');
+        // Silently handle calls when provider is not available
       },
       toggleTheme: () => {
-        console.warn('toggleTheme called but ThemeProvider is not available');
+        // Silently handle calls when provider is not available
       }
     };
   }

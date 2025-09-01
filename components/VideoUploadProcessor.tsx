@@ -113,6 +113,7 @@ export function VideoUploadProcessor({
           content: result.content,
           templateId: selectedTemplate,
           tags: ['youtube', 'ai-generated'],
+          youtubeUrl: videoUrl, // Add the YouTube URL to link note to video
         }),
       });
 

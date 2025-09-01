@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { VideoThumbnail } from '@/components/VideoThumbnail';
 
 interface VideoWithNotes {
   videoId: string;
@@ -244,7 +245,16 @@ export default function NotesPage() {
                     }`}
                     onClick={() => handleVideoSelect(video)}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      {/* Add thumbnail */}
+                      <VideoThumbnail
+                        youtubeUrl={video.youtubeUrl}
+                        backupThumbnailUrl={video.thumbnailUrl}
+                        className="w-16 h-9 flex-shrink-0"
+                        alt={`Thumbnail for ${video.title}`}
+                      />
+                      
+                      {/* Video info */}
                       <div className="flex-1 min-w-0">
                         <h3 className="text-[var(--text-primary)] font-medium truncate">
                           {video.title || 'Untitled Video'}
@@ -252,11 +262,9 @@ export default function NotesPage() {
                         <p className="text-[var(--text-secondary)] text-sm mt-1">
                           {new Date(video.noteFormats[0]?.createdAt || Date.now()).toLocaleDateString()}
                         </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="bg-[var(--accent-pink)] text-white text-xs px-2 py-1 rounded-full font-medium">
-                            {getUniqueFormats(video.noteFormats).length} format{getUniqueFormats(video.noteFormats).length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
+                        <p className="text-[var(--accent-pink)] text-xs mt-1 font-medium">
+                          {getUniqueFormats(video.noteFormats).length} format{getUniqueFormats(video.noteFormats).length !== 1 ? 's' : ''}
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -24,29 +24,55 @@ export async function GET(request: NextRequest) {
     const tags = searchParams.get('tags')?.split(',').filter(Boolean);
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
+    const grouped = searchParams.get('grouped') !== 'false'; // Default to true (grouped)
 
-    // Get notes
-    const result = await NotesService.getNotes({
-      userId: session.user.id,
-      videoId: videoId || undefined,
-      searchQuery: searchQuery || undefined,
-      tags: tags || undefined,
-      limit,
-      offset,
-    });
+    if (grouped) {
+      // Get video-grouped notes (new behavior)
+      const result = await NotesService.getVideoGroupedNotes({
+        userId: session.user.id,
+        videoId: videoId || undefined,
+        searchQuery: searchQuery || undefined,
+        tags: tags || undefined,
+        limit,
+        offset,
+      });
 
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || 'Failed to get notes' },
-        { status: 400 }
-      );
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error || 'Failed to get notes' },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        videos: result.videos || [],
+        total: result.total || 0,
+      });
+    } else {
+      // Get flat notes list (backward compatibility)
+      const result = await NotesService.getNotes({
+        userId: session.user.id,
+        videoId: videoId || undefined,
+        searchQuery: searchQuery || undefined,
+        tags: tags || undefined,
+        limit,
+        offset,
+      });
+
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error || 'Failed to get notes' },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        notes: result.notes || [],
+        total: result.total || 0,
+      });
     }
-
-    return NextResponse.json({
-      success: true,
-      notes: result.notes || [],
-      total: result.total || 0,
-    });
   } catch (error) {
     console.error('Error in get notes API:', error);
     return NextResponse.json(

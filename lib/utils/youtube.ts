@@ -212,3 +212,31 @@ export function extractVideoInfo(url: string) {
     isValid: true
   };
 }
+
+/**
+ * Alias for extractVideoId for consistency with plan
+ * @param url - YouTube URL
+ * @returns Video ID string or null if not found
+ */
+export function extractVideoIdFromUrl(url: string): string | null {
+  return extractVideoId(url);
+}
+
+/**
+ * Generate YouTube thumbnail URL with specific quality
+ * @param videoId - YouTube video ID
+ * @param quality - Thumbnail quality level
+ * @returns YouTube thumbnail URL
+ */
+export function getYouTubeThumbnail(
+  videoId: string, 
+  quality: 'default' | 'hq' | 'maxres' = 'maxres'
+): string {
+  const qualityMap = {
+    'default': 'default',
+    'hq': 'hqdefault', 
+    'maxres': 'maxresdefault'
+  };
+  
+  return `https://img.youtube.com/vi/${videoId}/${qualityMap[quality]}.jpg`;
+}

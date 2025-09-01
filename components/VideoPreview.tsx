@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { getYouTubeThumbnail } from '@/lib/utils/youtube';
 
 interface VideoInfo {
   videoId: string | null;
@@ -14,7 +15,7 @@ interface VideoPreviewProps {
 
 export function VideoPreview({ videoInfo, onClear }: VideoPreviewProps) {
   const thumbnailUrl = videoInfo.videoId 
-    ? `https://img.youtube.com/vi/${videoInfo.videoId}/maxresdefault.jpg` 
+    ? getYouTubeThumbnail(videoInfo.videoId, 'maxres')
     : '';
 
   return (
@@ -72,7 +73,7 @@ export function VideoPreview({ videoInfo, onClear }: VideoPreviewProps) {
             }}
             onError={(e) => {
               if (videoInfo.videoId) {
-                e.currentTarget.src = `https://img.youtube.com/vi/${videoInfo.videoId}/hqdefault.jpg`;
+                e.currentTarget.src = getYouTubeThumbnail(videoInfo.videoId, 'hq');
               }
             }}
           />

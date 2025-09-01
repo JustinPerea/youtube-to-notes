@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
     const result = await NotesService.saveNote({
       userId: session.user.id, // This is now the UUID from database
       videoId: sanitizedData.videoId,
+      youtubeUrl: sanitizedData.youtubeUrl, // Include YouTube URL for video record creation
       title: title || 'Untitled Note',
       content: sanitizedData.content,
       templateId: sanitizedData.templateId,

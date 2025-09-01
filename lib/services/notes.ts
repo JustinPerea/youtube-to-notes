@@ -9,9 +9,62 @@ import { db } from '../db/connection';
 import { notes, users, videos } from '../db/schema';
 import { eq, desc, and, or, ilike, arrayContains } from 'drizzle-orm';
 
+// Utility function to extract YouTube video ID from URL
+function extractVideoIdFromUrl(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&\n?#]+)/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
+
+// Utility function to fetch basic YouTube metadata (title and thumbnail)
+async function fetchYouTubeMetadata(videoId: string): Promise<{
+  title?: string;
+  thumbnailUrl?: string;
+  channelName?: string;
+  duration?: number;
+} | null> {
+  try {
+    // Use YouTube oEmbed API for basic metadata (no API key required)
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    
+    const response = await fetch(oembedUrl);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        title: data.title || `YouTube Video ${videoId}`,
+        thumbnailUrl: data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        channelName: data.author_name,
+      };
+    }
+    
+    // Fallback if oEmbed fails
+    return {
+      title: `YouTube Video ${videoId}`,
+      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+    };
+  } catch (error) {
+    console.error('Error fetching YouTube metadata:', error);
+    // Return fallback data
+    return {
+      title: `YouTube Video ${videoId}`,
+      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+    };
+  }
+}
+
 export interface SaveNoteRequest {
   userId: string; // This will be a UUID from the session
   videoId?: string;
+  youtubeUrl?: string; // YouTube URL to create/link video record
   title: string;
   content: string;
   templateId?: string;
@@ -34,6 +87,20 @@ export interface GetNotesRequest {
   tags?: string[];
   limit?: number;
   offset?: number;
+}
+
+export interface VideoWithNotes {
+  videoId: string;
+  title: string;
+  youtubeUrl: string;
+  thumbnailUrl?: string;
+  noteFormats: {
+    noteId: string;
+    templateId: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+  }[];
 }
 
 export class NotesService {
@@ -72,8 +139,67 @@ export class NotesService {
         };
       }
 
-      // If videoId provided, verify it exists and belongs to user
-      if (data.videoId) {
+      // Handle video record creation/linking
+      let finalVideoId = data.videoId;
+
+      // If youtubeUrl is provided, create or find existing video record
+      if (data.youtubeUrl) {
+        // Validate YouTube URL format
+        const videoId = extractVideoIdFromUrl(data.youtubeUrl);
+        if (!videoId) {
+          return {
+            success: false,
+            error: 'Invalid YouTube URL format'
+          };
+        }
+
+        // Try to find existing video by URL for this user
+        const existingVideo = await db
+          .select()
+          .from(videos)
+          .where(
+            and(
+              eq(videos.youtubeUrl, data.youtubeUrl),
+              eq(videos.userId, data.userId)
+            )
+          )
+          .limit(1);
+
+        if (existingVideo.length > 0) {
+          // Use existing video record
+          finalVideoId = existingVideo[0].id;
+        } else {
+          // Create new video record
+          try {
+            const videoMetadata = await fetchYouTubeMetadata(videoId);
+            
+            const [newVideo] = await db
+              .insert(videos)
+              .values({
+                userId: data.userId,
+                youtubeUrl: data.youtubeUrl,
+                videoId: videoId,
+                title: videoMetadata?.title || data.title,
+                thumbnailUrl: videoMetadata?.thumbnailUrl,
+                channelName: videoMetadata?.channelName,
+                duration: videoMetadata?.duration,
+                status: 'completed' // Mark as completed since we're not processing
+              })
+              .returning({ id: videos.id });
+
+            finalVideoId = newVideo.id;
+          } catch (error) {
+            console.error('Error creating video record:', error);
+            return {
+              success: false,
+              error: 'Failed to create video record'
+            };
+          }
+        }
+      }
+      
+      // If videoId provided (legacy), verify it exists and belongs to user
+      else if (data.videoId) {
         const videoExists = await db
           .select({ id: videos.id })
           .from(videos)
@@ -91,6 +217,7 @@ export class NotesService {
             error: 'Video not found or access denied.' 
           };
         }
+        finalVideoId = data.videoId;
       }
 
       // Insert the note
@@ -98,7 +225,7 @@ export class NotesService {
         .insert(notes)
         .values({
           userId: data.userId,
-          videoId: data.videoId || null,
+          videoId: finalVideoId || null,
           title: data.title,
           content: data.content,
           templateId: data.templateId || null,
@@ -243,6 +370,120 @@ export class NotesService {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to get notes' 
+      };
+    }
+  }
+
+  /**
+   * Get notes grouped by video for a user with optional filters
+   */
+  static async getVideoGroupedNotes(params: GetNotesRequest): Promise<{ 
+    success: boolean; 
+    videos?: VideoWithNotes[]; 
+    total?: number; 
+    error?: string 
+  }> {
+    if (!db) {
+      return { success: false, error: 'Database not configured. Please set up environment variables.' };
+    }
+
+    try {
+      const conditions = [eq(notes.userId, params.userId)];
+
+      // Add optional filters
+      if (params.videoId) {
+        conditions.push(eq(notes.videoId, params.videoId));
+      }
+
+      if (params.searchQuery) {
+        conditions.push(
+          or(
+            ilike(notes.title, `%${params.searchQuery}%`),
+            ilike(notes.content, `%${params.searchQuery}%`)
+          )!
+        );
+      }
+
+      if (params.tags && params.tags.length > 0) {
+        conditions.push(arrayContains(notes.tags, params.tags));
+      }
+
+      // Get notes with video data, ordered by most recent note creation
+      const notesWithVideos = await db
+        .select({
+          noteId: notes.id,
+          noteTitle: notes.title,
+          noteContent: notes.content,
+          noteTemplateId: notes.templateId,
+          noteCreatedAt: notes.createdAt,
+          noteUpdatedAt: notes.updatedAt,
+          videoId: notes.videoId,
+          videoTitle: videos.title,
+          videoYoutubeUrl: videos.youtubeUrl,
+          videoThumbnailUrl: videos.thumbnailUrl,
+        })
+        .from(notes)
+        .leftJoin(videos, eq(notes.videoId, videos.id))
+        .where(and(...conditions))
+        .orderBy(desc(notes.createdAt));
+
+      // Group notes by video
+      const videoMap = new Map<string, VideoWithNotes>();
+
+      for (const row of notesWithVideos) {
+        const videoKey = row.videoId || 'no-video'; // Handle notes without video
+        
+        if (!videoMap.has(videoKey)) {
+          // Create new video entry
+          videoMap.set(videoKey, {
+            videoId: row.videoId || '',
+            title: row.videoTitle || row.noteTitle, // Use note title if no video
+            youtubeUrl: row.videoYoutubeUrl || '',
+            thumbnailUrl: row.videoThumbnailUrl || undefined,
+            noteFormats: []
+          });
+        }
+
+        // Add note to video
+        const video = videoMap.get(videoKey)!;
+        video.noteFormats.push({
+          noteId: row.noteId,
+          templateId: row.noteTemplateId || '',
+          content: row.noteContent,
+          createdAt: row.noteCreatedAt.toISOString(),
+          updatedAt: row.noteUpdatedAt.toISOString(),
+        });
+      }
+
+      // Convert map to array and sort by most recent note
+      const videosList = Array.from(videoMap.values())
+        .map(video => ({
+          ...video,
+          noteFormats: video.noteFormats.sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+        }))
+        .sort((a, b) => {
+          const aLatest = new Date(a.noteFormats[0]?.createdAt || 0).getTime();
+          const bLatest = new Date(b.noteFormats[0]?.createdAt || 0).getTime();
+          return bLatest - aLatest;
+        });
+
+      // Apply pagination
+      const limit = params.limit || 20;
+      const offset = params.offset || 0;
+      const paginatedVideos = videosList.slice(offset, offset + limit);
+
+      return { 
+        success: true, 
+        videos: paginatedVideos, 
+        total: videosList.length
+      };
+    } catch (error) {
+      console.error('Error getting video-grouped notes:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to get video-grouped notes' 
       };
     }
   }

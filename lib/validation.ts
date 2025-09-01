@@ -30,6 +30,7 @@ export const noteSchema = z.object({
     .max(100000, 'Content must be less than 100,000 characters')
     .transform(str => str.trim()),
   videoId: z.string().optional(),
+  youtubeUrl: z.string().optional(),
   templateId: z.string().optional(),
   tags: z.array(z.string().max(50)).max(10).optional().default([])
 });
@@ -136,6 +137,7 @@ export function validateNoteData(data: any): { isValid: boolean; sanitizedData?:
       ...data,
       title: sanitizeInput(data.title || ''),
       content: sanitizeInput(data.content || ''),
+      youtubeUrl: data.youtubeUrl ? sanitizeInput(data.youtubeUrl) : undefined,
       tags: (data.tags || []).map((tag: string) => sanitizeInput(tag))
     };
     

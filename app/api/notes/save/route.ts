@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       content: sanitizedData.content,
       templateId: sanitizedData.templateId,
       tags: sanitizedData.tags || [],
+      verbosityVersions: sanitizedData.verbosityVersions, // Include verbosity data
     });
 
     if (!result.success) {

@@ -27,6 +27,11 @@ interface FormatContent {
   content: string;
   createdAt: string;
   updatedAt: string;
+  verbosityVersions?: {
+    brief?: string;
+    standard?: string;
+    comprehensive?: string;
+  };
 }
 
 export default function NotesPage() {
@@ -38,6 +43,7 @@ export default function NotesPage() {
   const [selectedVideo, setSelectedVideo] = useState<VideoWithNotes | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<string>('');
   const [selectedFormatContent, setSelectedFormatContent] = useState<FormatContent | null>(null);
+  const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('standard');
 
   // Helper function to deduplicate formats by templateId, keeping the most recent one
   const getUniqueFormats = (noteFormats: FormatContent[]) => {
@@ -77,6 +83,11 @@ export default function NotesPage() {
       setSelectedFormatContent(null);
     }
   }, [selectedVideo]);
+
+  // Reset verbosity to standard when format changes
+  useEffect(() => {
+    setCurrentVerbosity('standard');
+  }, [selectedFormat]);
 
   const fetchVideos = async () => {
     try {
@@ -160,6 +171,32 @@ export default function NotesPage() {
 
   const getSelectedFormatContent = () => {
     return selectedFormatContent;
+  };
+
+  // Get current verbosity content for the selected format
+  const getCurrentVerbosityContent = (): string => {
+    const formatContent = getSelectedFormatContent();
+    if (!formatContent?.verbosityVersions) {
+      // Fallback to standard content if no verbosity versions available
+      return formatContent?.content || '';
+    }
+
+    const verbosityContent = formatContent.verbosityVersions[currentVerbosity];
+    // Fallback hierarchy: requested -> standard -> any available -> original content
+    return verbosityContent || 
+           formatContent.verbosityVersions.standard || 
+           formatContent.verbosityVersions.comprehensive || 
+           formatContent.verbosityVersions.brief || 
+           formatContent.content;
+  };
+
+  // Check if verbosity versions are available for the selected format
+  const hasVerbosityVersions = (): boolean => {
+    const formatContent = getSelectedFormatContent();
+    return !!(formatContent?.verbosityVersions && 
+              (formatContent.verbosityVersions.brief || 
+               formatContent.verbosityVersions.standard || 
+               formatContent.verbosityVersions.comprehensive));
   };
 
   const handleVideoSelect = (video: VideoWithNotes) => {
@@ -340,6 +377,39 @@ export default function NotesPage() {
                           {formatTemplateName(selectedFormat)} • {new Date(getSelectedFormatContent()!.createdAt).toLocaleDateString()}
                         </p>
                       </div>
+
+                      {/* Verbosity Controls */}
+                      {hasVerbosityVersions() && (
+                        <div className="mb-6 p-4 bg-[var(--bg-primary)] rounded-xl border border-[var(--card-border)]">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-medium text-[var(--text-primary)]">Adjust Detail Level</span>
+                            <span className="text-xs text-[var(--text-secondary)]">Current: {currentVerbosity}</span>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <button
+                              onClick={() => setCurrentVerbosity('brief')}
+                              disabled={currentVerbosity === 'brief'}
+                              className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-lg text-xs text-red-400 hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                            >
+                              Brief
+                            </button>
+                            <button
+                              onClick={() => setCurrentVerbosity('standard')}
+                              disabled={currentVerbosity === 'standard'}
+                              className="px-3 py-1.5 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-400 hover:bg-yellow-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                            >
+                              Standard ⭐
+                            </button>
+                            <button
+                              onClick={() => setCurrentVerbosity('comprehensive')}
+                              disabled={currentVerbosity === 'comprehensive'}
+                              className="px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-xs text-green-400 hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                            >
+                              Comprehensive
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       
                       <div className="prose prose-lg max-w-none text-[var(--text-primary)]">
                         <style jsx>{`
@@ -410,7 +480,7 @@ export default function NotesPage() {
                             font-weight: 600;
                           }
                         `}</style>
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{getSelectedFormatContent()!.content}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{getCurrentVerbosityContent()}</ReactMarkdown>
                       </div>
                     </div>
                   ) : (

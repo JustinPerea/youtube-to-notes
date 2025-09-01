@@ -99,6 +99,11 @@ export const notes = pgTable('notes', {
   content: text('content').notNull(),
   templateId: text('template_id'),
   tags: text('tags').array(),
+  verbosityVersions: json('verbosity_versions').$type<{
+    brief?: string;
+    standard?: string;
+    comprehensive?: string;
+  }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

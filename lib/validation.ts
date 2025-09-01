@@ -32,7 +32,12 @@ export const noteSchema = z.object({
   videoId: z.string().optional(),
   youtubeUrl: z.string().optional(),
   templateId: z.string().optional(),
-  tags: z.array(z.string().max(50)).max(10).optional().default([])
+  tags: z.array(z.string().max(50)).max(10).optional().default([]),
+  verbosityVersions: z.object({
+    brief: z.string().optional(),
+    standard: z.string().optional(),
+    comprehensive: z.string().optional()
+  }).optional()
 });
 
 // Verbosity adjustment schema

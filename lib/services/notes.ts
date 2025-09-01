@@ -69,6 +69,11 @@ export interface SaveNoteRequest {
   content: string;
   templateId?: string;
   tags?: string[];
+  verbosityVersions?: {
+    brief?: string;
+    standard?: string;
+    comprehensive?: string;
+  };
 }
 
 export interface UpdateNoteRequest {
@@ -100,6 +105,11 @@ export interface VideoWithNotes {
     content: string;
     createdAt: string;
     updatedAt: string;
+    verbosityVersions?: {
+      brief?: string;
+      standard?: string;
+      comprehensive?: string;
+    };
   }[];
 }
 
@@ -230,6 +240,7 @@ export class NotesService {
           content: data.content,
           templateId: data.templateId || null,
           tags: data.tags || [],
+          verbosityVersions: data.verbosityVersions || null,
         })
         .returning({ id: notes.id });
 
@@ -350,6 +361,7 @@ export class NotesService {
           content: notes.content,
           tags: notes.tags,
           templateId: notes.templateId,
+          verbosityVersions: notes.verbosityVersions,
           videoId: notes.videoId,
           createdAt: notes.createdAt,
           updatedAt: notes.updatedAt,
@@ -415,6 +427,7 @@ export class NotesService {
           noteTitle: notes.title,
           noteContent: notes.content,
           noteTemplateId: notes.templateId,
+          noteVerbosityVersions: notes.verbosityVersions,
           noteCreatedAt: notes.createdAt,
           noteUpdatedAt: notes.updatedAt,
           videoId: notes.videoId,
@@ -452,6 +465,7 @@ export class NotesService {
           content: row.noteContent,
           createdAt: row.noteCreatedAt.toISOString(),
           updatedAt: row.noteUpdatedAt.toISOString(),
+          verbosityVersions: row.noteVerbosityVersions || undefined,
         });
       }
 
@@ -554,6 +568,7 @@ export class NotesService {
           content: notes.content,
           tags: notes.tags,
           templateId: notes.templateId,
+          verbosityVersions: notes.verbosityVersions,
           videoId: notes.videoId,
           createdAt: notes.createdAt,
           updatedAt: notes.updatedAt,

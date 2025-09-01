@@ -114,6 +114,7 @@ export function VideoUploadProcessor({
           templateId: selectedTemplate,
           tags: ['youtube', 'ai-generated'],
           youtubeUrl: videoUrl, // Add the YouTube URL to link note to video
+          verbosityVersions: result.verbosityVersions, // Store all verbosity levels
         }),
       });
 

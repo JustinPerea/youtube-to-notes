@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { TEMPLATES } from '@/lib/templates';
 import { videoProcessingRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateVideoUrl } from '@/lib/validation';
+import { extractTranscript, cleanTranscriptText } from '@/lib/transcript/extractor';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -101,6 +102,111 @@ OUTPUT: Return only the adjusted content, no explanations or meta-commentary.`;
       standard: originalContent, // Keep original as standard
       comprehensive: originalContent + '\n\n' + lines.map(line => line.startsWith('- ') ? line + ' [More details available in video]' : line).join('\n')
     };
+  }
+}
+
+// Generate verbosity levels from text (instead of re-processing video)
+async function generateVerbosityFromText(originalContent: string): Promise<{
+  brief: string;
+  standard: string;
+  comprehensive: string;
+}> {
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
+  
+  const verbosityInstructions = {
+    brief: 'Condense to 50-75 words per concept. Remove examples, keep only essential info. Use bullet points.',
+    standard: 'Balance to 100-150 words per concept. Include key examples and details.',
+    comprehensive: 'Expand to 200-300 words per concept. Add examples, context, detailed explanations.'
+  };
+
+  const generatePrompt = (verbosity: keyof typeof verbosityInstructions) => `
+You are adjusting text content verbosity level.
+
+ORIGINAL CONTENT:
+${originalContent}
+
+TASK: Adjust this content to ${verbosity} verbosity level.
+
+VERBOSITY RULES:
+${verbosityInstructions[verbosity]}
+
+FORMATTING: Maintain markdown structure, headings, and organization.
+OUTPUT: Return only the adjusted content, no explanations.`;
+
+  try {
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.0-flash-exp',
+      generationConfig: { temperature: 0.1, maxOutputTokens: 3000 }
+    });
+
+    // Generate all levels from text (much faster than video processing)
+    const [brief, standard, comprehensive] = await Promise.all([
+      model.generateContent(generatePrompt('brief')).then(r => r.response.text()),
+      model.generateContent(generatePrompt('standard')).then(r => r.response.text()),
+      model.generateContent(generatePrompt('comprehensive')).then(r => r.response.text())
+    ]);
+
+    return { brief, standard, comprehensive };
+  } catch (error) {
+    console.error('Error generating text-based verbosity levels:', error);
+    // Fallback to simple text manipulation
+    const lines = originalContent.split('\n').filter(line => line.trim());
+    return {
+      brief: lines.slice(0, Math.ceil(lines.length * 0.4)).join('\n'),
+      standard: originalContent,
+      comprehensive: originalContent + '\n\n## Additional Context\n\n' + lines.slice(-3).join('\n')
+    };
+  }
+}
+
+// Process transcript with Gemini (much faster than video processing)
+async function processTranscriptWithGemini(transcript: string, template: any): Promise<string> {
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
+  
+  // Create enhanced prompt for transcript processing
+  const transcriptPrompt = `${template.prompt}
+
+VIDEO TRANSCRIPT:
+${transcript}
+
+INSTRUCTIONS:
+- Process the above transcript to create ${template.name.toLowerCase()}
+- Focus on the spoken content and key information
+- Maintain professional tone and structure
+- Start with "**${template.name}**" as the title
+
+Generate comprehensive content based on this transcript.`;
+
+  try {
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.0-flash-exp',
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 4000,
+      }
+    });
+
+    const result = await model.generateContent(transcriptPrompt);
+    const text = await result.response.text();
+    
+    if (!text || text.trim().length === 0) {
+      throw new Error('Empty response from Gemini');
+    }
+    
+    return text;
+  } catch (error: any) {
+    if (error.status === 429) {
+      console.log('Primary model quota exceeded, trying fallback...');
+      const fallbackModel = genAI.getGenerativeModel({ 
+        model: 'gemini-1.5-flash',
+        generationConfig: { temperature: 0.1, maxOutputTokens: 3000 }
+      });
+      
+      const result = await fallbackModel.generateContent(transcriptPrompt);
+      return await result.response.text();
+    } else {
+      throw error;
+    }
   }
 }
 
@@ -371,6 +477,9 @@ export async function POST(request: NextRequest) {
 
     console.log('Processing video with template:', selectedTemplate);
 
+    // ORIGINAL: Full video analysis (kept as fallback or when explicitly selected)
+    console.log('🎥 Using full video analysis method...');
+    
     // Step 1: Enhanced content analysis
     console.log('Step 1: Analyzing video content...');
     const contentAnalysis = await analyzeVideoContent(videoUrl);

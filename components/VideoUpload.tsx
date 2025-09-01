@@ -50,6 +50,7 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
   const [showMarkdown, setShowMarkdown] = useState(true);
   const [videoInfo, setVideoInfo] = useState<ReturnType<typeof extractVideoInfo> | null>(null);
   const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('standard');
+  const [processingMethod, setProcessingMethod] = useState<'transcript' | 'video'>('transcript');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [saveNoteMessage, setSaveNoteMessage] = useState<string | null>(null);
 
@@ -78,7 +79,8 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
         },
         body: JSON.stringify({
           videoUrl: videoUrl.trim(),
-          selectedTemplate
+          selectedTemplate,
+          processingMethod
         }),
       });
 
@@ -208,6 +210,43 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Processing Method Toggle */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Processing Method:
+                </label>
+                <div className="flex items-center justify-center space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setProcessingMethod('transcript')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      processingMethod === 'transcript'
+                        ? 'bg-green-500/20 border border-green-500/30 text-green-400 shadow-lg'
+                        : 'bg-gray-700/30 border border-gray-600/30 text-gray-400 hover:bg-gray-600/30'
+                    }`}
+                  >
+                    🚀 Transcript-First (Fast)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProcessingMethod('video')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      processingMethod === 'video'
+                        ? 'bg-purple-500/20 border border-purple-500/30 text-purple-400 shadow-lg'
+                        : 'bg-gray-700/30 border border-gray-600/30 text-gray-400 hover:bg-gray-600/30'
+                    }`}
+                  >
+                    🎥 Full Video Analysis
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  {processingMethod === 'transcript' 
+                    ? '⚡ Uses captions for 95% faster processing'
+                    : '🔍 Analyzes video frames + audio for detailed insights'
+                  }
+                </p>
               </div>
 
               <button

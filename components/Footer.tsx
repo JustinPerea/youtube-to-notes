@@ -1,6 +1,17 @@
 'use client';
 
 export function Footer() {
+  // Helper function to handle navigation to tabbed sections
+  const handleTabNavigation = (hash: string) => {
+    // Update the URL hash
+    window.location.hash = hash;
+    
+    // Scroll to the tabbed section
+    const tabbedSection = document.querySelector('.tabbed-section');
+    if (tabbedSection) {
+      tabbedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
   return (
     <footer className="footer bg-[var(--card-bg)] backdrop-blur-[20px] border-t border-[var(--card-border)] pt-15 pb-10 mt-25">
       <div className="footer-content max-w-[1200px] mx-auto px-5 grid grid-cols-1 md:grid-cols-4 gap-15">
@@ -23,21 +34,30 @@ export function Footer() {
           <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-4 uppercase tracking-wide">
             Product
           </h4>
-          <a href="#features" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+          <button 
+            onClick={() => handleTabNavigation('#features')}
+            className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer text-left"
+          >
             Features
-          </a>
-          <a href="#pricing" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+          </button>
+          <button 
+            onClick={() => handleTabNavigation('#pricing')}
+            className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer text-left"
+          >
             Pricing
-          </a>
+          </button>
         </div>
         
         <div className="footer-column">
           <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-4 uppercase tracking-wide">
             Company
           </h4>
-          <a href="#about" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+          <button 
+            onClick={() => handleTabNavigation('#about')}
+            className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer text-left"
+          >
             About
-          </a>
+          </button>
           <a href="/roadmap" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             Roadmap
           </a>

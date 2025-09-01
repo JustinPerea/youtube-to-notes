@@ -9,6 +9,21 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session, status } = useSession();
 
+  // Helper function to handle navigation to tabbed sections
+  const handleTabNavigation = (hash: string) => {
+    // Update the URL hash
+    window.location.hash = hash;
+    
+    // Scroll to the tabbed section
+    const tabbedSection = document.querySelector('.tabbed-section');
+    if (tabbedSection) {
+      tabbedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Close mobile menu if open
+    closeMobileMenu();
+  };
+
   // Helper function to close mobile menu
   const closeMobileMenu = () => {
     setIsMenuOpen(false);
@@ -39,15 +54,24 @@ export function Header() {
             <Link href="/roadmap" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Roadmap
             </Link>
-            <a href="/#features" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            <button 
+              onClick={() => handleTabNavigation('#features')}
+              className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer"
+            >
               Features
-            </a>
-            <a href="/#pricing" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            </button>
+            <button 
+              onClick={() => handleTabNavigation('#pricing')}
+              className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer"
+            >
               Pricing
-            </a>
-            <a href="/#about" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            </button>
+            <button 
+              onClick={() => handleTabNavigation('#about')}
+              className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer"
+            >
               About
-            </a>
+            </button>
             {session ? (
               <UserProfile />
             ) : (
@@ -98,27 +122,24 @@ export function Header() {
               >
                 Roadmap
               </Link>
-              <a 
-                href="/#features" 
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
-                onClick={closeMobileMenu}
+              <button 
+                onClick={() => handleTabNavigation('#features')}
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium bg-transparent border-none cursor-pointer text-left"
               >
                 Features
-              </a>
-              <a 
-                href="/#pricing" 
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
-                onClick={closeMobileMenu}
+              </button>
+              <button 
+                onClick={() => handleTabNavigation('#pricing')}
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium bg-transparent border-none cursor-pointer text-left"
               >
                 Pricing
-              </a>
-              <a 
-                href="/#about" 
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
-                onClick={closeMobileMenu}
+              </button>
+              <button 
+                onClick={() => handleTabNavigation('#about')}
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium bg-transparent border-none cursor-pointer text-left"
               >
                 About
-              </a>
+              </button>
               {session ? (
                 <div className="flex items-center gap-3">
                   <span className="text-[var(--text-primary)] text-sm font-medium">{session.user?.name}</span>

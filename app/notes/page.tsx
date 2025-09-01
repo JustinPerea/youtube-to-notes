@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { VideoThumbnail } from '@/components/VideoThumbnail';
+import SimplePdfDownload from '@/components/SimplePdfDownload';
 
 interface VideoWithNotes {
   videoId: string;
@@ -480,6 +481,16 @@ export default function NotesPage() {
                             font-weight: 600;
                           }
                         `}</style>
+                        {/* PDF Download Button */}
+                        <div className="mb-6 pb-4 border-b border-[var(--card-border)]">
+                          <SimplePdfDownload
+                            content={getCurrentVerbosityContent()}
+                            title={selectedVideo.title + ' - ' + formatTemplateName(selectedFormat) + ' (' + currentVerbosity + ')'}
+                            template={formatTemplateName(selectedFormat)}
+                            className="flex justify-center"
+                          />
+                        </div>
+                        
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{getCurrentVerbosityContent()}</ReactMarkdown>
                       </div>
                     </div>

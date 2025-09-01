@@ -10,6 +10,13 @@ export interface YouTubeVideoInfo {
   isValid: boolean;
 }
 
+export interface URLValidationResult {
+  isValid: boolean;
+  errorType?: 'empty' | 'format' | 'not-youtube' | 'invalid-video-id';
+  errorMessage?: string;
+  suggestions?: string[];
+}
+
 /**
  * Extract video ID from various YouTube URL formats
  */
@@ -89,6 +96,102 @@ export function getThumbnailVariants(videoId: string) {
     mq: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
     sd: `https://img.youtube.com/vi/${videoId}/sddefault.jpg`,
     default: `https://img.youtube.com/vi/${videoId}/default.jpg`
+  };
+}
+
+/**
+ * Comprehensive YouTube URL validation with detailed error messages
+ */
+export function validateYouTubeUrl(url: string): URLValidationResult {
+  // Check if URL is empty
+  if (!url || url.trim() === '') {
+    return {
+      isValid: false,
+      errorType: 'empty',
+      errorMessage: 'Please enter a YouTube URL',
+      suggestions: [
+        'https://www.youtube.com/watch?v=VIDEO_ID',
+        'https://youtu.be/VIDEO_ID'
+      ]
+    };
+  }
+
+  const trimmedUrl = url.trim();
+
+  // Check if URL contains YouTube domain
+  const isYouTubeDomain = /(?:youtube\.com|youtu\.be)/i.test(trimmedUrl);
+  if (!isYouTubeDomain) {
+    return {
+      isValid: false,
+      errorType: 'not-youtube',
+      errorMessage: 'URL must be from YouTube (youtube.com or youtu.be)',
+      suggestions: [
+        'https://www.youtube.com/watch?v=VIDEO_ID',
+        'https://youtu.be/VIDEO_ID'
+      ]
+    };
+  }
+
+  // Check if URL has valid format and extract video ID
+  const { videoId, isValid } = parseYouTubeUrl(trimmedUrl);
+  
+  if (!isValid || !videoId) {
+    return {
+      isValid: false,
+      errorType: 'format',
+      errorMessage: 'Invalid YouTube URL format',
+      suggestions: [
+        'https://www.youtube.com/watch?v=VIDEO_ID',
+        'https://youtu.be/VIDEO_ID',
+        'Make sure the URL is complete and properly formatted'
+      ]
+    };
+  }
+
+  // Validate video ID format (YouTube video IDs are 11 characters, alphanumeric + _ -)
+  if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+    return {
+      isValid: false,
+      errorType: 'invalid-video-id',
+      errorMessage: 'Invalid video ID format',
+      suggestions: [
+        'Check that the video ID is 11 characters long',
+        'Ensure the URL is copied correctly from YouTube'
+      ]
+    };
+  }
+
+  return {
+    isValid: true
+  };
+}
+
+/**
+ * Enhanced URL validation that returns both validation result and video info
+ */
+export function validateAndExtractVideoInfo(url: string): {
+  validation: URLValidationResult;
+  videoInfo: YouTubeVideoInfo | null;
+} {
+  const validation = validateYouTubeUrl(url);
+  
+  if (!validation.isValid) {
+    return {
+      validation,
+      videoInfo: null
+    };
+  }
+
+  const { videoId } = parseYouTubeUrl(url);
+  const videoInfo: YouTubeVideoInfo = {
+    videoId: videoId!,
+    thumbnailUrl: getThumbnailUrl(videoId!),
+    isValid: true
+  };
+
+  return {
+    validation,
+    videoInfo
   };
 }
 

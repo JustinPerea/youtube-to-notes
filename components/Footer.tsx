@@ -23,17 +23,11 @@ export function Footer() {
           <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-4 uppercase tracking-wide">
             Product
           </h4>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+          <a href="#features" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             Features
           </a>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+          <a href="#pricing" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             Pricing
-          </a>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
-            API
-          </a>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
-            Integrations
           </a>
         </div>
         
@@ -41,17 +35,11 @@ export function Footer() {
           <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-4 uppercase tracking-wide">
             Company
           </h4>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+          <a href="#about" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             About
           </a>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
-            Blog
-          </a>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
-            Careers
-          </a>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
-            Contact
+          <a href="/roadmap" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            Roadmap
           </a>
         </div>
         
@@ -59,18 +47,15 @@ export function Footer() {
           <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-4 uppercase tracking-wide">
             Legal
           </h4>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
-            Privacy
-          </a>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
-            Terms
-          </a>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
-            Security
-          </a>
-          <a href="#" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
-            GDPR
-          </a>
+          <span className="footer-link block text-[var(--text-muted)] text-sm mb-3 cursor-default">
+            Privacy Policy
+          </span>
+          <span className="footer-link block text-[var(--text-muted)] text-sm mb-3 cursor-default">
+            Terms of Service
+          </span>
+          <span className="text-xs text-[var(--text-muted)] italic">
+            Coming Soon
+          </span>
         </div>
       </div>
     </footer>

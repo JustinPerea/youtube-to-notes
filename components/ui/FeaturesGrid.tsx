@@ -7,7 +7,7 @@ export function FeaturesGrid() {
     {
       icon: '⚡',
       title: 'Lightning Fast',
-      description: 'Get comprehensive notes from hour-long videos in under 30 seconds with our advanced AI'
+      description: 'Get comprehensive notes from YouTube videos with advanced AI processing'
     },
     {
       icon: '🎯',
@@ -31,8 +31,8 @@ export function FeaturesGrid() {
     },
     {
       icon: '🤖',
-      title: 'AI Chat (Pro)',
-      description: 'Ask questions about your videos with our intelligent chatbot'
+      title: 'AI Chat (Coming Soon)',
+      description: 'Ask questions about your videos with our intelligent chatbot - feature in development'
     }
   ];
 

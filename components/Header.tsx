@@ -9,6 +9,11 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session, status } = useSession();
 
+  // Helper function to close mobile menu
+  const closeMobileMenu = () => {
+    setIsMenuOpen(false);
+  };
+
   return (
     <header className="navbar fixed top-0 left-0 right-0 z-[999] bg-[var(--navbar-bg)] backdrop-blur-[20px] border-b border-[var(--card-border)] transition-all duration-300">
       <div className="nav-container max-w-[1200px] mx-auto px-5">
@@ -34,13 +39,13 @@ export function Header() {
             <Link href="/roadmap" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Roadmap
             </Link>
-            <a href="#features" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            <a href="/#features" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Features
             </a>
-            <a href="#pricing" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            <a href="/#pricing" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Pricing
             </a>
-            <a href="#about" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            <a href="/#about" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               About
             </a>
             {session ? (
@@ -70,31 +75,58 @@ export function Header() {
         {isMenuOpen && (
           <div className="md:hidden bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] mt-4 p-4 rounded-lg">
             <nav className="flex flex-col space-y-4">
-              <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
+              <Link 
+                href="/" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
+              >
                 Home
               </Link>
               {session && (
-                <Link href="/notes" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
+                <Link 
+                  href="/notes" 
+                  className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                  onClick={closeMobileMenu}
+                >
                   My Notes
                 </Link>
               )}
-              <Link href="/roadmap" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
+              <Link 
+                href="/roadmap" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
+              >
                 Roadmap
               </Link>
-              <a href="#features" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
+              <a 
+                href="/#features" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
+              >
                 Features
               </a>
-              <a href="#pricing" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
+              <a 
+                href="/#pricing" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
+              >
                 Pricing
               </a>
-              <a href="#about" className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium">
+              <a 
+                href="/#about" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
+              >
                 About
               </a>
               {session ? (
                 <div className="flex items-center gap-3">
                   <span className="text-[var(--text-primary)] text-sm font-medium">{session.user?.name}</span>
                   <button 
-                    onClick={() => signOut()}
+                    onClick={() => {
+                      signOut();
+                      closeMobileMenu();
+                    }}
                     className="bg-[var(--accent-pink)] text-white border-none rounded-xl px-4 py-2 font-semibold transition-all duration-300"
                   >
                     Sign Out
@@ -102,7 +134,10 @@ export function Header() {
                 </div>
               ) : (
                 <button 
-                  onClick={() => signIn('google')}
+                  onClick={() => {
+                    signIn('google');
+                    closeMobileMenu();
+                  }}
                   className="bg-[var(--accent-pink)] text-white border-none rounded-xl px-4 py-2 font-semibold transition-all duration-300"
                 >
                   Sign In

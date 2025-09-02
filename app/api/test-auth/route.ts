@@ -125,4 +125,4 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     }, { status: 500 });
   }
-}// Force redeploy Tue Sep  2 16:59:59 EDT 2025
+}// Force redeploy with corrected NEXTAUTH_URL (www.kyotoscribe.com) - Tue Sep  2 17:57 EDT 2025

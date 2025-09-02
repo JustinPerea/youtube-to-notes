@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { NotesService } from '@/lib/services/notes';
 
 // Force dynamic rendering for this API route
@@ -7,18 +7,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication using standard auth() method
-    const session = await auth();
-    console.log('NOTES API DEBUG - Session state:', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      timestamp: new Date().toISOString()
-    });
+    // Use new hybrid authentication approach
+    const session = await getApiSessionWithDatabase(request);
     
     if (!session?.user?.id) {
-      console.log('NOTES API DEBUG - Authentication failed, returning 401');
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in.' },
         { status: 401 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { NotesService } from '@/lib/services/notes';
 
 // Force dynamic rendering for this API route
@@ -10,8 +10,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get user session using standard auth() method
-    const session = await auth();
+    // Use new hybrid authentication approach
+    const session = await getApiSessionWithDatabase(request);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }

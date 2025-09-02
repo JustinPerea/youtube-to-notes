@@ -2,7 +2,7 @@
 // Ready to activate once business email and Stripe account are configured
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from '../../../../lib/auth';
+import { getApiSessionWithDatabase } from '../../../../lib/auth-utils';
 import { createCheckoutSession, isStripeReady } from '../../../../lib/stripe/stripe';
 import { z } from 'zod';
 
@@ -18,14 +18,8 @@ const CheckoutRequestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // Check if user is authenticated using custom getServerSession helper
-    let session = await getServerSession(req);
-    console.log('Checkout API - Session check:', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email
-    });
+    // Use new hybrid authentication approach
+    let session = await getApiSessionWithDatabase(req);
     
     if (!session?.user?.id) {
       return NextResponse.json(

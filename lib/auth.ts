@@ -126,6 +126,7 @@ async function getOrCreateUser(oauthId: string, email: string, name?: string | n
   }
 }
 
+// Simplified configuration without problematic satisfies pattern
 const config = {
   providers: [
     Google({
@@ -135,55 +136,31 @@ const config = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
+      // Keep database operations minimal in signIn - just verify the user can sign in
       if (account?.provider === 'google' && profile) {
-        try {
-          // Ensure user exists in database
-          await getOrCreateUser(
-            profile.sub || account.providerAccountId,
-            user.email!,
-            user.name,
-            user.image
-          );
-          return true;
-        } catch (error) {
-          console.error('Error during sign in:', error);
-          return false;
-        }
+        return true; // Move user creation to API routes for better performance
       }
       return true;
     },
-    async session({ session, token }) {
-      if (session.user && token.sub) {
-        try {
-          // Get user from database using OAuth ID
-          const dbUser = await getOrCreateUser(
-            token.sub,
-            session.user.email!,
-            session.user.name,
-            session.user.image
-          );
-          
-          // Add database UUID to session
-          session.user.id = dbUser.id; // This is now the UUID from database
-          session.user.oauthId = dbUser.oauthId; // Keep OAuth ID for reference if needed
-        } catch (error) {
-          console.error('Error in session callback:', error);
-          // Fallback: generate a consistent UUID from OAuth ID
-          session.user.id = generateUUIDFromOAuthId(token.sub);
-          session.user.oauthId = token.sub;
-        }
-      } else if (session.user && token.sub) {
-        // Fallback for cases where database is not available
-        session.user.id = generateUUIDFromOAuthId(token.sub);
-        session.user.oauthId = token.sub;
-      }
-      return session;
-    },
     async jwt({ token, user, account, profile }) {
       if (account && profile) {
-        token.sub = profile.sub || account.providerAccountId; // Store OAuth ID in token
+        token.sub = profile.sub || account.providerAccountId;
+        token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
       }
       return token;
+    },
+    async session({ session, token }) {
+      // Minimal session callback - avoid database calls for performance
+      if (session.user && token.sub) {
+        session.user.id = token.sub; // Use OAuth ID directly in session
+        session.user.oauthId = token.sub;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.image = token.picture as string;
+      }
+      return session;
     },
   },
   pages: {
@@ -191,12 +168,12 @@ const config = {
     error: '/auth/error',
   },
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
   },
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
   trustHost: true,
   debug: process.env.NODE_ENV === 'development',
-} satisfies Parameters<typeof NextAuth>[0];
+};
 
 export const { handlers, auth, signIn, signOut } = NextAuth(config);
 

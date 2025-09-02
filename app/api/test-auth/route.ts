@@ -29,19 +29,52 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      // Method 3: Try the working session endpoint approach
-      const sessionResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/session`, {
+      // Method 3: Try the working session endpoint approach with detailed debugging
+      const baseUrl = process.env.NEXTAUTH_URL?.trim() || 'https://kyotoscribe.com';
+      const fetchUrl = `${baseUrl}/api/auth/session`;
+      const cookieHeader = request.headers.get('cookie') || '';
+      
+      console.log('TEST AUTH - Fetch details:', {
+        baseUrl,
+        fetchUrl,
+        hasCookies: !!cookieHeader,
+        cookieLength: cookieHeader.length,
+        cookiePreview: cookieHeader.substring(0, 100)
+      });
+      
+      const sessionResponse = await fetch(fetchUrl, {
         headers: {
-          'Cookie': request.headers.get('cookie') || ''
+          'Cookie': cookieHeader,
+          'User-Agent': request.headers.get('user-agent') || '',
         }
       });
       
+      console.log('TEST AUTH - Fetch response:', {
+        status: sessionResponse.status,
+        statusText: sessionResponse.statusText,
+        ok: sessionResponse.ok,
+        headers: Object.fromEntries(sessionResponse.headers.entries())
+      });
+      
       if (sessionResponse.ok) {
-        session3 = await sessionResponse.json();
-        console.log('TEST AUTH - Session API result:', typeof session3, session3);
+        const responseText = await sessionResponse.text();
+        console.log('TEST AUTH - Response text:', responseText);
+        
+        try {
+          session3 = JSON.parse(responseText);
+          console.log('TEST AUTH - Parsed session:', typeof session3, session3);
+        } catch (parseError) {
+          console.log('TEST AUTH - JSON parse error:', parseError);
+          session3 = { error: 'JSON parse failed', rawResponse: responseText };
+        }
+      } else {
+        const errorText = await sessionResponse.text();
+        console.log('TEST AUTH - Error response:', errorText);
+        session3 = { error: 'HTTP error', status: sessionResponse.status, response: errorText };
       }
     } catch (e: any) {
       console.log('TEST AUTH - Session API error:', e.message);
+      session3 = { error: e.message };
     }
     
     const session = session1 || session2;

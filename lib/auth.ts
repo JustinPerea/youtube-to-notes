@@ -226,9 +226,9 @@ export async function getServerSession(req?: NextRequest) {
       
       // For development purposes, let's try a direct session API call approach
       try {
-        // Determine the base URL based on environment
-        const baseUrl = process.env.NEXTAUTH_URL || 
-                       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+        // Determine the base URL based on environment (trim to remove any whitespace/newlines)
+        const baseUrl = process.env.NEXTAUTH_URL?.trim() || 
+                       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.trim()}` : 
                        'http://localhost:3003');
         
         const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {

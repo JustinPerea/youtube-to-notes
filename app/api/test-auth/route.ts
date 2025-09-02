@@ -7,7 +7,7 @@ export async function GET() {
   try {
     console.log('TEST AUTH - Starting auth check...');
     const session = await auth();
-    console.log('TEST AUTH - Session result:', session);
+    console.log('TEST AUTH - Full session object:', JSON.stringify(session, null, 2));
     
     return NextResponse.json({
       success: true,
@@ -15,6 +15,10 @@ export async function GET() {
       hasUser: !!session?.user,
       userId: session?.user?.id,
       userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      sessionKeys: session ? Object.keys(session) : [],
+      userKeys: session?.user ? Object.keys(session.user) : [],
+      fullSession: session, // Include full session for debugging
       message: 'Test auth endpoint working',
       timestamp: new Date().toISOString()
     });

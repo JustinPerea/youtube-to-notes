@@ -66,6 +66,7 @@
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
+    "stripe": "^18.5.0",
     "tailwind-merge": "^2.2.0",
     "youtube-transcript": "^1.2.1",
     "youtube-transcript-api": "^3.0.6",

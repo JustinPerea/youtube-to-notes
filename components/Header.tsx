@@ -14,10 +14,12 @@ export function Header() {
     // Update the URL hash
     window.location.hash = hash;
     
-    // Scroll to the tabbed section
-    const tabbedSection = document.querySelector('.tabbed-section');
-    if (tabbedSection) {
-      tabbedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Scroll to the tabbed navigation component (not tabbed-section)
+    if (typeof document !== 'undefined' && document.body) {
+      const tabbedSection = document.querySelector('.tabbed-navigation');
+      if (tabbedSection) {
+        tabbedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
     
     // Close mobile menu if open

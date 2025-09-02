@@ -90,7 +90,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen">
+    <div className="min-h-screen">
       {/* Animated Orbs Background */}
       <OrbBackground />
       
@@ -232,7 +232,7 @@ export default function Home() {
             />
           </div>
           {/* Tabbed Navigation Section */}
-          <section className="tabbed-section py-20">
+          <section className="tabbed-section py-20 mb-32">
             <TabbedNavigation />
           </section>
         </div>
@@ -250,6 +250,6 @@ export default function Home() {
           onClose={() => setShowProcessor(false)}
         />
       )}
-    </main>
+    </div>
   );
 }

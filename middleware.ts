@@ -43,37 +43,42 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Block suspicious requests
+  // Block suspicious requests - but allow development tools
   const userAgent = request.headers.get('user-agent') || '';
-  const suspiciousPatterns = [
-    /bot/i,
-    /crawler/i,
-    /spider/i,
-    /scraper/i,
-    /postman/i,
-    /curl/i,
-    /wget/i,
-    /python/i,
-    /perl/i,
-    /ruby/i
-  ];
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  // In development, be more permissive for testing tools
+  if (!isDevelopment) {
+    const suspiciousPatterns = [
+      /bot/i,
+      /crawler/i,
+      /spider/i,
+      /scraper/i,
+      /postman/i,
+      /curl/i,
+      /wget/i,
+      /python/i,
+      /perl/i,
+      /ruby/i
+    ];
 
-  // Allow legitimate bots but block suspicious ones
-  const isSuspiciousBot = suspiciousPatterns.some(pattern => 
-    pattern.test(userAgent) && 
-    !userAgent.includes('googlebot') && 
-    !userAgent.includes('bingbot') &&
-    !userAgent.includes('slurp') // Yahoo
-  );
-
-  if (isSuspiciousBot) {
-    return new NextResponse(
-      JSON.stringify({ error: 'Access denied' }), 
-      { 
-        status: 403, 
-        headers: { 'Content-Type': 'application/json' } 
-      }
+    // Allow legitimate bots but block suspicious ones
+    const isSuspiciousBot = suspiciousPatterns.some(pattern => 
+      pattern.test(userAgent) && 
+      !userAgent.includes('googlebot') && 
+      !userAgent.includes('bingbot') &&
+      !userAgent.includes('slurp') // Yahoo
     );
+
+    if (isSuspiciousBot) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Access denied' }), 
+        { 
+          status: 403, 
+          headers: { 'Content-Type': 'application/json' } 
+        }
+      );
+    }
   }
 
   // Block requests with suspicious query parameters

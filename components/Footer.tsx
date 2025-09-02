@@ -6,14 +6,16 @@ export function Footer() {
     // Update the URL hash
     window.location.hash = hash;
     
-    // Scroll to the tabbed section
-    const tabbedSection = document.querySelector('.tabbed-section');
-    if (tabbedSection) {
-      tabbedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Scroll to the tabbed navigation component (not tabbed-section)
+    if (typeof document !== 'undefined' && document.body) {
+      const tabbedSection = document.querySelector('.tabbed-navigation');
+      if (tabbedSection) {
+        tabbedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   };
   return (
-    <footer className="footer bg-[var(--card-bg)] backdrop-blur-[20px] border-t border-[var(--card-border)] pt-15 pb-10 mt-25">
+    <footer className="footer bg-[var(--card-bg)] backdrop-blur-[20px] border-t border-[var(--card-border)] pt-20 pb-10 mt-16">
       <div className="footer-content max-w-[1200px] mx-auto px-5 grid grid-cols-1 md:grid-cols-4 gap-15">
         <div>
           <div className="footer-brand flex items-start gap-3 mb-4">
@@ -67,14 +69,17 @@ export function Footer() {
           <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-4 uppercase tracking-wide">
             Legal
           </h4>
-          <span className="footer-link block text-[var(--text-muted)] text-sm mb-3 cursor-default">
+          <a href="/privacy" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             Privacy Policy
-          </span>
-          <span className="footer-link block text-[var(--text-muted)] text-sm mb-3 cursor-default">
+          </a>
+          <a href="/terms" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             Terms of Service
+          </a>
+          <span className="footer-link block text-[var(--text-muted)] text-sm mb-3 cursor-default">
+            Cookie Policy
           </span>
           <span className="text-xs text-[var(--text-muted)] italic">
-            Coming Soon
+            Cookie Policy Coming Soon
           </span>
         </div>
       </div>

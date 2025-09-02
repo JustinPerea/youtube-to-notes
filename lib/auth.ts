@@ -4,6 +4,7 @@ import { db } from "./db/connection";
 import { users } from "./db/schema";
 import { eq, and } from "drizzle-orm";
 import crypto from 'crypto';
+import type { NextRequest } from 'next/server';
 
 // Helper function to generate a consistent UUID from OAuth ID
 function generateUUIDFromOAuthId(oauthId: string): string {
@@ -125,7 +126,7 @@ async function getOrCreateUser(oauthId: string, email: string, name?: string | n
   }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const config = {
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -194,7 +195,69 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   trustHost: true,
-});
+  debug: process.env.NODE_ENV === 'development',
+} satisfies Parameters<typeof NextAuth>[0];
+
+export const { handlers, auth, signIn, signOut } = NextAuth(config);
+
+// Helper function to safely get session in API routes
+export async function getServerSession(req?: NextRequest) {
+  try {
+    // First attempt: try the standard auth() function
+    try {
+      const session = await auth();
+      if (session && session.user) {
+        console.log('NextAuth auth() succeeded:', { userId: session.user.id });
+        return session;
+      }
+    } catch (authError: any) {
+      console.log('NextAuth auth() failed, trying alternative approach:', authError.message?.substring(0, 100));
+    }
+    
+    // Alternative approach: Check if we can get session from the request context
+    if (req) {
+      const sessionToken = req.cookies.get('__Secure-next-auth.session-token') || 
+                          req.cookies.get('next-auth.session-token');
+      
+      if (!sessionToken) {
+        console.log('No session token found in cookies');
+        return null;
+      }
+      
+      // For development purposes, let's try a direct session API call approach
+      try {
+        const sessionResponse = await fetch('http://localhost:3003/api/auth/session', {
+          headers: {
+            'Cookie': req.headers.get('cookie') || ''
+          }
+        });
+        
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          console.log('Session API response data:', sessionData);
+          if (sessionData && sessionData.user) {
+            console.log('Successfully retrieved session via API call:', {
+              userId: sessionData.user.id,
+              email: sessionData.user.email
+            });
+            return sessionData;
+          } else {
+            console.log('Session API returned data but no user:', sessionData);
+          }
+        } else {
+          console.log('Session API response not OK:', sessionResponse.status, sessionResponse.statusText);
+        }
+      } catch (fetchError) {
+        console.error('Failed to fetch session via API:', fetchError);
+      }
+    }
+    
+    return null;
+  } catch (error: any) {
+    console.error('Error in getServerSession:', error);
+    return null;
+  }
+}
 
 // Update the Session type
 declare module 'next-auth' {

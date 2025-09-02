@@ -9,8 +9,16 @@ export async function GET(request: NextRequest) {
   try {
     // Check authentication using standard auth() method
     const session = await auth();
+    console.log('NOTES API DEBUG - Session state:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      timestamp: new Date().toISOString()
+    });
     
     if (!session?.user?.id) {
+      console.log('NOTES API DEBUG - Authentication failed, returning 401');
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in.' },
         { status: 401 }

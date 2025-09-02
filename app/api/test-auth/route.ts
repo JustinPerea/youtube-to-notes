@@ -27,4 +27,4 @@ export async function GET() {
       timestamp: new Date().toISOString()
     }, { status: 500 });
   }
-}
+}// Force redeploy Tue Sep  2 16:59:59 EDT 2025

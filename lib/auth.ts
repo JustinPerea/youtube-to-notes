@@ -226,7 +226,12 @@ export async function getServerSession(req?: NextRequest) {
       
       // For development purposes, let's try a direct session API call approach
       try {
-        const sessionResponse = await fetch('http://localhost:3003/api/auth/session', {
+        // Determine the base URL based on environment
+        const baseUrl = process.env.NEXTAUTH_URL || 
+                       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                       'http://localhost:3003');
+        
+        const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
           headers: {
             'Cookie': req.headers.get('cookie') || ''
           }

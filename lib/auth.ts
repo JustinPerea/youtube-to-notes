@@ -135,23 +135,23 @@ const config = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile }: any) {
       // Keep database operations minimal in signIn - just verify the user can sign in
       if (account?.provider === 'google' && profile) {
         return true; // Move user creation to API routes for better performance
       }
       return true;
     },
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, account, profile }: any) {
       if (account && profile) {
         token.sub = profile.sub || account.providerAccountId;
-        token.email = user.email;
-        token.name = user.name;
-        token.picture = user.image;
+        token.email = user?.email;
+        token.name = user?.name;
+        token.picture = user?.image;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       // Minimal session callback - avoid database calls for performance
       if (session.user && token.sub) {
         session.user.id = token.sub; // Use OAuth ID directly in session

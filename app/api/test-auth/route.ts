@@ -18,7 +18,17 @@ export async function GET() {
       userName: session?.user?.name,
       sessionKeys: session ? Object.keys(session) : [],
       userKeys: session?.user ? Object.keys(session.user) : [],
-      fullSession: session, // Include full session for debugging
+      sessionType: typeof session,
+      isArray: Array.isArray(session),
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
+        hasAuthSecret: !!process.env.AUTH_SECRET,
+        nextAuthSecretLength: process.env.NEXTAUTH_SECRET?.length || 0,
+        authSecretLength: process.env.AUTH_SECRET?.length || 0,
+        NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+        hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
+      },
       message: 'Test auth endpoint working',
       timestamp: new Date().toISOString()
     });

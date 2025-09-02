@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getServerSession } from '@/lib/auth';
 import { NotesService } from '@/lib/services/notes';
 import { apiRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateNoteData } from '@/lib/validation';
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check authentication
-    const session = await auth();
+    // Check authentication using custom getServerSession helper
+    const session = await getServerSession(request);
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -106,8 +106,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await auth();
+    // Check authentication using custom getServerSession helper
+    const session = await getServerSession(request);
     
     if (!session?.user?.id) {
       return NextResponse.json(

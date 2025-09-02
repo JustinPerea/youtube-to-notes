@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getServerSession } from '@/lib/auth';
 import { NotesService } from '@/lib/services/notes';
 
 // Force dynamic rendering for this API route
@@ -7,8 +7,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await auth();
+    // Check authentication using custom getServerSession helper
+    const session = await getServerSession(request);
+    console.log('Notes API - Session check:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email
+    });
     
     if (!session?.user?.id) {
       return NextResponse.json(

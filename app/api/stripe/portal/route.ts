@@ -2,14 +2,14 @@
 // Allows users to manage their subscriptions
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '../../../../lib/auth';
+import { getServerSession } from '../../../../lib/auth';
 import { createCustomerPortalSession, isStripeReady } from '../../../../lib/stripe/stripe';
 import { getUserSubscription } from '../../../../lib/services/subscription';
 
 export async function POST(req: NextRequest) {
   try {
-    // Check if user is authenticated
-    const session = await auth();
+    // Check if user is authenticated using custom getServerSession helper
+    const session = await getServerSession(req);
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },

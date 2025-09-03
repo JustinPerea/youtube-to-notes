@@ -96,3 +96,36 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+# Large binaries and executables
+toolbox
+*.exe
+*.bin
+*.so
+*.dylib
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+mydatabase.db
+
+# Cache files
+*.tsbuildinfo
+.cache/
+*.cache
+
+# Temporary files
+*.tmp
+*.temp
+cookies.txt
+
+# Development logs
+dev.log
+*.log
+
+# SQL migration files (keep in separate migration folder)
+*.sql
+
+# Google Cloud MCP submodule
+google-cloud-mcp/

@@ -98,11 +98,35 @@ jspm_packages/
 .tern-port
 
 # Large binaries and executables
-toolbox
+toolbox*
+agent-toolkit
 *.exe
 *.bin
 *.so
 *.dylib
+*.app
+*.msi
+*.pkg
+*.deb
+*.rpm
+
+# Agent and MCP tools
+**/toolbox
+**/agent-toolkit
+tools.yaml
+tools.json
+mcp-*
+*-mcp/
+agent-*
+*-agent
+
+# AI/ML models and weights
+*.model
+*.weights
+*.ckpt
+*.h5
+*.pb
+*.onnx
 
 # Database files
 *.db

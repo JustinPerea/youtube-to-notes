@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
         const limitCheck = await checkUsageLimit(dbUserId, 'process_video');
         console.log(`🧪 Test ${i} result:`, limitCheck);
         
-        const testResult = {
+        const testResult: any = {
           attempt: i,
           beforeUsage: limitCheck.current || 0,
           allowed: limitCheck.allowed,
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       
       for (let i = 1; i <= 12; i++) {
         const limitCheck = await checkUsageLimit(dbUserId, 'ask_ai_question');
-        const testResult = {
+        const testResult: any = {
           attempt: i,
           beforeUsage: limitCheck.current || 0,
           allowed: limitCheck.allowed,

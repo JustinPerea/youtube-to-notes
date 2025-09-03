@@ -38,11 +38,22 @@ export default function Home() {
             {/* Get Started Button */}
             <button
               onClick={handleGetStarted}
-              className="get-started-btn px-12 py-4 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF5A8C] text-white border-none rounded-[50px] text-lg font-semibold transition-all duration-300 shadow-[0_4px_20px_rgba(255,107,157,0.25)] relative overflow-hidden group hover:transform hover:translate-y-[-3px] hover:shadow-[0_6px_30px_rgba(255,107,157,0.35)] mb-20"
+              className="get-started-btn px-14 py-5 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF5A8C] text-white border-none rounded-[50px] text-xl font-bold transition-all duration-300 relative overflow-hidden group hover:transform hover:scale-105 mb-20 animate-pulse-glow"
+              style={{
+                boxShadow: '0 6px 25px rgba(255,107,157,0.3)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 8px 35px rgba(255,107,157,0.45)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 6px 25px rgba(255,107,157,0.3)';
+              }}
             >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 -top-2 -bottom-2 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               {/* Ripple effect on hover */}
               <div className="absolute top-1/2 left-1/2 w-0 h-0 rounded-full bg-white/30 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-600 group-hover:w-[300px] group-hover:h-[300px]"></div>
-              <span className="relative z-10">Get Started Free ✨</span>
+              <span className="relative z-10 drop-shadow-sm">Get Started Free ✨</span>
             </button>
           </section>
 

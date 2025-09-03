@@ -22,11 +22,28 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   
   // Subscription and usage tracking
-  subscriptionTier: text('subscription_tier', { enum: ['free', 'basic', 'pro', 'enterprise'] }).default('free'),
+  subscriptionTier: text('subscription_tier', { enum: ['free', 'student', 'pro'] }).default('free'),
   subscriptionStatus: text('subscription_status', { enum: ['active', 'canceled', 'past_due', 'incomplete'] }).default('active'),
-  monthlyVideoLimit: integer('monthly_video_limit').default(3),
+  monthlyVideoLimit: integer('monthly_video_limit').default(5),
   videosProcessedThisMonth: integer('videos_processed_this_month').default(0),
   resetDate: timestamp('reset_date'),
+  
+  // Stripe integration
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  subscriptionCurrentPeriodStart: timestamp('subscription_current_period_start'),
+  subscriptionCurrentPeriodEnd: timestamp('subscription_current_period_end'),
+  subscriptionCancelAtPeriodEnd: boolean('subscription_cancel_at_period_end').default(false),
+  
+  // Usage tracking
+  aiQuestionsUsedThisMonth: integer('ai_questions_used_this_month').default(0),
+  aiQuestionsResetDate: timestamp('ai_questions_reset_date'),
+  storageUsedMb: integer('storage_used_mb').default(0),
+  storageLimitMb: integer('storage_limit_mb').default(100),
+  
+  // Admin testing override
+  adminOverrideTier: text('admin_override_tier', { enum: ['free', 'student', 'pro'] }),
+  adminOverrideExpires: timestamp('admin_override_expires'),
   
   // Settings
   preferences: json('preferences').$type<{
@@ -178,6 +195,56 @@ export const userUsageHistory = pgTable('user_usage_history', {
 });
 
 // =============================================================================
+// USER MONTHLY USAGE TABLE
+// =============================================================================
+export const userMonthlyUsage = pgTable('user_monthly_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  monthYear: text('month_year').notNull(), // Format: YYYY-MM
+  
+  // Video Processing
+  videosProcessed: integer('videos_processed').default(0),
+  videosLimit: integer('videos_limit').notNull(),
+  
+  // AI Chat
+  aiQuestionsAsked: integer('ai_questions_asked').default(0),
+  aiQuestionsLimit: integer('ai_questions_limit').default(0), // 0 = disabled, -1 = unlimited
+  
+  // Storage tracking
+  storageUsedMb: integer('storage_used_mb').default(0),
+  storageLimitMb: integer('storage_limit_mb').notNull(),
+  
+  // Subscription info at time of usage
+  subscriptionTier: text('subscription_tier', { enum: ['free', 'student', 'pro'] }).notNull(),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  // Unique constraint: one record per user per month
+  uniqueUserMonth: { userId: table.userId, monthYear: table.monthYear },
+}));
+
+// =============================================================================
+// AI CHAT SESSIONS TABLE
+// =============================================================================
+export const aiChatSessions = pgTable('ai_chat_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  videoId: uuid('video_id').references(() => videos.id, { onDelete: 'set null' }),
+  noteId: uuid('note_id').references(() => notes.id, { onDelete: 'set null' }),
+  
+  // Chat content
+  question: text('question').notNull(),
+  response: text('response').notNull(),
+  
+  // Cost tracking
+  tokensUsed: integer('tokens_used').default(0),
+  costInCents: integer('cost_in_cents').default(0),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =============================================================================
 // EXPORTS TABLE
 // =============================================================================
 export const exports = pgTable('exports', {
@@ -207,6 +274,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   usageHistory: many(userUsageHistory),
   exports: many(exports),
   notes: many(notes),
+  monthlyUsage: many(userMonthlyUsage),
+  aiChatSessions: many(aiChatSessions),
 }));
 
 export const videosRelations = relations(videos, ({ one, many }) => ({
@@ -233,7 +302,7 @@ export const templatesRelations = relations(templates, ({ many }) => ({
   usageHistory: many(userUsageHistory),
 }));
 
-export const notesRelations = relations(notes, ({ one }) => ({
+export const notesRelations = relations(notes, ({ one, many }) => ({
   user: one(users, {
     fields: [notes.userId],
     references: [users.id],
@@ -241,6 +310,29 @@ export const notesRelations = relations(notes, ({ one }) => ({
   video: one(videos, {
     fields: [notes.videoId],
     references: [videos.id],
+  }),
+  aiChatSessions: many(aiChatSessions),
+}));
+
+export const userMonthlyUsageRelations = relations(userMonthlyUsage, ({ one }) => ({
+  user: one(users, {
+    fields: [userMonthlyUsage.userId],
+    references: [users.id],
+  }),
+}));
+
+export const aiChatSessionsRelations = relations(aiChatSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [aiChatSessions.userId],
+    references: [users.id],
+  }),
+  video: one(videos, {
+    fields: [aiChatSessions.videoId],
+    references: [videos.id],
+  }),
+  note: one(notes, {
+    fields: [aiChatSessions.noteId],
+    references: [notes.id],
   }),
 }));
 
@@ -270,3 +362,9 @@ export type NewExport = typeof exports.$inferInsert;
 
 export type Note = typeof notes.$inferSelect;
 export type NewNote = typeof notes.$inferInsert;
+
+export type UserMonthlyUsage = typeof userMonthlyUsage.$inferSelect;
+export type NewUserMonthlyUsage = typeof userMonthlyUsage.$inferInsert;
+
+export type AiChatSession = typeof aiChatSessions.$inferSelect;
+export type NewAiChatSession = typeof aiChatSessions.$inferInsert;

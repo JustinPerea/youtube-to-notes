@@ -1,92 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { VideoUpload } from '../components/VideoUpload';
+import { useRouter } from 'next/navigation';
 import { Footer } from '../components/Footer';
 import { OrbBackground } from '../components/ui/OrbBackground';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
-import { FormatCards } from '../components/ui/FormatCards';
 import { TabbedNavigation } from '../components/ui/TabbedNavigation';
-import { extractVideoInfo, isValidYouTubeUrl, validateAndExtractVideoInfo, URLValidationResult, YouTubeVideoInfo } from '../lib/utils/youtube';
-import { VideoPreview } from '../components/VideoPreview';
-import { VideoUploadProcessor } from '../components/VideoUploadProcessor';
-import UserProfile from '../components/UserProfile';
+import { HowItWorks } from '../components/ui/HowItWorks';
 
 export default function Home() {
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('basic-summary');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [videoInfo, setVideoInfo] = useState<ReturnType<typeof extractVideoInfo> | null>(null);
-  const [showProcessor, setShowProcessor] = useState(false);
-  const [validation, setValidation] = useState<URLValidationResult>({ isValid: true });
-  const [isValidating, setIsValidating] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const { data: session, status } = useSession();
+  const router = useRouter();
 
-  // Convert YouTubeVideoInfo to expected VideoInfo format
-  const convertVideoInfo = (info: YouTubeVideoInfo | null): ReturnType<typeof extractVideoInfo> | null => {
-    if (!info) return null;
-    return {
-      videoId: info.videoId,
-      thumbnail: info.thumbnailUrl,
-      isValid: info.isValid
-    };
-  };
-
-  // Debounced validation function
-  const debouncedValidation = useCallback((url: string) => {
-    const timeoutId = setTimeout(() => {
-      if (!hasInteracted) return;
-      
-      setIsValidating(true);
-      const result = validateAndExtractVideoInfo(url);
-      
-      setValidation(result.validation);
-      // Convert to expected format
-      setVideoInfo(convertVideoInfo(result.videoInfo));
-      setIsValidating(false);
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [hasInteracted]);
-
-  // Effect for debounced validation
-  useEffect(() => {
-    const cleanup = debouncedValidation(videoUrl);
-    return cleanup;
-  }, [videoUrl, debouncedValidation]);
-
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const url = e.target.value;
-    setVideoUrl(url);
-    
-    // Mark that user has interacted with the input
-    if (!hasInteracted) {
-      setHasInteracted(true);
-    }
-    
-    // Clear previous validation state when user starts typing
-    if (hasInteracted) {
-      setValidation({ isValid: true });
-      setVideoInfo(null);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && validation.isValid && videoInfo?.isValid) {
-      // Scroll to the video upload section
-      document.getElementById('video-upload')?.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleGenerateNotes = () => {
-    if (validation.isValid && videoInfo?.isValid && selectedTemplate) {
-      setShowProcessor(true);
-    }
-  };
-
-  const scrollToVideoUpload = () => {
-    document.getElementById('video-upload')?.scrollIntoView({ behavior: 'smooth' });
+  const handleGetStarted = () => {
+    router.push('/process');
   };
 
   return (
@@ -100,137 +25,30 @@ export default function Home() {
         <ThemeToggle />
         {/* Header */}
         {/* Main Container */}
-        <div className="container max-w-[1200px] mx-auto pt-[100px] pb-10 px-5">
+        <div className="container max-w-[1200px] mx-auto pt-20 pb-10 px-5">
           {/* Hero Section */}
           <section className="hero text-center py-20">
             <h1 className="hero-title text-6xl font-extrabold leading-tight mb-6 bg-gradient-to-br from-[var(--text-primary)] to-[var(--accent-pink)] bg-clip-text text-transparent">
               Transform YouTube Videos<br />Into Smart Notes
             </h1>
             <p className="hero-subtitle text-[22px] text-[var(--text-secondary)] mb-12 max-w-[600px] mx-auto leading-relaxed">
-              Get comprehensive notes from YouTube videos
+              Get comprehensive notes from YouTube videos with AI-powered analysis in seconds
             </p>
             
-            {/* URL Input */}
-            <div className="url-section max-w-[700px] mx-auto mb-10">
-              <div className={`url-input-wrapper bg-[var(--card-bg)] backdrop-blur-[20px] border-2 rounded-2xl p-2 transition-all duration-300 relative ${
-                hasInteracted && !validation.isValid && !isValidating
-                  ? 'border-red-500 shadow-[0_4px_20px_rgba(239,68,68,0.15)]'
-                  : hasInteracted && validation.isValid && videoInfo && !isValidating
-                  ? 'border-green-500 shadow-[0_4px_20px_rgba(34,197,94,0.15)]'
-                  : 'border-[var(--card-border)] hover:border-[var(--accent-pink)] hover:shadow-[0_4px_20px_rgba(255,107,157,0.15)] hover:transform hover:translate-y-[-2px] focus-within:border-[var(--accent-pink)] focus-within:shadow-[0_4px_20px_rgba(255,107,157,0.15)] focus-within:transform focus-within:translate-y-[-2px]'
-              }`}>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={videoUrl}
-                    onChange={handleUrlChange}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Paste any YouTube URL here and press Enter..."
-                    className="url-input flex-1 px-6 py-5 bg-transparent border-none text-[var(--text-primary)] text-base outline-none font-medium placeholder:text-[var(--text-muted)]"
-                    aria-describedby={hasInteracted && !validation.isValid ? 'url-error' : undefined}
-                    aria-invalid={hasInteracted && !validation.isValid ? 'true' : 'false'}
-                  />
-                  
-                  {/* Validation Status Icons */}
-                  {isValidating && (
-                    <div className="flex items-center justify-center w-8 h-8 mr-2">
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-[var(--accent-pink)] border-t-transparent"></div>
-                    </div>
-                  )}
-                  
-                  {hasInteracted && !isValidating && validation.isValid && videoInfo && (
-                    <div className="flex items-center justify-center w-8 h-8 mr-2">
-                      <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                  
-                  {hasInteracted && !isValidating && !validation.isValid && (
-                    <div className="flex items-center justify-center w-8 h-8 mr-2">
-                      <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Error Message */}
-              {hasInteracted && !isValidating && !validation.isValid && validation.errorMessage && (
-                <div id="url-error" className="mt-3 px-4" role="alert" aria-live="polite">
-                  <p className="text-red-500 text-sm font-medium mb-2">
-                    {validation.errorMessage}
-                  </p>
-                  {validation.suggestions && validation.suggestions.length > 0 && (
-                    <div className="text-xs text-[var(--text-secondary)]">
-                      <p className="mb-1">Try these formats:</p>
-                      <ul className="space-y-1">
-                        {validation.suggestions.map((suggestion, index) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <span className="text-[var(--text-muted)]">•</span>
-                            <code className="bg-[var(--card-bg)] px-2 py-1 rounded text-[var(--text-primary)] font-mono text-xs">
-                              {suggestion}
-                            </code>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Video Preview */}
-            {validation.isValid && videoInfo && videoInfo.isValid && (
-              <div className="max-w-[700px] mx-auto mb-10">
-                <VideoPreview 
-                  videoInfo={videoInfo} 
-                  onClear={() => {
-                    setVideoUrl('');
-                    setVideoInfo(null);
-                    setValidation({ isValid: true });
-                    setHasInteracted(false);
-                  }} 
-                />
-              </div>
-            )}
-            
-            {/* Format Selection Cards */}
-            {validation.isValid && videoInfo && videoInfo.isValid && (
-              <FormatCards 
-                selectedTemplate={selectedTemplate}
-                onTemplateChange={setSelectedTemplate}
-              />
-            )}
-            
-            {/* Generate Button */}
-            {validation.isValid && videoInfo && videoInfo.isValid && (
-              <div className="generate-btn-wrapper text-center mb-15">
-                <button
-                  onClick={handleGenerateNotes}
-                  disabled={!validation.isValid || !videoInfo?.isValid}
-                  className={`generate-btn px-14 py-5 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF5A8C] text-white border-none rounded-[50px] text-lg font-semibold transition-all duration-300 shadow-[0_4px_20px_rgba(255,107,157,0.25)] relative overflow-hidden group ${
-                    validation.isValid && videoInfo?.isValid
-                      ? 'cursor-pointer hover:transform hover:translate-y-[-3px] hover:shadow-[0_6px_30px_rgba(255,107,157,0.35)]'
-                      : 'cursor-not-allowed opacity-50'
-                  }`}
-                >
-                  {/* Ripple effect on hover */}
-                  <div className="absolute top-1/2 left-1/2 w-0 h-0 rounded-full bg-white/30 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-600 group-hover:w-[300px] group-hover:h-[300px]"></div>
-                  <span className="relative z-10">Generate Notes with AI ✨</span>
-                </button>
-              </div>
-            )}
+            {/* Get Started Button */}
+            <button
+              onClick={handleGetStarted}
+              className="get-started-btn px-12 py-4 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF5A8C] text-white border-none rounded-[50px] text-lg font-semibold transition-all duration-300 shadow-[0_4px_20px_rgba(255,107,157,0.25)] relative overflow-hidden group hover:transform hover:translate-y-[-3px] hover:shadow-[0_6px_30px_rgba(255,107,157,0.35)] mb-20"
+            >
+              {/* Ripple effect on hover */}
+              <div className="absolute top-1/2 left-1/2 w-0 h-0 rounded-full bg-white/30 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-600 group-hover:w-[300px] group-hover:h-[300px]"></div>
+              <span className="relative z-10">Get Started Free ✨</span>
+            </button>
           </section>
-          
-          {/* Video Upload Section - Hidden but accessible for functionality */}
-          <div id="video-upload" className="hidden">
-            <VideoUpload 
-              selectedTemplate={selectedTemplate} 
-              onTemplateChange={setSelectedTemplate}
-            />
-          </div>
+
+          {/* How It Works Section */}
+          <HowItWorks />
+
           {/* Tabbed Navigation Section */}
           <section className="tabbed-section py-20 mb-32">
             <TabbedNavigation />
@@ -240,16 +58,6 @@ export default function Home() {
         {/* Footer */}
         <Footer />
       </div>
-      
-      {/* Video Upload Processor Modal */}
-      {showProcessor && videoInfo?.isValid && (
-        <VideoUploadProcessor
-          videoUrl={videoUrl}
-          selectedTemplate={selectedTemplate}
-          onProcessingComplete={() => {}}
-          onClose={() => setShowProcessor(false)}
-        />
-      )}
     </div>
   );
 }

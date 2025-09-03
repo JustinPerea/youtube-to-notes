@@ -341,11 +341,6 @@ export function TabbedNavigation({ className = '' }: TabbedNavigationProps) {
       )
     },
     {
-      id: 'how-it-works',
-      label: 'How Kyoto Works',
-      content: <HowItWorks />
-    },
-    {
       id: 'pricing',
       label: 'Simple, Transparent Pricing',
       content: <PricingSection />

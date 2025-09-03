@@ -9,22 +9,6 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session, status } = useSession();
 
-  // Helper function to handle navigation to tabbed sections
-  const handleTabNavigation = (hash: string) => {
-    // Update the URL hash
-    window.location.hash = hash;
-    
-    // Scroll to the tabbed navigation component (not tabbed-section)
-    if (typeof document !== 'undefined' && document.body) {
-      const tabbedSection = document.querySelector('.tabbed-navigation');
-      if (tabbedSection) {
-        tabbedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-    
-    // Close mobile menu if open
-    closeMobileMenu();
-  };
 
   // Helper function to close mobile menu
   const closeMobileMenu = () => {
@@ -56,24 +40,18 @@ export function Header() {
             <Link href="/roadmap" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Roadmap
             </Link>
-            <button 
-              onClick={() => handleTabNavigation('#features')}
-              className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer"
-            >
+            <Link href="/features" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Features
-            </button>
-            <button 
-              onClick={() => handleTabNavigation('#pricing')}
-              className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer"
-            >
+            </Link>
+            <Link href="/formats" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+              Formats
+            </Link>
+            <Link href="/pricing" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               Pricing
-            </button>
-            <button 
-              onClick={() => handleTabNavigation('#about')}
-              className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer"
-            >
+            </Link>
+            <Link href="/about" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               About
-            </button>
+            </Link>
             {session ? (
               <UserProfile />
             ) : (
@@ -124,24 +102,34 @@ export function Header() {
               >
                 Roadmap
               </Link>
-              <button 
-                onClick={() => handleTabNavigation('#features')}
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium bg-transparent border-none cursor-pointer text-left"
+              <Link 
+                href="/features" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
               >
                 Features
-              </button>
-              <button 
-                onClick={() => handleTabNavigation('#pricing')}
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium bg-transparent border-none cursor-pointer text-left"
+              </Link>
+              <Link 
+                href="/formats" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
+              >
+                Formats
+              </Link>
+              <Link 
+                href="/pricing" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
               >
                 Pricing
-              </button>
-              <button 
-                onClick={() => handleTabNavigation('#about')}
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium bg-transparent border-none cursor-pointer text-left"
+              </Link>
+              <Link 
+                href="/about" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
               >
                 About
-              </button>
+              </Link>
               {session ? (
                 <div className="flex items-center gap-3">
                   <span className="text-[var(--text-primary)] text-sm font-medium">{session.user?.name}</span>

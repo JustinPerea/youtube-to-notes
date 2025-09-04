@@ -180,61 +180,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth(config);
 // Helper function to safely get session in API routes
 export async function getServerSession(req?: NextRequest) {
   try {
-    // First attempt: try the standard auth() function
-    try {
-      const session = await auth();
-      if (session && session.user) {
-        console.log('NextAuth auth() succeeded:', { userId: session.user.id });
-        return session;
-      }
-    } catch (authError: any) {
-      console.log('NextAuth auth() failed, trying alternative approach:', authError.message?.substring(0, 100));
-    }
-    
-    // Alternative approach: Check if we can get session from the request context
-    if (req) {
-      const sessionToken = req.cookies.get('__Secure-next-auth.session-token') || 
-                          req.cookies.get('next-auth.session-token');
-      
-      if (!sessionToken) {
-        console.log('No session token found in cookies');
-        return null;
-      }
-      
-      // For development purposes, let's try a direct session API call approach
-      try {
-        // Determine the base URL based on environment (trim to remove any whitespace/newlines)
-        const baseUrl = process.env.NEXTAUTH_URL?.trim() || 
-                       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.trim()}` : 
-                       'http://localhost:3003');
-        
-        const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
-          headers: {
-            'Cookie': req.headers.get('cookie') || ''
-          }
-        });
-        
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          console.log('Session API response data:', sessionData);
-          if (sessionData && sessionData.user) {
-            console.log('Successfully retrieved session via API call:', {
-              userId: sessionData.user.id,
-              email: sessionData.user.email
-            });
-            return sessionData;
-          } else {
-            console.log('Session API returned data but no user:', sessionData);
-          }
-        } else {
-          console.log('Session API response not OK:', sessionResponse.status, sessionResponse.statusText);
-        }
-      } catch (fetchError) {
-        console.error('Failed to fetch session via API:', fetchError);
-      }
-    }
-    
-    return null;
+    // Use the standard NextAuth auth() function
+    const session = await auth();
+    return session;
   } catch (error: any) {
     console.error('Error in getServerSession:', error);
     return null;

@@ -11,6 +11,8 @@ import { extractVideoInfo, isValidYouTubeUrl, validateAndExtractVideoInfo, URLVa
 import { VideoPreview } from '../../components/VideoPreview';
 import { VideoUploadProcessor } from '../../components/VideoUploadProcessor';
 import UserProfile from '../../components/UserProfile';
+import FloatingChatbot from '../../components/chatbot/FloatingChatbot';
+import { ChatbotVideoContext } from '../../lib/types/enhanced-video-analysis';
 
 export default function ProcessPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('basic-summary');
@@ -20,6 +22,10 @@ export default function ProcessPage() {
   const [validation, setValidation] = useState<URLValidationResult>({ isValid: true });
   const [isValidating, setIsValidating] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [videoContext, setVideoContext] = useState<ChatbotVideoContext | null>(null);
+  const [processedNotes, setProcessedNotes] = useState<string>('');
+  // Simplified: Always use hybrid processing for best results
+  const processingMode = 'hybrid';
   const { data: session, status } = useSession();
 
   // Convert YouTubeVideoInfo to expected VideoInfo format
@@ -84,6 +90,16 @@ export default function ProcessPage() {
     if (validation.isValid && videoInfo?.isValid && selectedTemplate) {
       setShowProcessor(true);
     }
+  };
+
+  const handleVideoContextUpdate = (context: ChatbotVideoContext) => {
+    console.log('🤖 Received video context for chatbot:', context.title);
+    setVideoContext(context);
+  };
+
+  const handleProcessedNotesUpdate = (notes: string) => {
+    console.log('📝 Received processed notes for chatbot:', notes.length, 'characters');
+    setProcessedNotes(notes);
   };
 
   const handleSignIn = () => {
@@ -234,7 +250,11 @@ export default function ProcessPage() {
                     setVideoInfo(null);
                     setValidation({ isValid: true });
                     setHasInteracted(false);
-                  }} 
+                  }}
+                  onRecommendationChange={(rec) => {
+                    // Note: Processing mode is now fixed to hybrid, but we keep this for compatibility
+                    console.log(`Video recommendation: ${rec.mode} (using hybrid regardless)`);
+                  }}
                 />
               </div>
             )}
@@ -246,6 +266,8 @@ export default function ProcessPage() {
                 onTemplateChange={setSelectedTemplate}
               />
             )}
+
+            {/* Processing Mode Selection removed - now defaults to hybrid processing for optimal results */}
             
             {/* Generate Button - Only show for authenticated users */}
             {isAuthenticated && validation.isValid && videoInfo && videoInfo.isValid && (
@@ -261,7 +283,7 @@ export default function ProcessPage() {
                 >
                   {/* Ripple effect on hover */}
                   <div className="absolute top-1/2 left-1/2 w-0 h-0 rounded-full bg-white/30 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-600 group-hover:w-[300px] group-hover:h-[300px]"></div>
-                  <span className="relative z-10">Generate Notes with AI ✨</span>
+                  <span className="relative z-10">Convert to Notes ✨</span>
                 </button>
               </div>
             )}
@@ -285,8 +307,36 @@ export default function ProcessPage() {
         <VideoUploadProcessor
           videoUrl={videoUrl}
           selectedTemplate={selectedTemplate}
+          processingMode={processingMode}
           onProcessingComplete={() => {}}
           onClose={() => setShowProcessor(false)}
+          onVideoContextUpdate={handleVideoContextUpdate}
+          onProcessedNotesUpdate={handleProcessedNotesUpdate}
+        />
+      )}
+      
+      {/* Video-Context Chatbot or General Help Chatbot */}
+      {isAuthenticated && (
+        <FloatingChatbot 
+          videoContext={videoContext || undefined}
+          currentNote={processedNotes || `Welcome to YouTube-to-Notes! 
+
+**How to Use This Platform:**
+
+1. **Paste YouTube URL**: Enter any YouTube video URL in the input field above
+2. **Select Format**: Choose from Basic Summary, Study Notes, Tutorial Guide, Presentation Slides, or Quick Reference  
+3. **Click Generate with AI**: Our AI will process the video using ${status === 'authenticated' ? 'your subscription tier\'s' : 'the'} optimized models
+4. **Access Your Notes**: After processing, visit the Notes page to view, chat with, and export your content
+
+**What You Can Do:**
+• Process videos into structured notes and summaries
+• Switch between different verbosity levels (Brief, Standard, Comprehensive)  
+• Export to PDF or presentation format
+• Chat with your processed content for deeper insights
+
+**Next Steps:**
+After processing a video, go to the **Notes page** to access the full chatbot that can answer specific questions about your generated content with full context awareness.`}
+          currentFormat={videoContext ? selectedTemplate : "Getting Started Guide"}
         />
       )}
     </div>

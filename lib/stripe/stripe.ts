@@ -2,7 +2,12 @@
 // Ready to activate once Stripe account is set up with business email
 
 import Stripe from 'stripe';
-import { STRIPE_CONFIG, getStripePriceId, STUDENT_DISCOUNT } from './config';
+import { STRIPE_CONFIG, getStripePriceId, STUDENT_DISCOUNT, STRIPE_PRICES } from './config';
+import { db } from '../db/connection';
+import { users } from '../db/schema';
+import { eq } from 'drizzle-orm';
+import { updateUserSubscription } from '../subscription/service';
+import type { SubscriptionTier } from '../subscription/config';
 
 // Initialize Stripe (will work once environment variables are set)
 let stripe: Stripe | null = null;
@@ -168,58 +173,284 @@ export async function handleWebhookEvent(event: Stripe.Event) {
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata.userId;
-  const tier = subscription.metadata.tier as 'student' | 'pro' | 'creator';
+  console.log(`🔔 Webhook: Subscription created - ${subscription.id}`);
   
-  // TODO: Update user's subscription in database
-  console.log(`Subscription created for user ${userId} with tier ${tier}`);
-  
-  // You'll implement this when database schema is updated
-  // await updateUserSubscription(userId, {
-  //   stripeCustomerId: subscription.customer as string,
-  //   stripeSubscriptionId: subscription.id,
-  //   tier,
-  //   status: 'active',
-  //   currentPeriodStart: new Date(subscription.current_period_start * 1000),
-  //   currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-  // });
+  try {
+    // Find user by customer ID first, then by metadata
+    let userId = await findUserByStripeCustomer(subscription.customer as string);
+    if (!userId) {
+      userId = await findUserByMetadata(subscription.metadata);
+    }
+    
+    if (!userId) {
+      console.error('❌ User not found for subscription:', subscription.id);
+      throw new Error(`User not found for subscription ${subscription.id}`);
+    }
+
+    // Determine subscription tier
+    const tier = await getSubscriptionTier(subscription);
+    
+    console.log(`📝 Creating subscription for user ${userId} with tier ${tier}`);
+    
+    // Check for admin override - don't update if user has active admin override
+    const currentUserResult = await db
+      .select({ 
+        adminOverrideTier: users.adminOverrideTier,
+        adminOverrideExpires: users.adminOverrideExpires 
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const currentUser = currentUserResult[0];
+    const hasActiveAdminOverride = currentUser?.adminOverrideTier && 
+      (!currentUser.adminOverrideExpires || currentUser.adminOverrideExpires > new Date());
+
+    if (hasActiveAdminOverride) {
+      console.log(`⚠️ User ${userId} has active admin override - preserving override but updating Stripe data`);
+    }
+
+    // Update user subscription
+    await updateUserSubscription(userId, {
+      tier: hasActiveAdminOverride ? undefined : tier, // Don't override admin tier
+      status: 'active',
+      stripeCustomerId: subscription.customer as string,
+      stripeSubscriptionId: subscription.id,
+      currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    });
+
+    console.log(`✅ Subscription created successfully for user ${userId}`);
+  } catch (error) {
+    console.error('❌ Error handling subscription creation:', error);
+    throw error;
+  }
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata.userId;
+  console.log(`🔔 Webhook: Subscription updated - ${subscription.id}`);
   
-  console.log(`Subscription updated for user ${userId}`);
-  
-  // TODO: Update subscription status in database
-  // await updateUserSubscription(userId, {
-  //   status: subscription.status as any,
-  //   currentPeriodStart: new Date(subscription.current_period_start * 1000),
-  //   currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-  // });
+  try {
+    // Find user by customer ID first, then by metadata
+    let userId = await findUserByStripeCustomer(subscription.customer as string);
+    if (!userId) {
+      userId = await findUserByMetadata(subscription.metadata);
+    }
+    
+    if (!userId) {
+      console.error('❌ User not found for subscription update:', subscription.id);
+      throw new Error(`User not found for subscription ${subscription.id}`);
+    }
+
+    // Determine subscription tier from the updated subscription
+    const tier = await getSubscriptionTier(subscription);
+    
+    console.log(`📝 Updating subscription for user ${userId} - Status: ${subscription.status}, Tier: ${tier}`);
+
+    // Check for admin override - don't update tier if user has active admin override
+    const currentUserResult = await db
+      .select({ 
+        adminOverrideTier: users.adminOverrideTier,
+        adminOverrideExpires: users.adminOverrideExpires 
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const currentUser = currentUserResult[0];
+    const hasActiveAdminOverride = currentUser?.adminOverrideTier && 
+      (!currentUser.adminOverrideExpires || currentUser.adminOverrideExpires > new Date());
+
+    if (hasActiveAdminOverride) {
+      console.log(`⚠️ User ${userId} has active admin override - preserving override tier`);
+    }
+
+    // Map Stripe subscription status to our status
+    const statusMapping: Record<string, 'active' | 'canceled' | 'past_due' | 'incomplete'> = {
+      'active': 'active',
+      'canceled': 'canceled',
+      'incomplete': 'incomplete',
+      'incomplete_expired': 'incomplete',
+      'past_due': 'past_due',
+      'unpaid': 'past_due',
+      'trialing': 'active',
+    };
+    
+    const status = statusMapping[subscription.status] || 'incomplete';
+
+    // Update user subscription
+    await updateUserSubscription(userId, {
+      tier: hasActiveAdminOverride ? undefined : tier, // Don't override admin tier
+      status,
+      stripeCustomerId: subscription.customer as string,
+      stripeSubscriptionId: subscription.id,
+      currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    });
+
+    console.log(`✅ Subscription updated successfully for user ${userId} - Status: ${status}`);
+  } catch (error) {
+    console.error('❌ Error handling subscription update:', error);
+    throw error;
+  }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata.userId;
+  console.log(`🔔 Webhook: Subscription deleted - ${subscription.id}`);
   
-  console.log(`Subscription deleted for user ${userId}`);
-  
-  // TODO: Update user to free tier
-  // await updateUserSubscription(userId, {
-  //   tier: 'free',
-  //   status: 'cancelled',
-  // });
+  try {
+    // Find user by customer ID first, then by metadata
+    let userId = await findUserByStripeCustomer(subscription.customer as string);
+    if (!userId) {
+      userId = await findUserByMetadata(subscription.metadata);
+    }
+    
+    if (!userId) {
+      console.error('❌ User not found for subscription deletion:', subscription.id);
+      throw new Error(`User not found for subscription ${subscription.id}`);
+    }
+
+    console.log(`📝 Deleting subscription for user ${userId} - reverting to free tier`);
+
+    // Check for admin override - don't update tier if user has active admin override
+    const currentUserResult = await db
+      .select({ 
+        adminOverrideTier: users.adminOverrideTier,
+        adminOverrideExpires: users.adminOverrideExpires 
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const currentUser = currentUserResult[0];
+    const hasActiveAdminOverride = currentUser?.adminOverrideTier && 
+      (!currentUser.adminOverrideExpires || currentUser.adminOverrideExpires > new Date());
+
+    if (hasActiveAdminOverride) {
+      console.log(`⚠️ User ${userId} has active admin override - preserving override tier`);
+    }
+
+    // Update user subscription - revert to free tier if no admin override
+    await updateUserSubscription(userId, {
+      tier: hasActiveAdminOverride ? undefined : 'free',
+      status: 'canceled',
+      // Keep Stripe IDs for historical reference
+      currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+      cancelAtPeriodEnd: false, // Subscription is fully canceled
+    });
+
+    console.log(`✅ Subscription deleted successfully for user ${userId} - reverted to free tier`);
+  } catch (error) {
+    console.error('❌ Error handling subscription deletion:', error);
+    throw error;
+  }
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  console.log(`Payment succeeded for invoice ${invoice.id}`);
+  console.log(`🔔 Webhook: Payment succeeded - Invoice ${invoice.id}`);
   
-  // TODO: Log payment success, send confirmation email
+  try {
+    const subscriptionId = (invoice as any).subscription;
+    if (!subscriptionId) {
+      console.log('⚠️ No subscription associated with invoice, skipping');
+      return;
+    }
+
+    // Find user by customer ID
+    let userId = await findUserByStripeCustomer(invoice.customer as string);
+    
+    if (!userId) {
+      console.error('❌ User not found for payment success:', invoice.id);
+      // Don't throw here - payment succeeded but we can't find user
+      return;
+    }
+
+    console.log(`💳 Payment succeeded for user ${userId} - Invoice: ${invoice.id}, Amount: $${(invoice.amount_paid / 100).toFixed(2)}`);
+    
+    // If this is a subscription renewal, ensure the user's subscription is active
+    if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_create') {
+      // Check for admin override - don't update status if user has active admin override
+      const currentUserResult = await db
+        .select({ 
+          adminOverrideTier: users.adminOverrideTier,
+          adminOverrideExpires: users.adminOverrideExpires 
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const currentUser = currentUserResult[0];
+      const hasActiveAdminOverride = currentUser?.adminOverrideTier && 
+        (!currentUser.adminOverrideExpires || currentUser.adminOverrideExpires > new Date());
+
+      if (!hasActiveAdminOverride) {
+        // Update subscription status to active on successful payment
+        await updateUserSubscription(userId, {
+          status: 'active',
+        });
+        console.log(`✅ Subscription reactivated for user ${userId} after successful payment`);
+      }
+    }
+    
+    console.log(`✅ Payment processing completed for user ${userId}`);
+  } catch (error) {
+    console.error('❌ Error handling payment success:', error);
+    // Don't throw here - payment succeeded, but we had issues updating our records
+  }
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  console.log(`Payment failed for invoice ${invoice.id}`);
+  console.log(`🔔 Webhook: Payment failed - Invoice ${invoice.id}`);
   
-  // TODO: Handle failed payment, notify user
+  try {
+    const subscriptionId = (invoice as any).subscription;
+    if (!subscriptionId) {
+      console.log('⚠️ No subscription associated with invoice, skipping');
+      return;
+    }
+
+    // Find user by customer ID
+    let userId = await findUserByStripeCustomer(invoice.customer as string);
+    
+    if (!userId) {
+      console.error('❌ User not found for payment failure:', invoice.id);
+      return;
+    }
+
+    console.log(`💳 Payment failed for user ${userId} - Invoice: ${invoice.id}, Amount: $${(invoice.amount_due / 100).toFixed(2)}`);
+    
+    // Check for admin override - don't update status if user has active admin override
+    const currentUserResult = await db
+      .select({ 
+        adminOverrideTier: users.adminOverrideTier,
+        adminOverrideExpires: users.adminOverrideExpires 
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const currentUser = currentUserResult[0];
+    const hasActiveAdminOverride = currentUser?.adminOverrideTier && 
+      (!currentUser.adminOverrideExpires || currentUser.adminOverrideExpires > new Date());
+
+    if (!hasActiveAdminOverride) {
+      // Update subscription status to past_due on failed payment
+      await updateUserSubscription(userId, {
+        status: 'past_due',
+      });
+      console.log(`⚠️ Subscription marked as past_due for user ${userId} after failed payment`);
+    } else {
+      console.log(`⚠️ User ${userId} has active admin override - preserving status despite payment failure`);
+    }
+    
+    console.log(`✅ Payment failure processing completed for user ${userId}`);
+  } catch (error) {
+    console.error('❌ Error handling payment failure:', error);
+    // Don't throw here - we want to acknowledge the webhook even if our processing failed
+  }
 }
 
 // Verify webhook signature
@@ -229,6 +460,77 @@ export function verifyWebhookSignature(body: string, signature: string): Stripe.
   }
 
   return stripe.webhooks.constructEvent(body, signature, STRIPE_CONFIG.webhookSecret);
+}
+
+// Price ID to subscription tier mapping
+const STRIPE_PRICE_TO_TIER: Record<string, SubscriptionTier> = {
+  'price_1S2uKwE61emw6urZuJa7iMo9': 'student', // student_monthly
+  'price_1S2uLKE61emw6urZCl9Ne0mu': 'student', // student_yearly
+  'price_1S2uLYE61emw6urZoOGcTGfW': 'pro',     // pro_monthly
+  'price_1S2uLrE61emw6urZ20oHhP5r': 'pro',     // pro_yearly
+  'price_1S2uM4E61emw6urZjCGcU3oc': 'pro',     // creator_monthly -> map to 'pro' since schema only has 3 tiers
+  'price_1S2uMVE61emw6urZ3wloIrMQ': 'pro',     // creator_yearly -> map to 'pro' since schema only has 3 tiers
+} as const;
+
+// Helper function to map Stripe price to our subscription tier
+function getPriceIdToTier(priceId: string): SubscriptionTier {
+  return STRIPE_PRICE_TO_TIER[priceId] || 'free';
+}
+
+// Helper function to find user by Stripe customer ID or OAuth ID
+async function findUserByStripeCustomer(customerId: string): Promise<string | null> {
+  try {
+    const userResult = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.stripeCustomerId, customerId))
+      .limit(1);
+
+    if (userResult.length > 0) {
+      return userResult[0].id;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error finding user by Stripe customer ID:', error);
+    return null;
+  }
+}
+
+// Helper function to find user by metadata (fallback)
+async function findUserByMetadata(metadata: Record<string, string>): Promise<string | null> {
+  const userId = metadata.userId;
+  if (!userId) return null;
+
+  try {
+    const userResult = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    return userResult.length > 0 ? userId : null;
+  } catch (error) {
+    console.error('Error finding user by metadata:', error);
+    return null;
+  }
+}
+
+// Helper function to determine subscription tier from Stripe subscription
+async function getSubscriptionTier(subscription: Stripe.Subscription): Promise<SubscriptionTier> {
+  // Check metadata first
+  if (subscription.metadata.tier) {
+    return subscription.metadata.tier as SubscriptionTier;
+  }
+
+  // Get the first price ID from the subscription items
+  const firstItem = subscription.items.data[0];
+  if (firstItem?.price?.id) {
+    return getPriceIdToTier(firstItem.price.id);
+  }
+
+  // Default fallback
+  return 'free';
 }
 
 // Helper function to check if Stripe is ready

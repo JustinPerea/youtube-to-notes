@@ -7,12 +7,17 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { VideoThumbnail } from '@/components/VideoThumbnail';
 import SimplePdfDownload from '@/components/SimplePdfDownload';
+import ProcessingStatusBar, { ProcessingStep } from '@/components/ProcessingStatusBar';
+import FloatingChatbot from '@/components/chatbot/FloatingChatbot';
+import { ChatbotVideoContext } from '@/lib/types/enhanced-video-analysis';
 
 interface VideoWithNotes {
-  videoId: string;
+  videoId: string; // Database UUID
+  youtubeVideoId: string; // YouTube video ID for API calls
   title: string;
   youtubeUrl: string;
   thumbnailUrl?: string;
+  duration?: number; // Video duration in seconds
   noteFormats: {
     noteId: string;
     templateId: string;
@@ -45,6 +50,38 @@ export default function NotesPage() {
   const [selectedFormat, setSelectedFormat] = useState<string>('');
   const [selectedFormatContent, setSelectedFormatContent] = useState<FormatContent | null>(null);
   const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('standard');
+  const [chatbotContext, setChatbotContext] = useState<ChatbotVideoContext | null>(null);
+  const [loadingChatbotContext, setLoadingChatbotContext] = useState(false);
+  
+  // Function to determine processing status based on available data
+  const getVideoProcessingSteps = (video: VideoWithNotes, hasAnalysis: boolean): ProcessingStep[] => {
+    return [
+      {
+        key: 'notes',
+        label: 'Your Notes Are Ready',
+        status: 'complete',
+        description: 'Notes generated successfully! Read, download, or adjust detail level.',
+        enabledFeatures: ['Read Notes', 'Download PDF', 'Adjust Detail Level']
+      },
+      {
+        key: 'analysis', 
+        label: 'Enhanced Video Analysis',
+        status: hasAnalysis ? 'complete' : 'pending',
+        description: hasAnalysis 
+          ? 'Enhanced analysis complete! More features available.' 
+          : 'Enhanced analysis not available for this video.'
+      },
+      {
+        key: 'chatbot',
+        label: 'Chat with Your Video',
+        status: hasAnalysis ? 'complete' : 'pending',
+        description: hasAnalysis 
+          ? 'AI assistant ready! Ask questions about your video content.' 
+          : 'AI assistant requires enhanced analysis to be fully functional.',
+        enabledFeatures: hasAnalysis ? ['Ask Questions', 'Get Insights', 'Explore Topics'] : undefined
+      }
+    ];
+  };
 
   // Helper function to deduplicate formats by templateId, keeping the most recent one
   const getUniqueFormats = (noteFormats: FormatContent[]) => {
@@ -89,6 +126,95 @@ export default function NotesPage() {
   useEffect(() => {
     setCurrentVerbosity('standard');
   }, [selectedFormat]);
+
+  // Load comprehensive analysis for chatbot context when video is selected
+  useEffect(() => {
+    const loadChatbotContext = async () => {
+      if (!selectedVideo?.youtubeVideoId) {
+        setChatbotContext(null);
+        return;
+      }
+
+      try {
+        setLoadingChatbotContext(true);
+        console.log(`🤖 Loading chatbot context for video: ${selectedVideo.youtubeVideoId}`);
+
+        const response = await fetch(`/api/videos/comprehensive-analysis?videoId=${selectedVideo.youtubeVideoId}`);
+        const data = await response.json();
+
+        if (data.success && data.analysis) {
+          // Transform database analysis into ChatbotVideoContext format
+          const chatbotCtx: ChatbotVideoContext = {
+            videoId: selectedVideo.youtubeVideoId,
+            title: selectedVideo.title,
+            youtubeUrl: selectedVideo.youtubeUrl || '',
+            duration: selectedVideo.duration || 0,
+            currentlyViewingFormat: selectedFormat,
+            currentVerbosityLevel: currentVerbosity,
+            userSubscriptionTier: 'free', // TODO: Get from session/subscription
+            analysis: {
+              fullTranscript: data.analysis.fullTranscript || {
+                segments: [],
+                totalDuration: 0,
+                language: 'en',
+                averageConfidence: 0,
+                wordCount: 0
+              },
+              visualAnalysis: data.analysis.visualAnalysis || {
+                keyFrames: [],
+                hasSlides: data.analysis.hasSlides || false,
+                hasCharts: data.analysis.hasCharts || false,
+                hasDiagrams: false,
+                visualComplexity: 'low',
+                screenTextRatio: 0
+              },
+              contentStructure: data.analysis.contentStructure || {
+                chapters: [],
+                mainTopics: [],
+                flowType: 'linear',
+                hasIntroduction: false,
+                hasConclusion: false,
+                transitionPoints: []
+              },
+              conceptMap: data.analysis.conceptMap || {
+                concepts: [],
+                relationships: [],
+                hierarchyLevels: []
+              },
+              primarySubject: data.analysis.primarySubject || 'General',
+              secondarySubjects: data.analysis.secondarySubjects || [],
+              contentTags: data.analysis.contentTags || [],
+              difficultyLevel: data.analysis.difficultyLevel || 'intermediate',
+              suggestedQuestions: data.analysis.suggestedQuestions || [],
+              keyTimestamps: data.analysis.keyTimestamps || [],
+              allTemplateOutputs: data.analysis.allTemplateOutputs || {},
+              analysisVersion: data.analysis.analysisVersion || '1.0',
+              processingTime: data.analysis.processingTime || 0,
+              totalTokensUsed: data.analysis.totalTokensUsed || 0,
+              analysisCostInCents: data.analysis.analysisCostInCents || 0,
+              transcriptConfidence: parseFloat(data.analysis.transcriptConfidence || '0'),
+              analysisCompleteness: 1.0,
+              createdAt: new Date(data.analysis.createdAt || Date.now()),
+              updatedAt: new Date(data.analysis.updatedAt || Date.now())
+            }
+          };
+
+          setChatbotContext(chatbotCtx);
+          console.log(`✅ Chatbot context loaded: ${chatbotCtx.analysis.conceptMap.concepts.length} concepts available`);
+        } else {
+          console.log(`⚠️ No comprehensive analysis found for video: ${selectedVideo.youtubeVideoId}`);
+          setChatbotContext(null);
+        }
+      } catch (error) {
+        console.error('Failed to load chatbot context:', error);
+        setChatbotContext(null);
+      } finally {
+        setLoadingChatbotContext(false);
+      }
+    };
+
+    loadChatbotContext();
+  }, [selectedVideo?.youtubeVideoId, selectedFormat, currentVerbosity]);
 
   const fetchVideos = async () => {
     try {
@@ -200,8 +326,50 @@ export default function NotesPage() {
                formatContent.verbosityVersions.comprehensive));
   };
 
+  const loadChatbotContext = async (videoId: string) => {
+    try {
+      console.log('🤖 Loading chatbot context for video:', videoId);
+      const response = await fetch(`/api/videos/comprehensive-analysis?videoId=${videoId}`);
+      const data = await response.json();
+      
+      console.log('📊 Comprehensive analysis response:', data);
+      
+      if (data.success && data.analysis) {
+        // Find the video details using YouTube video ID
+        const video = videos.find(v => v.youtubeVideoId === videoId);
+        if (!video) {
+          console.warn('❌ Video not found in local videos list:', videoId);
+          return;
+        }
+        
+        const context: ChatbotVideoContext = {
+          videoId, // This is now the YouTube video ID
+          title: video.title,
+          youtubeUrl: video.youtubeUrl,
+          duration: 0, // Would be fetched from video metadata
+          currentlyViewingFormat: selectedFormat,
+          currentVerbosityLevel: currentVerbosity,
+          userSubscriptionTier: 'free', // Would come from user session
+          analysis: data.analysis
+        };
+        
+        console.log('✅ Chatbot context loaded successfully with', 
+          data.analysis.conceptMap?.concepts?.length || 0, 'concepts');
+        setChatbotContext(context);
+      } else {
+        console.warn('❌ No comprehensive analysis found for video:', videoId, 'Response:', data);
+        setChatbotContext(null);
+      }
+    } catch (error) {
+      console.error('💥 Failed to load chatbot context:', error);
+      setChatbotContext(null);
+    }
+  };
+
   const handleVideoSelect = (video: VideoWithNotes) => {
     setSelectedVideo(video);
+    // Load chatbot context for the selected video using YouTube video ID
+    loadChatbotContext(video.youtubeVideoId);
     // Auto-select first format is handled by useEffect
   };
 
@@ -481,14 +649,35 @@ export default function NotesPage() {
                             font-weight: 600;
                           }
                         `}</style>
-                        {/* PDF Download Button */}
+                        {/* Processing Status and PDF Download */}
                         <div className="mb-6 pb-4 border-b border-[var(--card-border)]">
-                          <SimplePdfDownload
-                            content={getCurrentVerbosityContent()}
-                            title={selectedVideo.title + ' - ' + formatTemplateName(selectedFormat) + ' (' + currentVerbosity + ')'}
-                            template={formatTemplateName(selectedFormat)}
-                            className="flex justify-center"
-                          />
+                          <div className="flex flex-col lg:flex-row gap-6 items-start">
+                            {/* Processing Status Bar */}
+                            <div className="lg:flex-1">
+                              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+                                Features Available
+                              </h4>
+                              <ProcessingStatusBar 
+                                steps={getVideoProcessingSteps(selectedVideo, !!chatbotContext)}
+                                onFeatureClick={(step) => {
+                                  if (step.key === 'chatbot' && step.status === 'complete') {
+                                    // Could scroll to chatbot or highlight it
+                                    console.log('Chatbot feature clicked');
+                                  }
+                                }}
+                              />
+                            </div>
+                            
+                            {/* PDF Download */}
+                            <div className="lg:w-64 flex flex-col justify-start">
+                              <SimplePdfDownload
+                                content={getCurrentVerbosityContent()}
+                                title={selectedVideo.title + ' - ' + formatTemplateName(selectedFormat) + ' (' + currentVerbosity + ')'}
+                                template={formatTemplateName(selectedFormat)}
+                                className="flex justify-center"
+                              />
+                            </div>
+                          </div>
                         </div>
                         
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{getCurrentVerbosityContent()}</ReactMarkdown>
@@ -512,6 +701,24 @@ export default function NotesPage() {
             </div>
           </div>
         )}
+        
+        {/* Context-Aware Floating Chatbot - Always visible for testing */}
+        <FloatingChatbot
+          videoContext={chatbotContext || undefined}
+          currentNote={selectedFormatContent?.content}
+          currentFormat={selectedFormat}
+        />
+        
+        {/* TEST: Always visible chatbot for debugging */}
+        <div className="fixed bottom-6 left-6 z-50">
+          <button
+            onClick={() => console.log('TEST: Chatbot button clicked!')}
+            className="bg-red-500 hover:bg-red-600 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-105"
+            style={{ zIndex: 9999 }}
+          >
+            💬 TEST
+          </button>
+        </div>
       </div>
     </div>
   );

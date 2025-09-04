@@ -5,12 +5,17 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import PresentationSlides from './PresentationSlides';
 import SimplePdfDownload from './SimplePdfDownload';
+import ProcessingStatusBar from './ProcessingStatusBar';
 import { useSession } from 'next-auth/react';
+import { extractVideoId } from '@/lib/utils/youtube';
+// Simplified UI - removed complex quality indicators
 
 interface ProcessingResult {
   title: string;
   content: string;
   template: string;
+  processingMethod?: 'hybrid' | 'transcript-only' | 'video-only' | 'auto' | 'fallback';
+  dataSourcesUsed?: string[];
   contentAnalysis?: {
     type: string;
     complexity: string;
@@ -25,6 +30,11 @@ interface ProcessingResult {
     cognitiveOptimization?: string;
   };
   verbosityVersions?: {
+    brief: string;
+    standard: string;
+    comprehensive: string;
+  };
+  allVerbosityLevels?: {
     brief: string;
     standard: string;
     comprehensive: string;
@@ -46,25 +56,33 @@ interface ProcessingResult {
     };
   };
   processingStats?: {
-    method: 'transcript' | 'video';
-    apiCalls: number;
-    processingTime: number;
-    transcriptWordCount: number;
+    method: 'transcript' | 'video' | 'hybrid';
+    tokenUsage?: string;
+    costOptimization?: string;
+    apiCalls?: number;
+    processingTime?: number;
+    transcriptWordCount?: number;
   };
 }
 
 interface VideoUploadProcessorProps {
   videoUrl: string;
   selectedTemplate: string;
+  processingMode?: 'auto' | 'hybrid' | 'transcript-only' | 'video-only';
   onProcessingComplete?: () => void;
   onClose?: () => void;
+  onVideoContextUpdate?: (context: any) => void; // ChatbotVideoContext from types
+  onProcessedNotesUpdate?: (notes: string) => void;
 }
 
 export function VideoUploadProcessor({ 
   videoUrl, 
   selectedTemplate,
+  processingMode = 'hybrid',
   onProcessingComplete,
-  onClose 
+  onClose,
+  onVideoContextUpdate,
+  onProcessedNotesUpdate
 }: VideoUploadProcessorProps) {
   const { data: session } = useSession();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -76,10 +94,26 @@ export function VideoUploadProcessor({
   const [saveNoteMessage, setSaveNoteMessage] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('Initializing...');
-  const [processingSteps, setProcessingSteps] = useState<string[]>([]);
+  const [processingStepsList, setProcessingStepsList] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [processingSteps, setProcessingSteps] = useState({
+    notes: { status: 'pending' as const },
+    analysis: { status: 'pending' as const },
+    chatbot: { status: 'pending' as const }
+  });
+  // Simplified UI - removed unused state variables
+
+  // Helper function to update specific processing step
+  const updateProcessingStep = (step: 'notes' | 'analysis' | 'chatbot', updates: { status: 'pending' | 'processing' | 'complete' | 'error', message?: string, error?: string }) => {
+    setProcessingSteps(prev => ({
+      ...prev,
+      [step]: { ...prev[step], ...updates }
+    }));
+  };
 
   React.useEffect(() => {
     if (videoUrl && selectedTemplate) {
@@ -88,7 +122,7 @@ export function VideoUploadProcessor({
   }, [videoUrl, selectedTemplate]);
 
   const addProcessingStep = (step: string, progressValue?: number) => {
-    setProcessingSteps(prev => [...prev, step]);
+    setProcessingStepsList(prev => [...prev, step]);
     setProcessingStatus(step);
     
     if (progressValue !== undefined) {
@@ -107,18 +141,24 @@ export function VideoUploadProcessor({
     setIsProcessing(true);
     setError(null);
     setResult(null);
-    setProcessingSteps([]);
+    setProcessingStepsList([]);
     setProgress(0);
     setStartTime(Date.now());
     setEstimatedTimeRemaining(null);
 
-    addProcessingStep('🚀 Starting AI video analysis...', 5);
-    addProcessingStep('📋 Validating video URL...', 10);
+    // Initialize processing steps
+    updateProcessingStep('notes', { 
+      status: 'processing'
+    });
+
+    addProcessingStep('🚀 Starting conversion...', 5);
+    addProcessingStep('📋 Preparing video...', 10);
 
     try {
-      addProcessingStep('🌐 Sending request to AI processing server...', 20);
+      // 🚀 STEP 1: Generate quick notes for immediate display (30-60 seconds)
+      addProcessingStep('📝 Generating quick notes...', 20);
       
-      const response = await fetch('/api/videos/process', {
+      const quickResponse = await fetch('/api/videos/quick-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +169,68 @@ export function VideoUploadProcessor({
         }),
       });
 
-      addProcessingStep('📥 AI is processing your video content...', 40);
+      addProcessingStep('✨ Preparing your notes...', 60);
+      
+      if (quickResponse.ok) {
+        const quickData = await quickResponse.json();
+        console.log('✅ Quick notes generated, showing immediately');
+        
+        // Show notes immediately
+        setResult(quickData);
+        setCurrentVerbosity('standard');
+        
+        // Mark notes as complete
+        updateProcessingStep('notes', { 
+          status: 'complete',
+          message: 'Quick notes ready! Enhanced processing continues in background...'
+        });
+
+        addProcessingStep('✅ Quick notes ready!', 80);
+        
+        // Share quick notes with chatbot
+        if (onProcessedNotesUpdate && quickData.content) {
+          onProcessedNotesUpdate(quickData.content);
+        }
+        
+        // ✅ Show notes immediately to user
+        onProcessingComplete?.();
+        
+        // 🔄 STEP 2: Start comprehensive processing in background 
+        updateProcessingStep('analysis', { 
+          status: 'processing',
+          message: 'Enhancing notes with comprehensive analysis...'
+        });
+        
+        // Start comprehensive processing in background (don't await)
+        startComprehensiveProcessing(videoUrl, selectedTemplate, processingMode)
+          .catch(err => {
+            console.error('Background comprehensive processing failed:', err);
+            updateProcessingStep('analysis', { 
+              status: 'error',
+              error: 'Enhanced analysis failed, but your notes are ready!' 
+            });
+          });
+        
+        return; // Exit early - notes are shown, background processing continues
+      }
+      
+      // If quick notes failed, fall back to comprehensive processing
+      console.warn('⚠️ Quick notes failed, falling back to comprehensive processing');
+      addProcessingStep('🧠 Analyzing with Premium AI...', 20);
+      
+      const response = await fetch('/api/videos/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoUrl: videoUrl.trim(),
+          selectedTemplate,
+          processingMode
+        }),
+      });
+
+      addProcessingStep('✨ Creating your notes...', 40);
       
       // Simulate progress updates during long API call
       const progressInterval = setInterval(() => {
@@ -143,19 +244,238 @@ export function VideoUploadProcessor({
         throw new Error(data.error || 'Failed to process video');
       }
 
-      addProcessingStep('🎬 Video analysis completed successfully!', 90);
-      addProcessingStep('📝 Generating different verbosity levels...', 95);
-      addProcessingStep('✅ Processing completed! Your notes are ready.', 100);
+      addProcessingStep('🎬 Analysis complete!', 90);
+      addProcessingStep('📝 Polishing your notes...', 95);
+      addProcessingStep('✅ Your notes are ready!', 100);
 
       setResult(data);
       setCurrentVerbosity('standard');
+      
+      // Mark notes as complete
+      updateProcessingStep('notes', { 
+        status: 'complete'
+      });
+
+      // Start analysis processing
+      updateProcessingStep('analysis', { 
+        status: 'processing'
+      });
+      
+      // Share processed notes with chatbot
+      if (onProcessedNotesUpdate && data.content) {
+        onProcessedNotesUpdate(data.content);
+      }
+      
+      // ✅ Show notes immediately to user
       onProcessingComplete?.();
+      
+      // 🔄 Start comprehensive analysis in background (don't await - let it run async)
+      generateComprehensiveAnalysis(videoUrl).catch(err => {
+        console.error('Background analysis failed:', err);
+        updateProcessingStep('analysis', { 
+          status: 'error',
+          error: 'Enhanced analysis failed, but your notes are ready!' 
+        });
+      });
     } catch (err: any) {
-      const errorMessage = err.message || 'An error occurred while processing the video';
-      addProcessingStep('❌ Processing failed: ' + errorMessage);
+      const errorMessage = err.message || 'Something went wrong while converting your video';
+      addProcessingStep('❌ Conversion failed: ' + errorMessage);
       setError(errorMessage);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Background comprehensive processing function
+  const startComprehensiveProcessing = async (videoUrl: string, selectedTemplate: string, processingMode: string) => {
+    console.log('🔄 Starting comprehensive processing in background...');
+    
+    try {
+      // Update users that we're enhancing their notes
+      updateProcessingStep('analysis', { 
+        status: 'processing',
+        message: 'Enhancing your notes with advanced AI analysis...'
+      });
+      
+      // Call the full comprehensive processing endpoint
+      const response = await fetch('/api/videos/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoUrl: videoUrl.trim(),
+          selectedTemplate,
+          processingMode
+        }),
+      });
+
+      if (response.ok) {
+        const comprehensiveData = await response.json();
+        console.log('✅ Comprehensive processing completed');
+        
+        // Update the result with enhanced data while preserving quick notes if user is still viewing them
+        if (comprehensiveData.allVerbosityLevels) {
+          setResult(prev => prev ? {
+            ...prev,
+            allVerbosityLevels: comprehensiveData.allVerbosityLevels,
+            processingMethod: comprehensiveData.processingMethod,
+            dataSourcesUsed: comprehensiveData.dataSourcesUsed
+          } : comprehensiveData);
+        }
+        
+        // Mark analysis as complete
+        updateProcessingStep('analysis', { 
+          status: 'complete',
+          message: 'Enhanced analysis complete! More features available.'
+        });
+        
+        // Start comprehensive analysis for chatbot
+        await generateComprehensiveAnalysis(videoUrl);
+        
+      } else {
+        throw new Error('Comprehensive processing failed');
+      }
+    } catch (error: any) {
+      console.error('❌ Background comprehensive processing failed:', error);
+      updateProcessingStep('analysis', { 
+        status: 'error',
+        error: 'Enhanced processing failed, but your notes are ready!'
+      });
+    }
+  };
+
+  const generateComprehensiveAnalysis = async (videoUrl: string) => {
+    // Extract video ID from URL
+    const videoId = extractVideoId(videoUrl);
+    if (!videoId) {
+      console.error('Failed to extract video ID from URL:', videoUrl);
+      return;
+    }
+
+    setIsGeneratingAnalysis(true);
+    setAnalysisError(null);
+    
+    try {
+      addProcessingStep('🧠 Preparing enhanced features...', 92);
+      console.log('🔍 Starting comprehensive analysis generation for video:', videoId);
+
+      const response = await fetch('/api/videos/comprehensive-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          youtubeUrl: videoUrl,
+          videoId: videoId,
+          requestedTemplates: ['basic-summary', 'study-notes', 'presentation-slides']
+        }),
+      });
+
+      if (response.ok) {
+        const analysisResult = await response.json();
+        console.log('✅ Comprehensive analysis completed successfully:', analysisResult);
+        addProcessingStep('🧠 Enhanced features ready!', 98);
+        
+        // Mark analysis as complete
+        updateProcessingStep('analysis', { 
+          status: 'complete'
+        });
+
+        // Start chatbot processing
+        updateProcessingStep('chatbot', { 
+          status: 'processing'
+        });
+        
+        // Fetch the full analysis data for chatbot context
+        await fetchAndShareVideoContext(videoId);
+        
+        // Mark chatbot as ready
+        updateProcessingStep('chatbot', { 
+          status: 'complete'
+        });
+        
+        addProcessingStep('✅ All done! Your notes are ready to use.', 100);
+      } else {
+        const errorData = await response.json();
+        console.warn('⚠️ Comprehensive analysis failed:', errorData.error);
+        setAnalysisError(`Analysis generation failed: ${errorData.error}`);
+        
+        // Mark analysis as error
+        updateProcessingStep('analysis', { 
+          status: 'error',
+          error: errorData.error
+        });
+        updateProcessingStep('chatbot', { 
+          status: 'error',
+          error: 'Analysis required for full functionality'
+        });
+        
+        addProcessingStep(`⚠️ Some features unavailable: ${errorData.error}`, 98);
+        addProcessingStep('✅ Your notes are ready!', 100);
+      }
+    } catch (error: any) {
+      console.warn('⚠️ Comprehensive analysis error:', error);
+      setAnalysisError(error.message || 'Analysis generation failed');
+      
+      // Mark analysis as error
+      updateProcessingStep('analysis', { 
+        status: 'error',
+        error: error.message || 'Unknown error'
+      });
+      updateProcessingStep('chatbot', { 
+        status: 'error',
+        error: 'Analysis required for full functionality'
+      });
+      
+      addProcessingStep(`⚠️ Some features unavailable: ${error.message || 'Unknown error'}`, 98);
+      addProcessingStep('✅ Your notes are ready!', 100);
+    } finally {
+      setIsGeneratingAnalysis(false);
+    }
+  };
+
+  const fetchAndShareVideoContext = async (videoId: string) => {
+    try {
+      // Fetch the full analysis data
+      const response = await fetch(`/api/videos/comprehensive-analysis?videoId=${videoId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        const analysis = data.analysis;
+        
+        if (analysis && onVideoContextUpdate) {
+          // Transform database analysis into ChatbotVideoContext format
+          const chatbotContext = {
+            videoId,
+            title: result?.title || 'Processed Video',
+            youtubeUrl: videoUrl,
+            duration: analysis.fullTranscript?.duration || 0,
+            currentlyViewingFormat: selectedTemplate,
+            currentVerbosityLevel: 'standard',
+            userSubscriptionTier: 'free',
+            analysis: {
+              difficultyLevel: analysis.difficultyLevel || 'intermediate',
+              primarySubject: analysis.primarySubject || 'general',
+              secondarySubjects: analysis.secondarySubjects || [],
+              contentTags: analysis.contentTags || [],
+              conceptMap: analysis.conceptMap || { concepts: [] },
+              fullTranscript: analysis.fullTranscript || { segments: [] },
+              visualAnalysis: analysis.visualAnalysis || { hasSlides: false, hasCharts: false },
+              keyTimestamps: analysis.keyTimestamps || [],
+              allTemplateOutputs: analysis.allTemplateOutputs || {},
+              suggestedQuestions: analysis.suggestedQuestions || []
+            }
+          };
+          
+          console.log('🤖 Sharing video context with chatbot:', chatbotContext.title);
+          onVideoContextUpdate(chatbotContext);
+        }
+      } else {
+        console.warn('⚠️ Could not fetch comprehensive analysis for chatbot context');
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching video context for chatbot:', error);
     }
   };
 
@@ -202,33 +522,42 @@ export function VideoUploadProcessor({
   };
 
   const adjustVerbosity = (newVerbosity: 'brief' | 'standard' | 'comprehensive') => {
-    if (!result || !result.verbosityVersions) return;
+    if (!result) return;
+    
+    // Support both old verbosityVersions and new allVerbosityLevels formats
+    const verbosityData = result.allVerbosityLevels || result.verbosityVersions;
+    if (!verbosityData) return;
     
     setCurrentVerbosity(newVerbosity);
     
     setResult({
       ...result,
-      content: result.verbosityVersions[newVerbosity]
+      content: verbosityData[newVerbosity]
     });
   };
 
   if (isProcessing) {
+
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-        <div className="bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-8 max-w-lg mx-4">
+        <div className="bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-8 max-w-2xl mx-4">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--accent-pink)] mx-auto mb-6"></div>
-            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Processing Video</h3>
-            <p className="text-[var(--text-secondary)] mb-6">AI is analyzing your content...</p>
+            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Converting Video</h3>
+            <p className="text-[var(--text-secondary)] mb-6">
+Converting with Premium AI...
+            </p>
             
-            {/* Progress Indicator */}
+            {/* Simplified Progress Indicator */}
             <div className="mb-6 p-4 bg-[var(--bg-primary)] rounded-lg border border-[var(--card-border)]">
-              <div className="flex items-center justify-center space-x-2 mb-3">
-                <span className="text-lg">🎥</span>
-                <span className="text-sm font-medium text-[var(--text-primary)]">AI Video Analysis</span>
+              {/* Premium AI Processing Badge */}
+              <div className="flex items-center justify-center mb-4">
+                <span className="px-4 py-2 rounded-lg text-sm font-medium border bg-purple-500/20 border-purple-500/30 text-purple-400">
+                  ⭐ Premium AI Processing
+                </span>
               </div>
               
-              {/* Progress Bar */}
+              {/* Overall Progress Bar */}
               <div className="w-full bg-[var(--card-border)] rounded-full h-3 mb-3 overflow-hidden">
                 <div 
                   className="bg-gradient-to-r from-[var(--accent-pink)] to-[#FF8FB3] h-full rounded-full transition-all duration-500 ease-out"
@@ -247,31 +576,11 @@ export function VideoUploadProcessor({
               </div>
             </div>
 
-            {/* Real-time Processing Steps */}
-            <div className="text-left space-y-2 max-h-48 overflow-y-auto">
-              <h4 className="text-sm font-medium text-[var(--text-primary)] mb-3 text-center">Processing Steps:</h4>
-              {processingSteps.map((step, index) => (
-                <div 
-                  key={index} 
-                  className={`text-xs p-2 rounded-lg transition-all duration-300 ${
-                    index === processingSteps.length - 1 
-                      ? 'bg-[var(--accent-pink)]/10 border border-[var(--accent-pink)]/20 text-[var(--accent-pink)]' 
-                      : 'bg-[var(--bg-primary)] text-[var(--text-secondary)]'
-                  }`}
-                >
-                  <div className="flex items-start space-x-2">
-                    <span className="text-[var(--text-secondary)] min-w-[20px]">{index + 1}.</span>
-                    <span>{step}</span>
-                  </div>
-                </div>
-              ))}
-              
-              {/* Current Status */}
-              <div className="text-center mt-4 p-2 bg-[var(--accent-pink)]/10 border border-[var(--accent-pink)]/20 rounded-lg">
-                <p className="text-xs text-[var(--accent-pink)] font-medium">
-                  {processingStatus}
-                </p>
-              </div>
+            {/* Simple Current Status */}
+            <div className="text-center p-3 bg-[var(--accent-pink)]/10 border border-[var(--accent-pink)]/20 rounded-lg">
+              <p className="text-sm text-[var(--accent-pink)] font-medium">
+                {processingStatus}
+              </p>
             </div>
           </div>
         </div>
@@ -285,7 +594,7 @@ export function VideoUploadProcessor({
         <div className="bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-8 max-w-md mx-4">
           <div className="text-center">
             <div className="text-4xl mb-4">❌</div>
-            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Processing Failed</h3>
+            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Conversion Failed</h3>
             <p className="text-[var(--text-secondary)] mb-4">{error}</p>
             <button
               onClick={onClose}
@@ -350,8 +659,21 @@ export function VideoUploadProcessor({
               )}
             </div>
 
+            {/* Simple Processing Success Badge */}
+            <div className="mb-4 flex justify-center">
+              <div className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <span className="text-purple-400">⭐</span>
+                  <span className="text-sm font-medium text-purple-400">
+                    Processed with Premium AI
+                  </span>
+                  <span className="text-purple-400">✓</span>
+                </div>
+              </div>
+            </div>
+
             {/* Verbosity Controls */}
-            {result.verbosityVersions && (
+            {(result.verbosityVersions || result.allVerbosityLevels) && (
               <div className="mb-4 p-4 bg-[var(--bg-primary)] rounded-xl border border-[var(--card-border)]">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-[var(--text-primary)]">Adjust Detail Level</span>
@@ -467,11 +789,28 @@ export function VideoUploadProcessor({
                 )}
               </div>
               
-              <SimplePdfDownload
-                content={typeof result.content === 'string' ? result.content : String(result.content || '')}
-                title={result.title}
-                template={result.template}
-              />
+              {/* Processing Status Bar and PDF Download Section */}
+              <div className="flex flex-col lg:flex-row gap-6 items-start">
+                {/* Processing Status Bar */}
+                <div className="lg:flex-1">
+                  <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+                    Processing Status
+                  </h4>
+                  <ProcessingStatusBar 
+                    steps={processingSteps}
+                    compact={false}
+                  />
+                </div>
+                
+                {/* PDF Download */}
+                <div className="lg:w-64 flex flex-col justify-start">
+                  <SimplePdfDownload
+                    content={typeof result.content === 'string' ? result.content : String(result.content || '')}
+                    title={result.title}
+                    template={result.template}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Save Note */}

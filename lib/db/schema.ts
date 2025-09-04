@@ -4,7 +4,7 @@
  * Uses Drizzle ORM with PostgreSQL (Supabase)
  */
 
-import { pgTable, text, timestamp, integer, boolean, json, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, integer, boolean, json, uuid, decimal } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // =============================================================================
@@ -100,6 +100,50 @@ export const processingResults = pgTable('processing_results', {
   exportedAt: timestamp('exported_at'),
   exportFormat: text('export_format', { enum: ['pdf', 'md', 'html', 'docx'] }),
   exportUrl: text('export_url'),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =============================================================================
+// VIDEO ANALYSIS TABLE (Comprehensive content analysis for chatbot)
+// =============================================================================
+export const videoAnalysis = pgTable('video_analysis', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  videoId: uuid('video_id').references(() => videos.id, { onDelete: 'cascade' }).notNull().unique(),
+  
+  // Transcript Analysis
+  fullTranscript: json('full_transcript'), // Array of transcript segments with timestamps
+  transcriptConfidence: decimal('transcript_confidence', { precision: 3, scale: 2 }),
+  
+  // Visual Analysis
+  visualAnalysis: json('visual_analysis'), // Key frames, diagrams, text recognition
+  hasSlides: boolean('has_slides').default(false),
+  hasCharts: boolean('has_charts').default(false),
+  
+  // Content Structure
+  contentStructure: json('content_structure'), // Chapters, sections, flow
+  identifiedConcepts: json('identified_concepts'), // Key terms, definitions, relationships
+  difficultyLevel: text('difficulty_level', { enum: ['beginner', 'intermediate', 'advanced'] }),
+  
+  // Subject Classification
+  primarySubject: text('primary_subject'),
+  secondarySubjects: text('secondary_subjects').array(),
+  contentTags: text('content_tags').array(),
+  
+  // Study Aids
+  suggestedQuestions: json('suggested_questions'), // Generated study questions
+  keyTimestamps: json('key_timestamps'), // Important moments in video
+  conceptMap: json('concept_map'), // Relationships between concepts
+  
+  // All Template Outputs (for comprehensive chatbot context)
+  allTemplateOutputs: json('all_template_outputs'), // All formats generated simultaneously
+  
+  // Analysis Metadata
+  analysisVersion: text('analysis_version').default('1.0'),
+  processingTime: integer('processing_time'), // Total analysis time in ms
+  totalTokensUsed: integer('total_tokens_used'),
+  analysisCostInCents: integer('analysis_cost_in_cents'),
   
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -287,6 +331,17 @@ export const videosRelations = relations(videos, ({ one, many }) => ({
   processingQueue: many(processingQueue),
   usageHistory: many(userUsageHistory),
   notes: many(notes),
+  videoAnalysis: one(videoAnalysis, {
+    fields: [videos.id],
+    references: [videoAnalysis.videoId],
+  }),
+}));
+
+export const videoAnalysisRelations = relations(videoAnalysis, ({ one }) => ({
+  video: one(videos, {
+    fields: [videoAnalysis.videoId],
+    references: [videos.id],
+  }),
 }));
 
 export const processingResultsRelations = relations(processingResults, ({ one, many }) => ({

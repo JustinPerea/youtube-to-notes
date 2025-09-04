@@ -8,6 +8,7 @@
 import { db } from '../db/connection';
 import { notes, users, videos } from '../db/schema';
 import { eq, desc, and, or, ilike, arrayContains } from 'drizzle-orm';
+import { fetchVideoMetadata, YouTubeVideoMetadata } from './youtube-api';
 
 // Utility function to extract YouTube video ID from URL
 function extractVideoIdFromUrl(url: string): string | null {
@@ -25,20 +26,45 @@ function extractVideoIdFromUrl(url: string): string | null {
   return null;
 }
 
-// Utility function to fetch basic YouTube metadata (title and thumbnail)
+// Utility function to fetch comprehensive YouTube metadata using YouTube Data API v3
 async function fetchYouTubeMetadata(videoId: string): Promise<{
   title?: string;
   thumbnailUrl?: string;
   channelName?: string;
   duration?: number;
+  fullMetadata?: YouTubeVideoMetadata;
 } | null> {
   try {
-    // Use YouTube oEmbed API for basic metadata (no API key required)
-    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    console.log('🔍 Fetching comprehensive YouTube metadata for video:', videoId);
     
+    // Use YouTube Data API v3 for comprehensive metadata
+    const metadata = await fetchVideoMetadata(videoId);
+    
+    if (metadata) {
+      console.log(`✅ Rich metadata fetched: "${metadata.title}" (${metadata.durationSeconds}s)`);
+      console.log(`   Content richness: ${metadata.contentRichness}, Has captions: ${metadata.caption}`);
+      
+      return {
+        title: metadata.title,
+        thumbnailUrl: metadata.thumbnails.maxres?.url || 
+                     metadata.thumbnails.standard?.url || 
+                     metadata.thumbnails.high?.url || 
+                     `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        channelName: metadata.channelTitle,
+        duration: metadata.durationSeconds,
+        fullMetadata: metadata
+      };
+    }
+    
+    console.log('⚠️ YouTube Data API failed, falling back to basic oEmbed...');
+    
+    // Fallback to oEmbed API if YouTube Data API fails
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
     const response = await fetch(oembedUrl);
+    
     if (response.ok) {
       const data = await response.json();
+      console.log('✅ oEmbed fallback successful');
       return {
         title: data.title || `YouTube Video ${videoId}`,
         thumbnailUrl: data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
@@ -46,13 +72,15 @@ async function fetchYouTubeMetadata(videoId: string): Promise<{
       };
     }
     
-    // Fallback if oEmbed fails
+    // Final fallback if both APIs fail
+    console.log('⚠️ Both APIs failed, using fallback data');
     return {
       title: `YouTube Video ${videoId}`,
       thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
     };
+    
   } catch (error) {
-    console.error('Error fetching YouTube metadata:', error);
+    console.error('❌ Error fetching YouTube metadata:', error);
     // Return fallback data
     return {
       title: `YouTube Video ${videoId}`,
@@ -95,7 +123,8 @@ export interface GetNotesRequest {
 }
 
 export interface VideoWithNotes {
-  videoId: string;
+  videoId: string; // Database UUID
+  youtubeVideoId: string; // YouTube video ID for API calls
   title: string;
   youtubeUrl: string;
   thumbnailUrl?: string;
@@ -430,7 +459,8 @@ export class NotesService {
           noteVerbosityVersions: notes.verbosityVersions,
           noteCreatedAt: notes.createdAt,
           noteUpdatedAt: notes.updatedAt,
-          videoId: notes.videoId,
+          videoId: notes.videoId, // Database UUID
+          videoYoutubeId: videos.videoId, // YouTube video ID
           videoTitle: videos.title,
           videoYoutubeUrl: videos.youtubeUrl,
           videoThumbnailUrl: videos.thumbnailUrl,
@@ -449,7 +479,8 @@ export class NotesService {
         if (!videoMap.has(videoKey)) {
           // Create new video entry
           videoMap.set(videoKey, {
-            videoId: row.videoId || '',
+            videoId: row.videoId || '', // Database UUID
+            youtubeVideoId: row.videoYoutubeId || '', // YouTube video ID
             title: row.videoTitle || row.noteTitle, // Use note title if no video
             youtubeUrl: row.videoYoutubeUrl || '',
             thumbnailUrl: row.videoThumbnailUrl || undefined,

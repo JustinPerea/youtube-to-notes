@@ -6,6 +6,7 @@ import { db } from '../db/connection';
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { USAGE_LIMITS } from '../stripe/config';
+import { memoryCache, CacheKeys, CacheTTL } from '../cache/memory-cache';
 
 export interface UserSubscription {
   id: string;
@@ -33,6 +34,14 @@ export interface UsageData {
 // Get user's current subscription
 export async function getUserSubscription(userId: string): Promise<UserSubscription | null> {
   try {
+    const cacheKey = CacheKeys.USER_SUBSCRIPTION(userId);
+    
+    // Check cache first
+    const cachedSubscription = memoryCache.get<UserSubscription>(cacheKey);
+    if (cachedSubscription) {
+      return cachedSubscription;
+    }
+
     // TODO: Update this query once subscription columns are added to users table
     const user = await db
       .select()
@@ -46,7 +55,7 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
 
     // For now, return a default free subscription
     // This will be replaced with actual subscription data from database
-    return {
+    const subscription: UserSubscription = {
       id: userId,
       userId,
       tier: 'free', // TODO: Get from database
@@ -54,9 +63,29 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+    
+    // Cache the result
+    memoryCache.set(cacheKey, subscription, CacheTTL.USER_SUBSCRIPTION);
+    
+    return subscription;
   } catch (error) {
     console.error('Error getting user subscription:', error);
-    return null;
+    
+    // Return fallback data to prevent complete failure
+    const fallbackSubscription: UserSubscription = {
+      id: userId || 'anonymous',
+      userId: userId || 'anonymous',
+      tier: 'free',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    // Cache fallback briefly (1 minute) to prevent repeated errors
+    const cacheKey = CacheKeys.USER_SUBSCRIPTION(userId);
+    memoryCache.set(cacheKey, fallbackSubscription, 60 * 1000);
+    
+    return fallbackSubscription;
   }
 }
 

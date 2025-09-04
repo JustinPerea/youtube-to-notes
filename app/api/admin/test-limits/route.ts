@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
     const dbUserId = await ensureUserExists({
       id: session.user.id,
       email: session.user.email!,
-      name: session.user.name,
-      image: session.user.image
+      name: session.user.name ?? undefined,
+      image: session.user.image ?? undefined
     });
 
     const { testType } = await req.json();

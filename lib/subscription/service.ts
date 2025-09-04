@@ -109,7 +109,44 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
 export async function getUserUsage(userId: string): Promise<UsageData | null> {
   try {
     const subscription = await getUserSubscription(userId);
-    if (!subscription) return null;
+    if (!subscription) {
+      console.error('No subscription found for user:', userId);
+      // Return default usage data for free tier
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const limits = SUBSCRIPTION_LIMITS['free'];
+      
+      return {
+        userId,
+        month: currentMonth,
+        subscription: {
+          id: userId,
+          userId,
+          tier: 'free',
+          status: 'active',
+          currentPeriodEnd: undefined,
+          cancelAtPeriodEnd: false,
+        },
+        
+        // Current usage
+        videosProcessed: 0,
+        aiQuestionsAsked: 0,
+        storageUsedMb: 0,
+        
+        // Limits
+        videoLimit: limits.videosPerMonth,
+        aiQuestionLimit: limits.aiQuestionsPerMonth,
+        storageLimitMb: limits.storageGB * 1024,
+        
+        // Status checks
+        canProcessVideo: limits.videosPerMonth === -1 || 0 < limits.videosPerMonth,
+        canUseAI: limits.aiQuestionsPerMonth !== 0 && 
+                  (limits.aiQuestionsPerMonth === -1 || 0 < limits.aiQuestionsPerMonth),
+        canUseStorage: 0 < (limits.storageGB * 1024),
+        
+        // Reset date (first day of next month)
+        resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+      };
+    }
 
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
     const limits = SUBSCRIPTION_LIMITS[subscription.tier];

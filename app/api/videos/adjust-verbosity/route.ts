@@ -23,7 +23,58 @@ function generateVerbosityAdjustmentPrompt(template: any, currentContent: string
     comprehensive: 'Expand the content to 200-300 words per concept. Add examples, contextual background, detailed explanations, and supporting information.'
   };
 
-  return `You are adjusting the verbosity level of existing notes. 
+  // Get template-specific structure requirements
+  const getTemplateStructure = (templateId: string) => {
+    switch (templateId) {
+      case 'basic-summary':
+        return `
+REQUIRED STRUCTURE FOR BASIC SUMMARY:
+**Video Summary**
+
+**Main Topic**: [Single sentence describing the core subject]
+
+**Key Points**: 
+- [First main point from the video]
+- [Second main point from the video]
+- [Third main point from the video]
+
+**Important Details**: 
+- [Supporting detail or example 1]
+- [Supporting detail or example 2]
+- [Supporting detail or example 3]
+
+**Structure**: [How the video content was organized]
+
+**Conclusion**: [Main takeaway or final message]`;
+
+      case 'study-notes':
+        return `
+REQUIRED STRUCTURE FOR STUDY NOTES:
+## 📖 Video Overview
+## 🎯 Learning Objectives
+## 📝 Detailed Notes
+### [Section/Topic 1]
+### [Section/Topic 2]
+## ❓ Study Questions
+## 🔍 Key Terms & Definitions
+## 📋 Summary Points
+## 🎯 Application`;
+
+      case 'presentation-slides':
+        return `
+REQUIRED STRUCTURE FOR PRESENTATION SLIDES:
+# Presentation Slides: [Topic]
+## Slide 1: Title Slide
+## Slide 2: The Problem We're Solving
+[Continue with 8 slides total]
+**Speaker Notes:** [For each slide]`;
+
+      default:
+        return `Maintain the exact structure and format of the original template: ${template.name}`;
+    }
+  };
+
+  return `You are adjusting the verbosity level of existing notes while STRICTLY maintaining the template structure.
 
 CURRENT CONTENT:
 ${currentContent}
@@ -31,17 +82,20 @@ ${currentContent}
 TARGET VERBOSITY: ${newVerbosity.toUpperCase()}
 ${verbosityInstructions[newVerbosity as keyof typeof verbosityInstructions]}
 
-TEMPLATE FORMAT: ${template.name}
+TEMPLATE: ${template.name} (ID: ${template.id})
 
-REQUIREMENTS:
-- Maintain the same structure and format as the original
-- Keep all important concepts and key points
-- Adjust detail level according to the new verbosity target
-- Use the same professional, non-conversational tone
-- Start with "**${template.name}**" - no introductory text
-- Preserve all headings, bullet points, and formatting
+${getTemplateStructure(template.id)}
 
-Return ONLY the adjusted content with no explanations or additional text.`;
+CRITICAL REQUIREMENTS:
+- MUST follow the exact structure shown above for ${template.name}
+- MUST preserve all section headers exactly as specified
+- MUST maintain the same formatting (headings, bullet points, etc.)
+- Adjust ONLY the content length/detail within each section
+- Keep the same professional, non-conversational tone
+- NO introductory text or meta-commentary
+- Start with the exact first line shown in the structure
+
+Return ONLY the adjusted content following the template structure exactly.`;
 }
 
 export async function POST(request: NextRequest) {

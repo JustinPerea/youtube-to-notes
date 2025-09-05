@@ -52,6 +52,12 @@ export default function NotesPage() {
   const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('standard');
   const [chatbotContext, setChatbotContext] = useState<ChatbotVideoContext | null>(null);
   const [loadingChatbotContext, setLoadingChatbotContext] = useState(false);
+  const [loadingVerbosity, setLoadingVerbosity] = useState(false);
+  const [generatedVerbosityVersions, setGeneratedVerbosityVersions] = useState<Record<string, {
+    brief?: string;
+    standard?: string;
+    comprehensive?: string;
+  }>>({});
   
   // Function to determine processing status based on available data
   const getVideoProcessingSteps = (video: VideoWithNotes, hasAnalysis: boolean): ProcessingStep[] => {
@@ -110,6 +116,12 @@ export default function NotesPage() {
   useEffect(() => {
     setCurrentVerbosity('standard');
   }, [selectedFormat]);
+
+  // Clear generated versions when video changes
+  useEffect(() => {
+    setGeneratedVerbosityVersions({});
+    setCurrentVerbosity('standard');
+  }, [selectedVideo]);
 
   // Load comprehensive analysis for chatbot context when video is selected
   useEffect(() => {
@@ -287,27 +299,103 @@ export default function NotesPage() {
   // Get current verbosity content for the selected format
   const getCurrentVerbosityContent = (): string => {
     const formatContent = getSelectedFormatContent();
-    if (!formatContent?.verbosityVersions) {
-      // Fallback to standard content if no verbosity versions available
-      return formatContent?.content || '';
+    if (!formatContent) return '';
+
+    const formatKey = `${selectedVideo?.videoId}-${selectedFormat}`;
+    const generated = generatedVerbosityVersions[formatKey];
+    
+    // Check generated versions first, then database versions, then original content
+    if (generated && generated[currentVerbosity]) {
+      return generated[currentVerbosity]!;
+    }
+    
+    if (formatContent.verbosityVersions && formatContent.verbosityVersions[currentVerbosity]) {
+      return formatContent.verbosityVersions[currentVerbosity]!;
     }
 
-    const verbosityContent = formatContent.verbosityVersions[currentVerbosity];
-    // Fallback hierarchy: requested -> standard -> any available -> original content
-    return verbosityContent || 
-           formatContent.verbosityVersions.standard || 
-           formatContent.verbosityVersions.comprehensive || 
-           formatContent.verbosityVersions.brief || 
-           formatContent.content;
+    // For standard verbosity, always return original content if no specific version exists
+    if (currentVerbosity === 'standard') {
+      return formatContent.content;
+    }
+
+    // For brief/comprehensive, fallback to original content if no version exists
+    return formatContent.content;
   };
 
   // Check if verbosity versions are available for the selected format
   const hasVerbosityVersions = (): boolean => {
     const formatContent = getSelectedFormatContent();
-    return !!(formatContent?.verbosityVersions && 
-              (formatContent.verbosityVersions.brief || 
-               formatContent.verbosityVersions.standard || 
-               formatContent.verbosityVersions.comprehensive));
+    // Always show verbosity controls if we have content - generate on-demand if needed
+    return !!(formatContent?.content);
+  };
+
+  // Handle verbosity level changes with on-demand generation
+  const handleVerbosityChange = async (newVerbosity: 'brief' | 'standard' | 'comprehensive') => {
+    if (!selectedVideo || !selectedFormat || !selectedFormatContent) {
+      console.error('Missing required data for verbosity change');
+      return;
+    }
+
+    const formatKey = `${selectedVideo.videoId}-${selectedFormat}`;
+    const generated = generatedVerbosityVersions[formatKey];
+    
+    // Check if we already have this verbosity level
+    const hasInDatabase = selectedFormatContent.verbosityVersions?.[newVerbosity];
+    const hasGenerated = generated?.[newVerbosity];
+    
+    if (hasInDatabase || hasGenerated || newVerbosity === 'standard') {
+      // Content already exists or it's standard (original), just switch
+      setCurrentVerbosity(newVerbosity);
+      return;
+    }
+
+    // Generate the new verbosity level
+    try {
+      setLoadingVerbosity(true);
+      console.log(`🔄 Generating ${newVerbosity} version for ${selectedFormat}...`);
+
+      const response = await fetch('/api/videos/adjust-verbosity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoUrl: selectedVideo.youtubeUrl,
+          selectedTemplate: selectedFormat,
+          currentContent: selectedFormatContent.content,
+          newVerbosity: newVerbosity,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.content) {
+        // Store the generated content
+        setGeneratedVerbosityVersions(prev => ({
+          ...prev,
+          [formatKey]: {
+            ...prev[formatKey],
+            [newVerbosity]: result.content
+          }
+        }));
+        
+        // Switch to the new verbosity level
+        setCurrentVerbosity(newVerbosity);
+        console.log(`✅ Generated ${newVerbosity} version successfully`);
+      } else {
+        throw new Error('No content returned from verbosity adjustment');
+      }
+    } catch (error) {
+      console.error('Failed to generate verbosity version:', error);
+      // Show error to user but don't prevent switching (will show original content)
+      setCurrentVerbosity(newVerbosity);
+    } finally {
+      setLoadingVerbosity(false);
+    }
   };
 
   const loadChatbotContext = async (videoId: string) => {
@@ -540,25 +628,37 @@ export default function NotesPage() {
                           </div>
                           <div className="flex items-center space-x-3">
                             <button
-                              onClick={() => setCurrentVerbosity('brief')}
-                              disabled={currentVerbosity === 'brief'}
+                              onClick={() => handleVerbosityChange('brief')}
+                              disabled={currentVerbosity === 'brief' || loadingVerbosity}
                               className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-lg text-xs text-red-400 hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                             >
-                              Brief
+                              {loadingVerbosity && currentVerbosity !== 'brief' ? (
+                                <div className="animate-spin rounded-full h-3 w-3 border border-red-400 border-t-transparent mx-auto" />
+                              ) : (
+                                'Brief'
+                              )}
                             </button>
                             <button
-                              onClick={() => setCurrentVerbosity('standard')}
-                              disabled={currentVerbosity === 'standard'}
+                              onClick={() => handleVerbosityChange('standard')}
+                              disabled={currentVerbosity === 'standard' || loadingVerbosity}
                               className="px-3 py-1.5 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-400 hover:bg-yellow-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                             >
-                              Standard ⭐
+                              {loadingVerbosity && currentVerbosity !== 'standard' ? (
+                                <div className="animate-spin rounded-full h-3 w-3 border border-yellow-400 border-t-transparent mx-auto" />
+                              ) : (
+                                'Standard ⭐'
+                              )}
                             </button>
                             <button
-                              onClick={() => setCurrentVerbosity('comprehensive')}
-                              disabled={currentVerbosity === 'comprehensive'}
+                              onClick={() => handleVerbosityChange('comprehensive')}
+                              disabled={currentVerbosity === 'comprehensive' || loadingVerbosity}
                               className="px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-xs text-green-400 hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                             >
-                              Comprehensive
+                              {loadingVerbosity && currentVerbosity !== 'comprehensive' ? (
+                                <div className="animate-spin rounded-full h-3 w-3 border border-green-400 border-t-transparent mx-auto" />
+                              ) : (
+                                'Comprehensive'
+                              )}
                             </button>
                           </div>
                         </div>

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get session for model selection
-    const session = await getApiSession(request);
+    const session = await getApiSessionWithDatabase(request);
     const userId = session?.user?.id || 'anonymous';
     
     console.log('🚀 Quick notes generation starting for:', videoId);

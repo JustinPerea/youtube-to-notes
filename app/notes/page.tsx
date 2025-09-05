@@ -57,28 +57,12 @@ export default function NotesPage() {
   const getVideoProcessingSteps = (video: VideoWithNotes, hasAnalysis: boolean): ProcessingStep[] => {
     return [
       {
-        key: 'notes',
-        label: 'Your Notes Are Ready',
-        status: 'complete',
-        description: 'Notes generated successfully! Read, download, or adjust detail level.',
-        enabledFeatures: ['Read Notes', 'Download PDF', 'Adjust Detail Level']
-      },
-      {
         key: 'analysis', 
-        label: 'Enhanced Video Analysis',
+        label: 'Enhanced Video Analysis Available',
         status: hasAnalysis ? 'complete' : 'pending',
         description: hasAnalysis 
           ? 'Enhanced analysis complete! More features available.' 
           : 'Enhanced analysis not available for this video.'
-      },
-      {
-        key: 'chatbot',
-        label: 'Chat with Your Video',
-        status: hasAnalysis ? 'complete' : 'pending',
-        description: hasAnalysis 
-          ? 'AI assistant ready! Ask questions about your video content.' 
-          : 'AI assistant requires enhanced analysis to be fully functional.',
-        enabledFeatures: hasAnalysis ? ['Ask Questions', 'Get Insights', 'Explore Topics'] : undefined
       }
     ];
   };

@@ -11,6 +11,7 @@ import { videos, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { extractVideoId } from '@/lib/utils/youtube';
 import { getUserSubscription } from '@/lib/services/subscription';
+import { NotesService } from '@/lib/services/notes';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -78,38 +79,114 @@ async function generateAllVerbosityLevels(videoUrl: string, template: any, origi
   
   console.log('🔄 Optimized verbosity generation: Creating all levels in single API call...');
   
+  // Get template-specific structure requirements
+  const getTemplateStructure = (templateId: string) => {
+    switch (templateId) {
+      case 'study-notes':
+        return `
+REQUIRED STUDY NOTES STRUCTURE (use for ALL verbosity levels):
+## 📖 Video Overview
+- **Title**: [Video Title]
+- **Speaker/Channel**: [Who is presenting]
+- **Duration**: [Video length]
+- **Main Topic**: [What is being taught]
+
+## 🎯 Learning Objectives
+[List 3-5 specific things viewers should learn from this video]
+
+## 📝 Detailed Notes
+### [Section/Topic 1]
+- Key concepts and definitions
+- Important examples or case studies
+- Formulas, steps, or procedures (if applicable)
+
+### [Section/Topic 2]
+- Key concepts and definitions
+- Important examples or case studies
+- Formulas, steps, or procedures (if applicable)
+
+[Continue for all major sections...]
+
+## ❓ Study Questions
+Create 5-8 comprehension questions that test understanding of the material:
+1. [Question 1]
+2. [Question 2]
+3. [Question 3]
+
+## 🔍 Key Terms & Definitions
+- **Term 1**: Definition
+- **Term 2**: Definition
+- **Term 3**: Definition
+
+## 📋 Summary Points
+- [Key takeaway 1]
+- [Key takeaway 2]
+- [Key takeaway 3]
+
+## 🎯 Application
+How can this knowledge be applied in real-world scenarios?`;
+
+      case 'basic-summary':
+        return `
+REQUIRED BASIC SUMMARY STRUCTURE:
+**Video Summary**
+
+**Main Topic**: [Single sentence describing the core subject]
+
+**Key Points**: 
+- [First main point from the video]
+- [Second main point from the video]
+- [Third main point from the video]
+
+**Important Details**: 
+- [Supporting detail or example 1]
+- [Supporting detail or example 2]
+- [Supporting detail or example 3]
+
+**Structure**: [How the video content was organized]
+
+**Conclusion**: [Main takeaway or final message]`;
+
+      default:
+        return `Maintain the exact structure and format of the ${template.name} template`;
+    }
+  };
+
   // OPTIMIZATION: Generate comprehensive version first, then parse down to brief/standard
   const comprehensivePrompt = `
-You are creating comprehensive video notes that will be condensed to different verbosity levels.
+You are creating video notes that will be provided at different verbosity levels while MAINTAINING EXACT TEMPLATE STRUCTURE.
 
 ORIGINAL CONTENT:
 ${originalContent}
 
-TASK: Create a comprehensive, detailed version of this content that includes:
-- All key concepts explained in 200-300 words each
-- Detailed examples and contextual background
-- Supporting information and elaborations
-- Rich explanations that can later be condensed
+TARGET TEMPLATE: ${template.name} (ID: ${template.id})
 
-FORMATTING REQUIREMENTS:
-- Maintain section structure with clear headings
-- Use consistent markdown formatting
-- Start with "**${template.name}**" as the title
-- Include section markers like "### Key Concepts" or "### Main Points"
+${getTemplateStructure(template.id)}
+
+CRITICAL REQUIREMENTS FOR ALL VERBOSITY LEVELS:
+- MUST follow the exact template structure shown above
+- MUST include ALL sections and headers (including emoji icons for Study Notes)
+- MUST maintain consistent formatting across all verbosity levels
+- Only adjust the detail level within each section, never remove sections
+
+VERBOSITY LEVEL DEFINITIONS:
+- COMPREHENSIVE: 200-300 words per concept with detailed examples and context
+- STANDARD: 100-150 words per concept with some examples and key details  
+- BRIEF: 50-75 words per concept with only essential information
 
 OUTPUT FORMAT:
-Please return the comprehensive content in this exact format:
+Please return the content in this exact format:
 
 === COMPREHENSIVE ===
-[Your comprehensive content here]
+[Full template structure with comprehensive detail level]
 
 === STANDARD ===
-[Now condense the above to 100-150 words per concept, removing some examples and details but keeping key information]
+[SAME template structure with standard detail level - include ALL sections]
 
 === BRIEF ===
-[Now condense further to 50-75 words per concept, keeping only essential information in bullet points]
+[SAME template structure with brief detail level - include ALL sections]
 
-This single response will provide all three verbosity levels efficiently.`;
+Remember: ALL three versions MUST have identical structure, only varying in content detail within each section.`;
 
   const generateWithFallback = async () => {
     // Get user's tier-appropriate models
@@ -801,8 +878,33 @@ export async function POST(request: NextRequest) {
     // Generate all verbosity levels from the result
     console.log('Generating all verbosity levels for instant switching...');
     const verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result, userId);
+    console.log('✅ All verbosity levels generated successfully');
     
-    // Update video status as completed
+    // Auto-save notes to database with all verbosity levels
+    console.log('💾 Auto-saving notes to database with verbosity levels...');
+    try {
+      const saveResult = await NotesService.saveNote({
+        userId: userId,
+        youtubeUrl: videoUrl,
+        title: `Notes from ${videoUrl}`,
+        content: verbosityVersions.standard, // Default content
+        templateId: selectedTemplate,
+        verbosityVersions: verbosityVersions
+      });
+      
+      if (saveResult.success) {
+        console.log('✅ Notes successfully saved to database with ID:', saveResult.noteId);
+      } else {
+        console.warn('⚠️ Failed to auto-save notes:', saveResult.error);
+        // Continue processing - don't fail the entire request
+      }
+    } catch (saveError) {
+      console.error('❌ Error during auto-save:', saveError);
+      // Continue processing - don't fail the entire request
+    }
+    
+    // Update video status as completed AFTER verbosity generation and auto-save
+    console.log('🏁 Marking video processing as completed...');
     await updateVideoRecordStatus(request, videoUrl, 'completed');
     
     // Prepare response data in existing format for frontend compatibility

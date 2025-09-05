@@ -18,9 +18,23 @@ function getModel(useAlternative: boolean = false) {
 
 function generateVerbosityAdjustmentPrompt(template: any, currentContent: string, newVerbosity: string) {
   const verbosityInstructions = {
-    brief: 'Condense the content to 50-75 words per concept. Remove examples, detailed explanations, and keep only essential information. Use bullet points and concise language.',
-    standard: 'Balance the content to 100-150 words per concept. Include some examples and key details, but remove excessive elaboration.',
-    comprehensive: 'Expand the content to 200-300 words per concept. Add examples, contextual background, detailed explanations, and supporting information.'
+    brief: 'Condense the content to 50-75 words per concept. Remove examples, detailed explanations, and keep only essential information. MUST maintain ALL template sections and structure.',
+    standard: 'Balance the content to 100-150 words per concept. Include some examples and key details, but remove excessive elaboration. MUST maintain ALL template sections and structure.',
+    comprehensive: 'Expand the content to 200-300 words per concept. Add examples, contextual background, detailed explanations, and supporting information. MUST maintain ALL template sections and structure.'
+  };
+
+  // Detect current content format to handle format conversion
+  const detectCurrentFormat = (content: string) => {
+    if (content.includes('📖 Video Overview') && content.includes('📝 Detailed Notes')) {
+      return 'study-notes';
+    }
+    if (content.includes('**Video Summary**') && content.includes('**Main Topic**')) {
+      return 'basic-summary';
+    }
+    if (content.includes('# Presentation Slides:') && content.includes('## Slide')) {
+      return 'presentation-slides';
+    }
+    return 'unknown';
   };
 
   // Get template-specific structure requirements
@@ -51,14 +65,48 @@ REQUIRED STRUCTURE FOR BASIC SUMMARY:
         return `
 REQUIRED STRUCTURE FOR STUDY NOTES:
 ## 📖 Video Overview
+- **Title**: [Video Title]
+- **Speaker/Channel**: [Who is presenting]
+- **Duration**: [Video length]
+- **Main Topic**: [What is being taught]
+
 ## 🎯 Learning Objectives
+[List 3-5 specific things viewers should learn from this video]
+
 ## 📝 Detailed Notes
+
 ### [Section/Topic 1]
+- Key concepts and definitions
+- Important examples or case studies
+- Formulas, steps, or procedures (if applicable)
+
 ### [Section/Topic 2]
+- Key concepts and definitions
+- Important examples or case studies
+- Formulas, steps, or procedures (if applicable)
+
+[Continue for all major sections...]
+
 ## ❓ Study Questions
+Create 5-8 comprehension questions that test understanding of the material:
+1. [Question 1]
+2. [Question 2]
+3. [Question 3]
+4. [Question 4]
+5. [Question 5]
+
 ## 🔍 Key Terms & Definitions
+- **Term 1**: Definition
+- **Term 2**: Definition
+- **Term 3**: Definition
+
 ## 📋 Summary Points
-## 🎯 Application`;
+- [Key takeaway 1]
+- [Key takeaway 2]
+- [Key takeaway 3]
+
+## 🎯 Application
+How can this knowledge be applied in real-world scenarios?`;
 
       case 'presentation-slides':
         return `
@@ -74,28 +122,53 @@ REQUIRED STRUCTURE FOR PRESENTATION SLIDES:
     }
   };
 
-  return `You are adjusting the verbosity level of existing notes while STRICTLY maintaining the template structure.
+  const currentFormat = detectCurrentFormat(currentContent);
+  const targetFormat = template.id;
+  const needsFormatConversion = currentFormat !== targetFormat && currentFormat !== 'unknown';
 
-CURRENT CONTENT:
+  // Build prompt based on whether format conversion is needed
+  const conversionInstruction = needsFormatConversion 
+    ? `IMPORTANT: The current content is in "${currentFormat}" format, but you need to convert it to "${targetFormat}" format AND adjust verbosity.`
+    : `IMPORTANT: The content is already in the correct format. Only adjust the verbosity level.`;
+
+  return `You are ${needsFormatConversion ? 'converting content format AND adjusting verbosity' : 'adjusting the verbosity level'} for video notes.
+
+CURRENT CONTENT (Format: ${currentFormat}):
 ${currentContent}
 
-TARGET VERBOSITY: ${newVerbosity.toUpperCase()}
+TARGET: ${template.name} format with ${newVerbosity.toUpperCase()} verbosity level
 ${verbosityInstructions[newVerbosity as keyof typeof verbosityInstructions]}
 
-TEMPLATE: ${template.name} (ID: ${template.id})
+${conversionInstruction}
 
+TARGET TEMPLATE STRUCTURE:
 ${getTemplateStructure(template.id)}
 
 CRITICAL REQUIREMENTS:
-- MUST follow the exact structure shown above for ${template.name}
-- MUST preserve all section headers exactly as specified
+- MUST follow the EXACT structure shown above for ${template.name}
+- MUST preserve all section headers exactly as specified (including emoji icons if applicable)
+- MUST include ALL sections from the target template structure
 - MUST maintain the same formatting (headings, bullet points, etc.)
-- Adjust ONLY the content length/detail within each section
+- Extract and reorganize information from current content to fit target structure
+- Adjust content length/detail according to verbosity level
 - Keep the same professional, non-conversational tone
 - NO introductory text or meta-commentary
-- Start with the exact first line shown in the structure
+- Start with the exact first line shown in the target structure
+- For Study Notes: MUST include all emoji headers (📖 🎯 📝 ❓ 🔍 📋 🎯)
+- Even with brief verbosity, include ALL required sections with appropriate content
 
-Return ONLY the adjusted content following the template structure exactly.`;
+${needsFormatConversion ? 
+`CONVERSION PROCESS:
+1. Extract all relevant information from the current content
+2. Reorganize it according to the target template structure
+3. Adjust the detail level according to the verbosity setting
+4. Ensure all required sections are populated with relevant content` :
+`ADJUSTMENT PROCESS:
+1. Keep the existing structure intact
+2. Adjust only the content length/detail within each section
+3. Maintain all headers and formatting exactly`}
+
+Return ONLY the converted and adjusted content following the target template structure exactly.`;
 }
 
 export async function POST(request: NextRequest) {
@@ -116,6 +189,16 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Adjusting verbosity to:', newVerbosity);
+    console.log('Template ID:', template.id);
+    console.log('Current content format detection...');
+    
+    // Quick format detection for debugging
+    const hasStudyNotesFormat = currentContent.includes('📖 Video Overview') && currentContent.includes('📝 Detailed Notes');
+    const hasBasicSummaryFormat = currentContent.includes('**Video Summary**') && currentContent.includes('**Main Topic**');
+    console.log('Content analysis:');
+    console.log('- Has Study Notes format:', hasStudyNotesFormat);
+    console.log('- Has Basic Summary format:', hasBasicSummaryFormat);
+    console.log('- Content length:', currentContent.length);
 
     // Generate adjusted content
     let model = getModel(false);

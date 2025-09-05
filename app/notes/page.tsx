@@ -52,7 +52,6 @@ export default function NotesPage() {
   const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('standard');
   const [chatbotContext, setChatbotContext] = useState<ChatbotVideoContext | null>(null);
   const [loadingChatbotContext, setLoadingChatbotContext] = useState(false);
-  const [loadingVerbosity, setLoadingVerbosity] = useState(false);
   const [generatedVerbosityVersions, setGeneratedVerbosityVersions] = useState<Record<string, {
     brief?: string;
     standard?: string;
@@ -105,6 +104,10 @@ export default function NotesPage() {
       if (uniqueFormats.length > 0) {
         setSelectedFormat(uniqueFormats[0].templateId);
         setSelectedFormatContent(uniqueFormats[0]);
+        
+        // DEBUG: Log verbosity versions for debugging
+        console.log('🔍 DEBUG: Selected format content:', uniqueFormats[0]);
+        console.log('🔍 DEBUG: Verbosity versions available:', uniqueFormats[0].verbosityVersions);
       }
     } else {
       setSelectedFormat('');
@@ -329,73 +332,38 @@ export default function NotesPage() {
     return !!(formatContent?.content);
   };
 
-  // Handle verbosity level changes with on-demand generation
-  const handleVerbosityChange = async (newVerbosity: 'brief' | 'standard' | 'comprehensive') => {
+  // Handle verbosity level changes using pre-stored versions
+  const handleVerbosityChange = (newVerbosity: 'brief' | 'standard' | 'comprehensive') => {
     if (!selectedVideo || !selectedFormat || !selectedFormatContent) {
       console.error('Missing required data for verbosity change');
       return;
     }
 
+    // Check if we have the verbosity version in database or generated versions
     const formatKey = `${selectedVideo.videoId}-${selectedFormat}`;
     const generated = generatedVerbosityVersions[formatKey];
-    
-    // Check if we already have this verbosity level
     const hasInDatabase = selectedFormatContent.verbosityVersions?.[newVerbosity];
     const hasGenerated = generated?.[newVerbosity];
     
+    // DEBUG: Log current state for debugging
+    console.log('🔍 DEBUG: Verbosity change debugging:');
+    console.log('  - New verbosity:', newVerbosity);
+    console.log('  - Selected format content:', selectedFormatContent);
+    console.log('  - Database verbosity versions:', selectedFormatContent.verbosityVersions);
+    console.log('  - Generated versions:', generated);
+    console.log('  - Has in database:', hasInDatabase);
+    console.log('  - Has generated:', hasGenerated);
+    
+    // All verbosity versions should be pre-stored, so just switch immediately
     if (hasInDatabase || hasGenerated || newVerbosity === 'standard') {
-      // Content already exists or it's standard (original), just switch
+      console.log(`✅ Switching to ${newVerbosity} verbosity (using pre-stored version)`);
       setCurrentVerbosity(newVerbosity);
       return;
     }
 
-    // Generate the new verbosity level
-    try {
-      setLoadingVerbosity(true);
-      console.log(`🔄 Generating ${newVerbosity} version for ${selectedFormat}...`);
-
-      const response = await fetch('/api/videos/adjust-verbosity', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          videoUrl: selectedVideo.youtubeUrl,
-          selectedTemplate: selectedFormat,
-          currentContent: selectedFormatContent.content,
-          newVerbosity: newVerbosity,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.content) {
-        // Store the generated content
-        setGeneratedVerbosityVersions(prev => ({
-          ...prev,
-          [formatKey]: {
-            ...prev[formatKey],
-            [newVerbosity]: result.content
-          }
-        }));
-        
-        // Switch to the new verbosity level
-        setCurrentVerbosity(newVerbosity);
-        console.log(`✅ Generated ${newVerbosity} version successfully`);
-      } else {
-        throw new Error('No content returned from verbosity adjustment');
-      }
-    } catch (error) {
-      console.error('Failed to generate verbosity version:', error);
-      // Show error to user but don't prevent switching (will show original content)
-      setCurrentVerbosity(newVerbosity);
-    } finally {
-      setLoadingVerbosity(false);
-    }
+    // If for some reason the version doesn't exist, fallback to standard content
+    console.warn(`⚠️ ${newVerbosity} version not found for ${selectedFormat}, falling back to original content`);
+    setCurrentVerbosity(newVerbosity);
   };
 
   const loadChatbotContext = async (videoId: string) => {
@@ -629,36 +597,24 @@ export default function NotesPage() {
                           <div className="flex items-center space-x-3">
                             <button
                               onClick={() => handleVerbosityChange('brief')}
-                              disabled={currentVerbosity === 'brief' || loadingVerbosity}
+                              disabled={currentVerbosity === 'brief'}
                               className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-lg text-xs text-red-400 hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                             >
-                              {loadingVerbosity && currentVerbosity !== 'brief' ? (
-                                <div className="animate-spin rounded-full h-3 w-3 border border-red-400 border-t-transparent mx-auto" />
-                              ) : (
-                                'Brief'
-                              )}
+                              Brief
                             </button>
                             <button
                               onClick={() => handleVerbosityChange('standard')}
-                              disabled={currentVerbosity === 'standard' || loadingVerbosity}
+                              disabled={currentVerbosity === 'standard'}
                               className="px-3 py-1.5 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-400 hover:bg-yellow-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                             >
-                              {loadingVerbosity && currentVerbosity !== 'standard' ? (
-                                <div className="animate-spin rounded-full h-3 w-3 border border-yellow-400 border-t-transparent mx-auto" />
-                              ) : (
-                                'Standard ⭐'
-                              )}
+                              Standard ⭐
                             </button>
                             <button
                               onClick={() => handleVerbosityChange('comprehensive')}
-                              disabled={currentVerbosity === 'comprehensive' || loadingVerbosity}
+                              disabled={currentVerbosity === 'comprehensive'}
                               className="px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-xs text-green-400 hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                             >
-                              {loadingVerbosity && currentVerbosity !== 'comprehensive' ? (
-                                <div className="animate-spin rounded-full h-3 w-3 border border-green-400 border-t-transparent mx-auto" />
-                              ) : (
-                                'Comprehensive'
-                              )}
+                              Comprehensive
                             </button>
                           </div>
                         </div>
@@ -764,7 +720,26 @@ export default function NotesPage() {
                           </div>
                         </div>
                         
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{getCurrentVerbosityContent()}</ReactMarkdown>
+                        <div className="text-sm text-[var(--text-primary)] prose prose-invert prose-sm max-w-none">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              h1: ({children}) => <h1 className="text-xl font-bold text-[var(--text-primary)] mb-4">{children}</h1>,
+                              h2: ({children}) => <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">{children}</h2>,
+                              h3: ({children}) => <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{children}</h3>,
+                              p: ({children}) => <p className="mb-3 text-[var(--text-primary)]">{children}</p>,
+                              ul: ({children}) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
+                              ol: ({children}) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
+                              li: ({children}) => <li className="ml-4">{children}</li>,
+                              strong: ({children}) => <strong className="font-semibold text-[var(--text-primary)]">{children}</strong>,
+                              em: ({children}) => <em className="italic">{children}</em>,
+                              code: ({children}) => <code className="bg-[var(--card-border)] px-1 py-0.5 rounded text-xs">{children}</code>,
+                              pre: ({children}) => <pre className="bg-[var(--card-border)] p-3 rounded-lg overflow-x-auto mb-3">{children}</pre>,
+                            }}
+                          >
+                            {getCurrentVerbosityContent()}
+                          </ReactMarkdown>
+                        </div>
                       </div>
                     </div>
                   ) : (

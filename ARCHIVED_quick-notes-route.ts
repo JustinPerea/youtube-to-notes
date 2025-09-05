@@ -1,3 +1,18 @@
+/**
+ * ARCHIVED: Quick Notes Route
+ * 
+ * This file was removed to simplify the processing pipeline.
+ * It provided immediate user feedback (30-60s) but created complexity:
+ * - Dual processing paths (quick vs comprehensive)
+ * - Throwaway content that gets replaced
+ * - Complex state management
+ * - User confusion with changing content
+ * 
+ * Original location: app/api/videos/quick-notes/route.ts
+ * Archived on: 2025-01-09
+ * Reason: Simplify pipeline to single comprehensive processing
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { TEMPLATES } from '@/lib/templates';

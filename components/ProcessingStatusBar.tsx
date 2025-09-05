@@ -9,7 +9,7 @@ import React from 'react';
 import { CheckCircle, Clock, XCircle, FileText, Brain, MessageCircle, Download, Settings, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type ProcessingStep = 'notes' | 'analysis' | 'chatbot';
+type ProcessingStepKey = 'notes' | 'analysis' | 'chatbot';
 type StepStatus = 'pending' | 'processing' | 'complete' | 'error';
 
 interface ProcessingStepData {
@@ -28,7 +28,7 @@ export interface ProcessingStep {
 }
 
 interface ProcessingStatusBarProps {
-  steps: ProcessingStep[] | Record<ProcessingStep, ProcessingStepData>;
+  steps: ProcessingStep[] | Record<ProcessingStepKey, ProcessingStepData>;
   className?: string;
   compact?: boolean;
   onFeatureClick?: (step: ProcessingStep) => void;
@@ -198,7 +198,7 @@ export default function ProcessingStatusBar({ steps, className, compact = false,
   // Handle both array and object-based steps
   const stepArray = Array.isArray(steps) ? steps : Object.entries(steps).map(([key, stepData]) => {
     // Convert record-based steps to array format with proper labels
-    const stepConfig = STEP_CONFIG[key as keyof typeof STEP_CONFIG];
+    const stepConfig = STEP_CONFIG[key as ProcessingStepKey];
     if (!stepConfig) return null;
     
     return {
@@ -211,7 +211,7 @@ export default function ProcessingStatusBar({ steps, className, compact = false,
   }).filter(Boolean);
   
   // Only filter out completely invalid steps (null/undefined)
-  const validSteps = stepArray.filter(step => step && step.status);
+  const validSteps = stepArray.filter((step): step is ProcessingStep => step != null && step.status != null);
   
   if (compact) {
     // Show only current processing step in compact mode

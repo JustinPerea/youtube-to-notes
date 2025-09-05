@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { TEMPLATES } from '@/lib/templates';
+import { TEMPLATES, Template } from '@/lib/templates';
 import { videoProcessingRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateVideoUrl } from '@/lib/validation';
 import { extractTranscript, extractTranscriptEnhanced, cleanTranscriptText } from '@/lib/transcript/extractor';
@@ -15,6 +15,14 @@ import { NotesService } from '@/lib/services/notes';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
+
+// Local implementation of getTemplatePrompt function (temporary workaround for import issue)
+function getTemplatePrompt(template: Template, durationSeconds?: number): string {
+  if (typeof template.prompt === 'function') {
+    return (template.prompt as (durationSeconds?: number) => string)(durationSeconds);
+  }
+  return template.prompt as string;
+}
 
 // Configure maximum execution timeout for long video processing (300 seconds = 5 minutes)
 export const maxDuration = 300;
@@ -74,7 +82,7 @@ async function getModelForUser(userId: string): Promise<{
 }
 
 // Generate all verbosity levels for instant switching (OPTIMIZED: Single API call)
-async function generateAllVerbosityLevels(videoUrl: string, template: any, originalContent: string, userId: string) {
+async function generateAllVerbosityLevels(videoUrl: string, template: any, originalContent: string, userId: string, durationSeconds?: number) {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
   
   console.log('🔄 Optimized verbosity generation: Creating all levels in single API call...');
@@ -127,25 +135,11 @@ Create 5-8 comprehension questions that test understanding of the material:
 How can this knowledge be applied in real-world scenarios?`;
 
       case 'basic-summary':
+        // Use the dynamic template prompt that scales with video duration
+        const dynamicPrompt = getTemplatePrompt(template, durationSeconds);
         return `
-REQUIRED BASIC SUMMARY STRUCTURE:
-**Video Summary**
-
-**Main Topic**: [Single sentence describing the core subject]
-
-**Key Points**: 
-- [First main point from the video]
-- [Second main point from the video]
-- [Third main point from the video]
-
-**Important Details**: 
-- [Supporting detail or example 1]
-- [Supporting detail or example 2]
-- [Supporting detail or example 3]
-
-**Structure**: [How the video content was organized]
-
-**Conclusion**: [Main takeaway or final message]`;
+REQUIRED BASIC SUMMARY STRUCTURE (Dynamic scaling based on video length):
+${dynamicPrompt}`;
 
       default:
         return `Maintain the exact structure and format of the ${template.name} template`;
@@ -491,7 +485,7 @@ Return ONLY the JSON object. No markdown formatting, no explanations, no code bl
 
 
 // Enhanced prompt generation with cognitive load optimization
-function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLevel: string) {
+function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLevel: string, durationSeconds?: number) {
   const verbosityInstructions = {
     brief: 'Generate concise notes with 50-75 words per concept. Use bullet points and limit to 1-2 supporting details maximum.',
     standard: 'Generate balanced notes with 100-150 words per concept. Use mixed paragraph and bullet formats with 3-4 supporting details.',
@@ -516,7 +510,10 @@ function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLe
       startInstruction = `Ensure the first characters of your response must be "**${template.name}**" with no text before it.`;
     }
 
-    return `${template.prompt}
+    // Get the template prompt (dynamic if supported, static otherwise)
+    const templatePrompt = getTemplatePrompt(template, durationSeconds);
+
+    return `${templatePrompt}
 
 CONTENT ANALYSIS:
 - Type: ${contentAnalysis.type}
@@ -877,7 +874,8 @@ export async function POST(request: NextRequest) {
     
     // Generate all verbosity levels from the result
     console.log('Generating all verbosity levels for instant switching...');
-    const verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result, userId);
+    const durationSeconds = processingResult.metadata?.videoDuration;
+    const verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result, userId, durationSeconds);
     console.log('✅ All verbosity levels generated successfully');
     
     // Auto-save notes to database with all verbosity levels

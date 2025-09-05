@@ -5,6 +5,66 @@
  * Each template contains a curated prompt for Gemini 2.5
  */
 
+/**
+ * Generate natural Basic Summary prompt based on video duration
+ * Uses content-aware guidance instead of artificial point constraints
+ */
+function generateBasicSummaryPrompt(durationSeconds: number = 300): string {
+  // Determine content depth guidance based on duration
+  let contentGuidance: string;
+  let detailLevel: string;
+  let durationContext: string;
+  
+  if (durationSeconds < 300) { // < 5 minutes
+    contentGuidance = "Extract the core concepts concisely";
+    detailLevel = "Focus on essential information only";
+    durationContext = "short video";
+  } else if (durationSeconds < 900) { // 5-15 minutes  
+    contentGuidance = "Identify all major topics and themes presented";
+    detailLevel = "Include supporting details for each major point";
+    durationContext = "medium-length video";
+  } else if (durationSeconds < 1800) { // 15-30 minutes
+    contentGuidance = "Provide comprehensive coverage of all significant concepts, themes, and subtopics";
+    detailLevel = "Include examples, context, and detailed explanations";
+    durationContext = "longer video";
+  } else { // > 30 minutes
+    contentGuidance = "Ensure thorough analysis covering all major sections, concepts, and their interconnections";
+    detailLevel = "Include comprehensive examples, context, detailed explanations, and relationships between concepts";
+    durationContext = "extended video";
+  }
+
+  return `Generate a structured video summary following this format:
+
+**Video Summary**
+
+**Main Topic**: [Single sentence describing the core subject]
+
+**Key Points**: 
+[${contentGuidance} - Let the content naturally determine the number of points]
+
+**Important Details**: 
+[${detailLevel} - Extract naturally occurring supporting information]
+
+**Structure**: [How the ${durationContext} content was organized]
+
+**Conclusion**: [Main takeaway or final message]
+
+CONTENT EXTRACTION GUIDANCE:
+- Video Duration: ${Math.floor(durationSeconds / 60)} minutes
+- Approach: ${contentGuidance}
+- Detail Level: ${detailLevel}
+- Extract key points based on actual content structure, not artificial limits
+- For ${durationContext}s, ensure appropriate comprehensiveness without forced constraints
+- Let the natural flow and organization of content determine the structure
+
+FORMATTING RULES:
+- Start output with "**Video Summary**" on first line
+- Use only the sections listed above
+- Write in third-person, factual tone
+- No preambles, introductions, or meta-commentary
+- Format as clean markdown with bullet points`;
+}
+
 export interface Template {
   id: string;
   name: string;
@@ -12,7 +72,7 @@ export interface Template {
   category: 'summary' | 'educational' | 'professional' | 'creative';
   icon: string;
   color: string;
-  prompt: string;
+  prompt: string | ((durationSeconds?: number) => string);
   outputFormat: 'markdown' | 'html' | 'json' | 'text';
   features: string[];
   limitations: string[];
@@ -25,49 +85,23 @@ export const TEMPLATES: Template[] = [
   {
     id: 'basic-summary',
     name: 'Basic Summary',
-    description: 'A concise overview of the video content with key points',
+    description: 'Natural content extraction that adapts depth based on video length - no artificial constraints',
     category: 'summary',
     icon: '📝',
     color: 'blue',
-    prompt: `Generate a structured video summary following this EXACT format:
-
-**Video Summary**
-
-**Main Topic**: [Single sentence describing the core subject]
-
-**Key Points**: 
-- [First main point from the video]
-- [Second main point from the video]
-- [Third main point from the video]
-
-**Important Details**: 
-- [Supporting detail or example 1]
-- [Supporting detail or example 2]
-- [Supporting detail or example 3]
-
-**Structure**: [How the video content was organized]
-
-**Conclusion**: [Main takeaway or final message]
-
-RULES:
-- Start output with "**Video Summary**" on first line
-- Use only the sections listed above
-- Write in third-person, factual tone
-- No preambles, introductions, or meta-commentary
-- Format as clean markdown with bullet points`,
+    prompt: generateBasicSummaryPrompt,
     outputFormat: 'markdown',
     features: [
-      'Quick overview',
-      'Key points extraction',
-      'Clean formatting',
-      'Fast processing'
+      'Natural content extraction',
+      'Duration-aware depth scaling',
+      'Intelligent point identification',
+      'Content-driven structure'
     ],
     limitations: [
-      'Limited detail',
-      'No interactive elements',
-      'Basic structure only'
+      'Structure-focused format',
+      'No interactive elements'
     ],
-    estimatedTokens: 800,
+    estimatedTokens: 2400,
     processingTime: 2,
     isPremium: false
   },
@@ -428,6 +462,16 @@ Format with academic writing style, proper headings, and detailed analysis. Incl
     isPremium: true
   }
 ];
+
+/**
+ * Resolve dynamic prompt for templates that support it
+ */
+export function getTemplatePrompt(template: Template, durationSeconds?: number): string {
+  if (typeof template.prompt === 'function') {
+    return template.prompt(durationSeconds);
+  }
+  return template.prompt;
+}
 
 export function getTemplateById(id: string): Template | undefined {
   return TEMPLATES.find(template => template.id === id);

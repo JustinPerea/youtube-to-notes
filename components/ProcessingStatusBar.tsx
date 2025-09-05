@@ -19,10 +19,19 @@ interface ProcessingStepData {
   error?: string;
 }
 
+export interface ProcessingStep {
+  key: string;
+  label: string;
+  status: string;
+  description: string;
+  enabledFeatures?: string[];
+}
+
 interface ProcessingStatusBarProps {
-  steps: Record<ProcessingStep, ProcessingStepData>;
+  steps: ProcessingStep[] | Record<ProcessingStep, ProcessingStepData>;
   className?: string;
   compact?: boolean;
+  onFeatureClick?: (step: ProcessingStep) => void;
 }
 
 const STEP_CONFIG = {
@@ -185,34 +194,40 @@ const ProcessingStep: React.FC<{
   );
 };
 
-export default function ProcessingStatusBar({ steps, className, compact = false }: ProcessingStatusBarProps) {
-  const stepOrder: ProcessingStep[] = ['notes', 'analysis', 'chatbot'];
+export default function ProcessingStatusBar({ steps, className, compact = false, onFeatureClick }: ProcessingStatusBarProps) {
+  // Handle both array and object-based steps
+  const stepArray = Array.isArray(steps) ? steps : Object.values(steps);
   
   if (compact) {
     // Show only current processing step in compact mode
-    const currentStep = stepOrder.find(step => steps[step].status === 'processing') || 
-                      stepOrder.find(step => steps[step].status === 'pending') ||
-                      'notes';
+    const currentStep = stepArray.find(step => step.status === 'processing') || 
+                       stepArray.find(step => step.status === 'pending') ||
+                       stepArray[0];
+    
+    if (!currentStep) return null;
     
     return (
       <div className={cn("flex items-center justify-between p-2 bg-gray-50 border rounded-lg", className)}>
-        <ProcessingStep 
-          step={currentStep}
-          data={steps[currentStep]}
-          config={STEP_CONFIG[currentStep]}
-          compact={true}
-        />
+        <div className="flex items-center space-x-2">
+          <StatusIcon status={currentStep.status as StepStatus} icon={FileText} />
+          <span className="text-sm text-gray-700">{currentStep.label}</span>
+          {currentStep.status === 'processing' && (
+            <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-600 rounded-full animate-pulse w-2/3"></div>
+            </div>
+          )}
+        </div>
         
         {/* Overall Progress */}
         <div className="flex items-center space-x-2 text-sm text-gray-600">
           <span>
-            {stepOrder.filter(step => steps[step].status === 'complete').length}/{stepOrder.length}
+            {stepArray.filter(step => step.status === 'complete').length}/{stepArray.length}
           </span>
           <div className="w-12 h-2 bg-gray-200 rounded-full overflow-hidden">
             <div 
               className="h-full bg-blue-600 rounded-full transition-all duration-300"
               style={{ 
-                width: `${(stepOrder.filter(step => steps[step].status === 'complete').length / stepOrder.length) * 100}%` 
+                width: `${(stepArray.filter(step => step.status === 'complete').length / stepArray.length) * 100}%` 
               }}
             />
           </div>
@@ -227,26 +242,68 @@ export default function ProcessingStatusBar({ steps, className, compact = false 
         <h2 className="text-lg font-semibold text-gray-900">Processing Status</h2>
         <div className="flex items-center space-x-2 text-sm text-gray-600">
           <span>
-            {stepOrder.filter(step => steps[step].status === 'complete').length}/{stepOrder.length} Complete
+            {stepArray.filter(step => step.status === 'complete').length}/{stepArray.length} Complete
           </span>
         </div>
       </div>
       
       <div className="space-y-3">
-        {stepOrder.map((step, index) => (
-          <div key={step} className="relative">
-            <ProcessingStep 
-              step={step}
-              data={steps[step]}
-              config={STEP_CONFIG[step]}
-            />
+        {stepArray.map((step, index) => (
+          <div key={step.key} className="relative">
+            <div className={cn(
+              "p-4 border rounded-lg transition-all duration-300 cursor-pointer hover:shadow-md",
+              step.status === 'complete' && "border-green-200 bg-green-50",
+              step.status === 'processing' && "border-blue-200 bg-blue-50", 
+              step.status === 'error' && "border-red-200 bg-red-50",
+              step.status === 'pending' && "border-gray-200 bg-gray-50"
+            )}
+            onClick={() => onFeatureClick?.(step)}>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <StatusIcon status={step.status as StepStatus} icon={getStepIcon(step.key)} />
+                  <h3 className="font-medium text-gray-900">{step.label}</h3>
+                </div>
+                
+                {step.status === 'processing' && (
+                  <div className="flex items-center space-x-2 text-sm text-blue-600">
+                    <Clock className="w-4 h-4 animate-pulse" />
+                    <span>Processing...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              <p className={cn(
+                "text-sm mb-3",
+                step.status === 'complete' && "text-green-700",
+                step.status === 'processing' && "text-blue-700",
+                step.status === 'error' && "text-red-700",
+                step.status === 'pending' && "text-gray-600"
+              )}>
+                {step.description}
+              </p>
+
+              {/* Features */}
+              {step.enabledFeatures && step.enabledFeatures.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {step.enabledFeatures.map((feature, idx) => (
+                    <FeatureTag 
+                      key={idx} 
+                      feature={feature} 
+                      available={step.status === 'complete'} 
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
             
             {/* Progress Line */}
-            {index < stepOrder.length - 1 && (
+            {index < stepArray.length - 1 && (
               <div className="flex justify-center my-2">
                 <div className={cn(
                   "w-px h-4 transition-colors duration-300",
-                  steps[step].status === 'complete' ? "bg-green-300" : "bg-gray-300"
+                  step.status === 'complete' ? "bg-green-300" : "bg-gray-300"
                 )} />
               </div>
             )}
@@ -255,4 +312,13 @@ export default function ProcessingStatusBar({ steps, className, compact = false 
       </div>
     </div>
   );
+}
+
+function getStepIcon(key: string) {
+  switch (key) {
+    case 'notes': return FileText;
+    case 'analysis': return Brain;
+    case 'chatbot': return MessageCircle;
+    default: return FileText;
+  }
 }

@@ -14,7 +14,7 @@ let stripe: Stripe | null = null;
 
 if (STRIPE_CONFIG.secretKey && !STRIPE_CONFIG.secretKey.includes('placeholder')) {
   stripe = new Stripe(STRIPE_CONFIG.secretKey, {
-    apiVersion: '2025-08-27.basil',
+    apiVersion: '2025-02-24.acacia',
   });
 }
 

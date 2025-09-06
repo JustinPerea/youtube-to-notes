@@ -1,4 +1,4 @@
-import { handlers } from "@/lib/auth";
+import { handlers } from "@/auth";
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';

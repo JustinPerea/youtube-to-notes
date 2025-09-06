@@ -269,17 +269,6 @@ export function VideoPreview({ videoInfo, onClear, onRecommendationChange }: Vid
                 </span>
               </div>
               
-              {/* Simple Premium Processing Badge */}
-              <div className="mt-3 flex justify-center">
-                <div className="px-3 py-2 bg-purple-500/20 border border-purple-500/30 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-purple-400">⭐</span>
-                    <span className="text-xs font-medium text-purple-400">
-                      Ready for Premium AI Processing
-                    </span>
-                  </div>
-                </div>
-              </div>
             </>
           ) : (
             <div className="flex items-center space-x-2 text-sm">

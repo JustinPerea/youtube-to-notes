@@ -519,17 +519,11 @@ export function VideoUploadProcessor({
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--accent-pink)] mx-auto mb-6"></div>
             <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Converting Video</h3>
             <p className="text-[var(--text-secondary)] mb-6">
-Converting with Premium AI...
+Processing your video...
             </p>
             
             {/* Simplified Progress Indicator */}
             <div className="mb-6 p-4 bg-[var(--bg-primary)] rounded-lg border border-[var(--card-border)]">
-              {/* Premium AI Processing Badge */}
-              <div className="flex items-center justify-center mb-4">
-                <span className="px-4 py-2 rounded-lg text-sm font-medium border bg-purple-500/20 border-purple-500/30 text-purple-400">
-                  ⭐ Premium AI Processing
-                </span>
-              </div>
               
               {/* Overall Progress Bar */}
               <div className="w-full bg-[var(--card-border)] rounded-full h-3 mb-3 overflow-hidden">
@@ -657,18 +651,6 @@ Converting with Premium AI...
               )}
             </div>
 
-            {/* Simple Processing Success Badge */}
-            <div className="mb-4 flex justify-center">
-              <div className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <span className="text-purple-400">⭐</span>
-                  <span className="text-sm font-medium text-purple-400">
-                    Processed with Premium AI
-                  </span>
-                  <span className="text-purple-400">✓</span>
-                </div>
-              </div>
-            </div>
 
             {/* Verbosity Controls */}
             {result.allVerbosityLevels && (

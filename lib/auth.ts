@@ -175,7 +175,8 @@ const config = {
   debug: process.env.NODE_ENV === 'development',
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(config);
+const nextAuth = NextAuth(config);
+export const { handlers, auth, signIn, signOut } = nextAuth;
 
 // Helper function to safely get session in API routes
 export async function getServerSession(req?: NextRequest) {

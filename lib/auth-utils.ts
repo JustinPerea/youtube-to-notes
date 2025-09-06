@@ -6,30 +6,17 @@ export async function getApiSession(request: NextRequest) {
   try {
     console.log('AUTH-UTILS: Starting session retrieval...');
     
-    // Primary approach: Try NextAuth auth()
-    const session = await auth();
-    console.log('AUTH-UTILS: auth() result:', {
-      type: typeof session,
-      isObject: typeof session === 'object' && session !== null,
-      hasUser: session && typeof session === 'object' && 'user' in session,
-    });
-    
-    // Check if it's actually a session object, not a string
-    if (session && typeof session === 'object' && session !== null && 'user' in session && session.user) {
-      console.log('AUTH-UTILS: Valid session from auth(), user:', session.user.email);
-      return session;
-    }
-    
-    console.log('AUTH-UTILS: auth() failed, trying fallback...');
-    
-    // Fallback: Direct session API call
-    const baseUrl = process.env.NEXTAUTH_URL?.trim() || 
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.trim()}` : 
-                   'https://kyotoscribe.com');
+    // Direct session API call - the only reliable method in NextAuth v5
+    const baseUrl = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3003' 
+      : (process.env.NEXTAUTH_URL?.trim() || 
+         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.trim()}` : 
+         'https://kyotoscribe.com'));
     
     const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
       headers: {
-        'Cookie': request.headers.get('cookie') || ''
+        'Cookie': request.headers.get('cookie') || '',
+        'Content-Type': 'application/json'
       }
     });
     
@@ -43,7 +30,8 @@ export async function getApiSession(request: NextRequest) {
       const sessionData = await sessionResponse.json();
       console.log('AUTH-UTILS: Session API data:', {
         hasUser: !!sessionData?.user,
-        userEmail: sessionData?.user?.email
+        userEmail: sessionData?.user?.email,
+        userId: sessionData?.user?.id
       });
       
       if (sessionData?.user) {
@@ -51,7 +39,7 @@ export async function getApiSession(request: NextRequest) {
       }
     }
     
-    console.log('AUTH-UTILS: All authentication methods failed');
+    console.log('AUTH-UTILS: Session retrieval failed - no valid session found');
     return null;
   } catch (error: any) {
     console.error('AUTH-UTILS: Session retrieval failed:', error.message);

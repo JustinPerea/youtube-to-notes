@@ -328,6 +328,7 @@ export function VideoUploadProcessor({
     try {
       addProcessingStep('🧠 Preparing enhanced features...', 92);
       console.log('🔍 Starting comprehensive analysis generation for video:', videoId);
+      console.log('🔍 Making request to /api/videos/comprehensive-analysis');
 
       const response = await fetch('/api/videos/comprehensive-analysis', {
         method: 'POST',
@@ -340,6 +341,9 @@ export function VideoUploadProcessor({
           requestedTemplates: ['basic-summary', 'study-notes', 'presentation-slides']
         }),
       });
+
+      console.log('🔍 Comprehensive analysis response status:', response.status);
+      console.log('🔍 Response ok:', response.ok);
 
       if (response.ok) {
         const analysisResult = await response.json();
@@ -366,21 +370,22 @@ export function VideoUploadProcessor({
         
         addProcessingStep('✅ All done! Your notes are ready to use.', 100);
       } else {
-        const errorData = await response.json();
-        console.warn('⚠️ Comprehensive analysis failed:', errorData.error);
-        setAnalysisError(`Analysis generation failed: ${errorData.error}`);
+        const errorText = await response.text();
+        console.warn('⚠️ Comprehensive analysis failed with status:', response.status);
+        console.warn('⚠️ Error response:', errorText);
+        setAnalysisError(`Analysis generation failed: HTTP ${response.status}`);
         
         // Mark analysis as error
         updateProcessingStep('analysis', { 
           status: 'error',
-          error: errorData.error
+          error: `HTTP ${response.status}: ${errorText.substring(0, 100)}`
         });
         updateProcessingStep('chatbot', { 
           status: 'error',
           error: 'Analysis required for full functionality'
         });
         
-        addProcessingStep(`⚠️ Some features unavailable: ${errorData.error}`, 98);
+        addProcessingStep(`⚠️ Some features unavailable: HTTP ${response.status}`, 98);
         addProcessingStep('✅ Your notes are ready!', 100);
       }
     } catch (error: any) {

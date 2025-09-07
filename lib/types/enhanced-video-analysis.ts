@@ -167,7 +167,7 @@ export interface ChatbotVideoContext {
   // User Context
   currentlyViewingFormat?: string;
   currentVerbosityLevel?: 'brief' | 'standard' | 'comprehensive';
-  userSubscriptionTier: 'free' | 'student' | 'pro';
+  userSubscriptionTier: 'free' | 'basic' | 'pro';
   
   // Comprehensive Analysis
   analysis: EnhancedVideoAnalysis;

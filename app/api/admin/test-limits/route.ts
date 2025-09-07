@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       
       for (let i = 1; i <= 7; i++) {
         console.log(`🧪 Test ${i}: Checking limit for user ${dbUserId}`);
-        const limitCheck = await checkUsageLimit(dbUserId, 'process_video');
+        const limitCheck = await checkUsageLimit(dbUserId, 'generate_note');
         console.log(`🧪 Test ${i} result:`, limitCheck);
         
         const testResult: any = {
@@ -115,48 +115,26 @@ export async function POST(req: NextRequest) {
 
         if (limitCheck.allowed) {
           // Simulate processing a video by incrementing usage
-          await incrementUsage(dbUserId, 'process_video');
-          testResult.action = 'Video processed (simulated)';
+          await incrementUsage(dbUserId, 'generate_note');
+          testResult.action = 'Note generated (simulated)';
         } else {
           testResult.action = 'Blocked - limit reached';
         }
 
         results.testResults.push(testResult);
         
-        console.log(`Video ${i}: ${testResult.action} - ${testResult.beforeUsage}/${testResult.limit || 'unlimited'}`);
+        console.log(`Note ${i}: ${testResult.action} - ${testResult.beforeUsage}/${testResult.limit || 'unlimited'}`);
       }
 
       results.message = 'Video limit test completed. Check if 6th and 7th videos were blocked.';
 
     } else if (testType === 'ai_limits') {
-      // Test AI chat limits
-      console.log('🧪 Testing AI chat limits...');
-      
-      for (let i = 1; i <= 12; i++) {
-        const limitCheck = await checkUsageLimit(dbUserId, 'ask_ai_question');
-        const testResult: any = {
-          attempt: i,
-          beforeUsage: limitCheck.current || 0,
-          allowed: limitCheck.allowed,
-          limit: limitCheck.limit,
-          remaining: limitCheck.remaining,
-          unlimited: limitCheck.unlimited,
-          reason: limitCheck.reason
-        };
-
-        if (limitCheck.allowed) {
-          await incrementUsage(dbUserId, 'ask_ai_question');
-          testResult.action = 'AI question processed (simulated)';
-        } else {
-          testResult.action = 'Blocked - limit reached or disabled';
-        }
-
-        results.testResults.push(testResult);
-        
-        console.log(`AI Q${i}: ${testResult.action} - ${testResult.beforeUsage}/${testResult.limit || 'unlimited'}`);
-      }
-
-      results.message = 'AI chat limit test completed. Check if limits are enforced correctly.';
+      // AI features disabled for launch
+      results.message = 'AI chatbot features are disabled for launch. Coming soon!';
+      results.testResults.push({
+        action: 'Skipped',
+        message: 'AI chatbot features coming soon'
+      });
 
     } else if (testType === 'reset_usage') {
       // Reset usage for testing

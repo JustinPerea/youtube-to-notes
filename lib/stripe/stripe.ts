@@ -2,7 +2,7 @@
 // Ready to activate once Stripe account is set up with business email
 
 import Stripe from 'stripe';
-import { STRIPE_CONFIG, getStripePriceId, STUDENT_DISCOUNT, STRIPE_PRICES } from './config';
+import { STRIPE_CONFIG, getStripePriceId, EDUCATIONAL_DISCOUNT, STRIPE_PRICES } from './config';
 import { db } from '../db/connection';
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -21,9 +21,9 @@ if (STRIPE_CONFIG.secretKey && !STRIPE_CONFIG.secretKey.includes('placeholder'))
 export interface CreateCheckoutSessionParams {
   userId: string;
   email: string;
-  tier: 'student' | 'pro' | 'creator';
+  tier: 'basic' | 'pro';
   billing: 'monthly' | 'yearly';
-  studentDiscount?: boolean;
+  educationalDiscount?: boolean;
 }
 
 export interface CustomerPortalParams {
@@ -37,7 +37,7 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
     throw new Error('Stripe not configured. Please set up your business email and Stripe account first.');
   }
 
-  const { userId, email, tier, billing, studentDiscount = false } = params;
+  const { userId, email, tier, billing, educationalDiscount = false } = params;
   const priceId = getStripePriceId(tier, billing);
 
   if (!priceId) {
@@ -61,7 +61,7 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
       userId,
       tier,
       billing,
-      studentDiscount: studentDiscount.toString(),
+      educationalDiscount: educationalDiscount.toString(),
     },
     subscription_data: {
       metadata: {
@@ -72,11 +72,11 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
     },
   };
 
-  // Apply student discount if applicable
-  if (studentDiscount && tier === 'student') {
+  // Apply educational discount if applicable
+  if (educationalDiscount && tier === 'basic') {
     sessionParams.discounts = [
       {
-        coupon: STUDENT_DISCOUNT.couponId,
+        coupon: EDUCATIONAL_DISCOUNT.couponId,
       },
     ];
   }
@@ -464,8 +464,8 @@ export function verifyWebhookSignature(body: string, signature: string): Stripe.
 
 // Price ID to subscription tier mapping
 const STRIPE_PRICE_TO_TIER: Record<string, SubscriptionTier> = {
-  'price_1S2uKwE61emw6urZuJa7iMo9': 'student', // student_monthly
-  'price_1S2uLKE61emw6urZCl9Ne0mu': 'student', // student_yearly
+  'price_1S2uKwE61emw6urZuJa7iMo9': 'basic', // basic_monthly
+  'price_1S2uLKE61emw6urZCl9Ne0mu': 'basic', // basic_yearly
   'price_1S2uLYE61emw6urZoOGcTGfW': 'pro',     // pro_monthly
   'price_1S2uLrE61emw6urZ20oHhP5r': 'pro',     // pro_yearly
   'price_1S2uM4E61emw6urZjCGcU3oc': 'pro',     // creator_monthly -> map to 'pro' since schema only has 3 tiers

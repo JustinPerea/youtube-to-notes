@@ -11,10 +11,10 @@ import { useSession, signIn } from 'next-auth/react';
 interface SubscriptionInfo {
   subscription: {
     id: string;
-    tier: 'free' | 'student' | 'pro';
+    tier: 'free' | 'basic' | 'pro';
     status: string;
     adminOverride?: {
-      tier: 'free' | 'student' | 'pro';
+      tier: 'free' | 'basic' | 'pro';
       expires?: string;
     };
   };
@@ -36,7 +36,7 @@ export default function SimpleAdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [testTier, setTestTier] = useState<'free' | 'student' | 'pro'>('free');
+  const [testTier, setTestTier] = useState<'free' | 'basic' | 'pro'>('free');
   const [expiresInHours, setExpiresInHours] = useState<number>(24);
   const [testResults, setTestResults] = useState<any>(null);
   const [runningTest, setRunningTest] = useState<string>('');

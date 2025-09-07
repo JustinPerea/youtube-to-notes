@@ -4,7 +4,7 @@
 
 import { db } from '../db/connection';
 import { users } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { USAGE_LIMITS } from '../stripe/config';
 import { memoryCache, CacheKeys, CacheTTL } from '../cache/memory-cache';
 
@@ -13,7 +13,7 @@ export interface UserSubscription {
   userId: string;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
-  tier: 'free' | 'student' | 'pro' | 'creator';
+  tier: 'free' | 'basic' | 'pro';
   status: 'active' | 'cancelled' | 'past_due' | 'incomplete';
   currentPeriodStart?: Date;
   currentPeriodEnd?: Date;
@@ -25,8 +25,7 @@ export interface UserSubscription {
 export interface UsageData {
   userId: string;
   month: string; // Format: YYYY-MM
-  videosProcessed: number;
-  aiQuestionsAsked: number;
+  notesGenerated: number;
   storageUsedMB: number;
   resetAt: Date;
 }
@@ -42,9 +41,22 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
       return cachedSubscription;
     }
 
-    // TODO: Update this query once subscription columns are added to users table
+    // Get user data from database with subscription info
     const user = await db
-      .select()
+      .select({
+        id: users.id,
+        subscriptionTier: users.subscriptionTier,
+        subscriptionStatus: users.subscriptionStatus,
+        stripeCustomerId: users.stripeCustomerId,
+        stripeSubscriptionId: users.stripeSubscriptionId,
+        subscriptionCurrentPeriodStart: users.subscriptionCurrentPeriodStart,
+        subscriptionCurrentPeriodEnd: users.subscriptionCurrentPeriodEnd,
+        subscriptionCancelAtPeriodEnd: users.subscriptionCancelAtPeriodEnd,
+        adminOverrideTier: users.adminOverrideTier,
+        adminOverrideExpires: users.adminOverrideExpires,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
@@ -53,15 +65,26 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
       return null;
     }
 
-    // For now, return a default free subscription
-    // This will be replaced with actual subscription data from database
+    const userData = user[0];
+    
+    // Check if admin override is active
+    let effectiveTier = userData.subscriptionTier;
+    if (userData.adminOverrideTier && userData.adminOverrideExpires && userData.adminOverrideExpires > new Date()) {
+      effectiveTier = userData.adminOverrideTier;
+    }
+
     const subscription: UserSubscription = {
-      id: userId,
+      id: userData.id,
       userId,
-      tier: 'free', // TODO: Get from database
-      status: 'active',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      stripeCustomerId: userData.stripeCustomerId || undefined,
+      stripeSubscriptionId: userData.stripeSubscriptionId || undefined,
+      tier: (effectiveTier as 'free' | 'basic' | 'pro') || 'free',
+      status: (userData.subscriptionStatus as 'active' | 'cancelled' | 'past_due' | 'incomplete') || 'active',
+      currentPeriodStart: userData.subscriptionCurrentPeriodStart || undefined,
+      currentPeriodEnd: userData.subscriptionCurrentPeriodEnd || undefined,
+      cancelAtPeriodEnd: userData.subscriptionCancelAtPeriodEnd || false,
+      createdAt: userData.createdAt,
+      updatedAt: userData.updatedAt,
     };
     
     // Cache the result
@@ -95,22 +118,43 @@ export async function updateUserSubscription(
   subscriptionData: Partial<UserSubscription>
 ): Promise<void> {
   try {
-    // TODO: Update users table with subscription data
-    // await db
-    //   .update(users)
-    //   .set({
-    //     stripeCustomerId: subscriptionData.stripeCustomerId,
-    //     stripeSubscriptionId: subscriptionData.stripeSubscriptionId,
-    //     subscriptionTier: subscriptionData.tier,
-    //     subscriptionStatus: subscriptionData.status,
-    //     subscriptionCurrentPeriodStart: subscriptionData.currentPeriodStart,
-    //     subscriptionCurrentPeriodEnd: subscriptionData.currentPeriodEnd,
-    //     subscriptionCancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd,
-    //     updatedAt: new Date(),
-    //   })
-    //   .where(eq(users.id, userId));
+    // Build update object only with defined values
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
 
-    console.log('Subscription update (placeholder):', { userId, subscriptionData });
+    if (subscriptionData.stripeCustomerId !== undefined) {
+      updateData.stripeCustomerId = subscriptionData.stripeCustomerId;
+    }
+    if (subscriptionData.stripeSubscriptionId !== undefined) {
+      updateData.stripeSubscriptionId = subscriptionData.stripeSubscriptionId;
+    }
+    if (subscriptionData.tier !== undefined) {
+      updateData.subscriptionTier = subscriptionData.tier;
+    }
+    if (subscriptionData.status !== undefined) {
+      updateData.subscriptionStatus = subscriptionData.status;
+    }
+    if (subscriptionData.currentPeriodStart !== undefined) {
+      updateData.subscriptionCurrentPeriodStart = subscriptionData.currentPeriodStart;
+    }
+    if (subscriptionData.currentPeriodEnd !== undefined) {
+      updateData.subscriptionCurrentPeriodEnd = subscriptionData.currentPeriodEnd;
+    }
+    if (subscriptionData.cancelAtPeriodEnd !== undefined) {
+      updateData.subscriptionCancelAtPeriodEnd = subscriptionData.cancelAtPeriodEnd;
+    }
+
+    await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId));
+
+    // Clear cache to force refresh on next read
+    const cacheKey = CacheKeys.USER_SUBSCRIPTION(userId);
+    memoryCache.delete(cacheKey);
+
+    console.log('Subscription updated successfully:', { userId, subscriptionData });
   } catch (error) {
     console.error('Error updating user subscription:', error);
     throw error;
@@ -122,15 +166,55 @@ export async function getUserUsage(userId: string): Promise<UsageData> {
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
   
   try {
-    // TODO: Query actual usage from database
-    // For now, return placeholder data
+    // Get current usage from database
+    const user = await db
+      .select({
+        videosProcessedThisMonth: users.videosProcessedThisMonth,
+        storageUsedMb: users.storageUsedMb,
+        resetDate: users.resetDate,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user.length) {
+      throw new Error('User not found');
+    }
+
+    const userData = user[0];
+    const now = new Date();
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    
+    // Check if we need to reset monthly counters
+    const shouldResetVideos = !userData.resetDate || userData.resetDate < new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    if (shouldResetVideos) {
+      const updateData: any = {
+        videosProcessedThisMonth: 0,
+        resetDate: nextMonthStart,
+      };
+      
+      await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, userId));
+      
+      // Return reset values
+      return {
+        userId,
+        month: currentMonth,
+        notesGenerated: shouldResetVideos ? 0 : (userData.videosProcessedThisMonth || 0),
+        storageUsedMB: userData.storageUsedMb || 0,
+        resetAt: nextMonthStart,
+      };
+    }
+
     return {
       userId,
       month: currentMonth,
-      videosProcessed: 0, // TODO: Get from database
-      aiQuestionsAsked: 0, // TODO: Get from database
-      storageUsedMB: 0, // TODO: Calculate from user's files
-      resetAt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+      notesGenerated: userData.videosProcessedThisMonth || 0,
+      storageUsedMB: userData.storageUsedMb || 0,
+      resetAt: userData.resetDate || nextMonthStart,
     };
   } catch (error) {
     console.error('Error getting user usage:', error);
@@ -141,7 +225,7 @@ export async function getUserUsage(userId: string): Promise<UsageData> {
 // Check if user can perform an action based on their tier and usage
 export async function checkUsageLimit(
   userId: string, 
-  action: 'process_video' | 'ask_ai_question' | 'use_storage'
+  action: 'generate_note' | 'use_storage'
 ): Promise<{ allowed: boolean; reason?: string; limit?: number; current?: number }> {
   try {
     const subscription = await getUserSubscription(userId);
@@ -154,36 +238,16 @@ export async function checkUsageLimit(
     const limits = USAGE_LIMITS[subscription.tier];
     
     switch (action) {
-      case 'process_video':
+      case 'generate_note':
         if (limits.videosPerMonth === -1) {
           return { allowed: true }; // Unlimited
         }
-        const videoAllowed = usage.videosProcessed < limits.videosPerMonth;
+        const noteAllowed = usage.notesGenerated < limits.videosPerMonth;
         return {
-          allowed: videoAllowed,
-          reason: videoAllowed ? undefined : 'Monthly video limit reached',
+          allowed: noteAllowed,
+          reason: noteAllowed ? undefined : 'Monthly note generation limit reached',
           limit: limits.videosPerMonth,
-          current: usage.videosProcessed,
-        };
-
-      case 'ask_ai_question':
-        if (limits.aiQuestionsPerMonth === -1) {
-          return { allowed: true }; // Unlimited
-        }
-        if (limits.aiQuestionsPerMonth === 0) {
-          return { 
-            allowed: false, 
-            reason: 'AI chat not available in free tier',
-            limit: 0,
-            current: usage.aiQuestionsAsked,
-          };
-        }
-        const questionAllowed = usage.aiQuestionsAsked < limits.aiQuestionsPerMonth;
-        return {
-          allowed: questionAllowed,
-          reason: questionAllowed ? undefined : 'Monthly AI question limit reached',
-          limit: limits.aiQuestionsPerMonth,
-          current: usage.aiQuestionsAsked,
+          current: usage.notesGenerated,
         };
 
       case 'use_storage':
@@ -211,12 +275,22 @@ export async function checkUsageLimit(
 // Increment usage counter
 export async function incrementUsage(
   userId: string, 
-  action: 'process_video' | 'ask_ai_question',
+  action: 'generate_note',
   amount: number = 1
 ): Promise<void> {
   try {
-    // TODO: Increment usage in database
-    console.log('Usage increment (placeholder):', { userId, action, amount });
+    if (action === 'generate_note') {
+      // Increment note generation counter using raw SQL for atomic increment
+      await db
+        .update(users)
+        .set({
+          videosProcessedThisMonth: sql`COALESCE(${users.videosProcessedThisMonth}, 0) + ${amount}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+    }
+
+    console.log('Usage incremented successfully:', { userId, action, amount });
   } catch (error) {
     console.error('Error incrementing usage:', error);
     throw error;
@@ -235,25 +309,19 @@ export function getSubscriptionDisplayInfo(subscription: UserSubscription | null
   }
 
   const tierInfo = {
-    student: {
-      name: 'Student',
+    basic: {
+      name: 'Basic',
       color: 'blue',
-      features: ['25 videos/month', 'Study notes', 'AI chat (10/month)', '1GB storage'],
+      features: ['Unlimited videos', 'Study notes', 'AI chat (10/month)', '5GB storage'],
       upgradeAvailable: true,
     },
     pro: {
       name: 'Pro',
       color: 'pink',
-      features: ['100 videos/month', 'All formats', 'Unlimited AI chat', '10GB storage'],
-      upgradeAvailable: true,
-    },
-    creator: {
-      name: 'Creator',
-      color: 'gold',
-      features: ['Unlimited videos', 'API access', 'White-label', 'Unlimited storage'],
+      features: ['Unlimited videos', 'All formats', 'Unlimited AI chat', '50GB storage'],
       upgradeAvailable: false,
     },
   };
 
-  return tierInfo[subscription.tier] || tierInfo.student;
+  return tierInfo[subscription.tier as 'basic' | 'pro'] || tierInfo.basic;
 }

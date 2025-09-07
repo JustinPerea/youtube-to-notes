@@ -3,7 +3,7 @@
  * This is the single source of truth for all subscription limits and features
  */
 
-export type SubscriptionTier = 'free' | 'student' | 'pro';
+export type SubscriptionTier = 'free' | 'basic' | 'pro';
 
 export interface TierLimits {
   // Video Processing
@@ -43,8 +43,8 @@ export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, TierLimits> = {
     priceMonthly: 0,
   },
   
-  student: {
-    videosPerMonth: -1, // Unlimited as shown in screenshot
+  basic: {
+    videosPerMonth: -1, // Unlimited
     aiQuestionsPerMonth: 10,
     storageGB: 5,
     availableFormats: ['basic_summary', 'study_notes', 'presentation_slides'],
@@ -52,11 +52,11 @@ export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, TierLimits> = {
     watermarkOnExports: false,
     processingSpeed: 'standard',
     supportLevel: 'email',
-    priceMonthly: 999, // $9.99
+    priceMonthly: 399, // $3.99
   },
   
   pro: {
-    videosPerMonth: -1, // Unlimited as shown in screenshot
+    videosPerMonth: -1, // Unlimited
     aiQuestionsPerMonth: -1, // Unlimited
     storageGB: 50,
     availableFormats: ['basic_summary', 'study_notes', 'presentation_slides', 'tutorial_guide', 'quick_reference'],
@@ -64,7 +64,7 @@ export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, TierLimits> = {
     watermarkOnExports: false,
     processingSpeed: 'priority', // 2x faster
     supportLevel: 'priority',
-    priceMonthly: 1999, // $19.99
+    priceMonthly: 999, // $9.99
   },
 };
 
@@ -137,7 +137,7 @@ export function getTierDisplayInfo(tier: SubscriptionTier) {
     price: limits.priceMonthly,
     priceDisplay: limits.priceMonthly === 0 ? '$0' : `$${(limits.priceMonthly / 100).toFixed(2)}`,
     features: generateFeatureList(tier),
-    color: tier === 'free' ? 'gray' : tier === 'student' ? 'blue' : 'pink',
+    color: tier === 'free' ? 'gray' : tier === 'basic' ? 'blue' : 'pink',
     popular: tier === 'pro',
   };
 }

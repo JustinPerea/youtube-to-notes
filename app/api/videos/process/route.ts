@@ -10,7 +10,7 @@ import { db } from '@/lib/db/drizzle';
 import { videos, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { extractVideoId } from '@/lib/utils/youtube';
-import { getUserSubscription } from '@/lib/services/subscription';
+import { getUserSubscription, checkUsageLimit, incrementUsage } from '@/lib/subscription/service';
 import { NotesService } from '@/lib/services/notes';
 
 // Force dynamic rendering for this API route
@@ -47,7 +47,7 @@ async function getModelForUser(userId: string): Promise<{
           tierMessage: 'Using our reliable foundation model optimized for quality and efficiency'
         };
       
-      case 'student':
+      case 'basic':
         return {
           primaryModel: 'gemini-1.5-flash',
           fallbackModel: 'gemini-2.0-flash-exp',
@@ -55,7 +55,6 @@ async function getModelForUser(userId: string): Promise<{
         };
       
       case 'pro':
-      case 'creator':
         return {
           primaryModel: 'gemini-2.0-flash-exp',
           fallbackModel: 'gemini-1.5-flash',
@@ -846,6 +845,20 @@ export async function POST(request: NextRequest) {
     const session = await getApiSession(request);
     const userId = session?.userId || 'anonymous';
     
+    // Check if user can generate notes (subscription limits)
+    if (userId !== 'anonymous') {
+      const limitCheck = await checkUsageLimit(userId, 'generate_note');
+      if (!limitCheck.allowed) {
+        return NextResponse.json({
+          error: 'Note generation limit reached',
+          details: limitCheck.reason,
+          limit: limitCheck.limit,
+          current: limitCheck.current,
+          resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
+        }, { status: 429 });
+      }
+    }
+    
     // Create processing request for GeminiClient
     const processingRequest = {
       youtubeUrl: videoUrl,
@@ -937,6 +950,17 @@ export async function POST(request: NextRequest) {
         nonConversationalScore: 0.95,
         contentAdaptation: 'video-optimized'
       };
+    }
+    
+    // Track usage for authenticated users
+    if (userId !== 'anonymous') {
+      try {
+        await incrementUsage(userId, 'generate_note');
+        console.log('✅ Usage tracked successfully for user:', userId);
+      } catch (error) {
+        console.error('Failed to track usage:', error);
+        // Don't fail the request if usage tracking fails
+      }
     }
     
     return NextResponse.json(responseData);

@@ -12,12 +12,12 @@ interface UsageData {
   subscription: {
     id: string;
     userId: string;
-    tier: 'free' | 'student' | 'pro';
+    tier: 'free' | 'basic' | 'pro';
     status: 'active' | 'canceled' | 'past_due' | 'incomplete';
     currentPeriodEnd?: Date;
     cancelAtPeriodEnd?: boolean;
     adminOverride?: {
-      tier: 'free' | 'student' | 'pro';
+      tier: 'free' | 'basic' | 'pro';
       expires?: Date;
     };
   };
@@ -197,7 +197,7 @@ function ProfileHeaderCard({
   const getTierBadgeColor = (tier?: string) => {
     switch (tier) {
       case 'pro': return 'bg-gradient-to-r from-[var(--accent-pink)] to-purple-500 text-white';
-      case 'student': return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white';
+      case 'basic': return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white';
       default: return 'bg-gray-100 text-gray-700 border border-gray-300';
     }
   };
@@ -205,7 +205,7 @@ function ProfileHeaderCard({
   const getTierLabel = (tier?: string) => {
     switch (tier) {
       case 'pro': return 'Pro';
-      case 'student': return 'Student';
+      case 'basic': return 'Student';
       default: return 'Free';
     }
   };
@@ -448,7 +448,7 @@ function BillingManagementCard({
   const getPlanPrice = (tier?: string) => {
     switch (tier) {
       case 'pro': return '$19.99/month';
-      case 'student': return '$9.99/month';
+      case 'basic': return '$9.99/month';
       default: return 'Free';
     }
   };

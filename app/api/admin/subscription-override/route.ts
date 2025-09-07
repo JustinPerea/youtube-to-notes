@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!['free', 'student', 'pro'].includes(tier)) {
+    if (!['free', 'basic', 'pro'].includes(tier)) {
       return NextResponse.json(
         { error: 'Invalid tier. Must be free, student, or pro' },
         { status: 400 }

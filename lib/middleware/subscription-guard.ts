@@ -9,7 +9,7 @@ import { checkUsageLimit, getUserSubscription, getUserUsage, canAccessFeature } 
 import { type SubscriptionTier } from '@/lib/subscription/config';
 
 export interface SubscriptionGuardOptions {
-  action: 'process_video' | 'ask_ai_question' | 'use_storage';
+  action: 'generate_note' | 'use_storage';
   requiredFeature?: string;
   requiredTier?: SubscriptionTier;
   amount?: number;
@@ -51,7 +51,7 @@ export async function subscriptionGuard(
 
     // Check if user has required tier
     if (options.requiredTier) {
-      const tierOrder = { free: 0, student: 1, pro: 2 };
+      const tierOrder = { free: 0, basic: 1, pro: 2 };
       const userTierLevel = tierOrder[subscription.tier];
       const requiredTierLevel = tierOrder[options.requiredTier];
       
@@ -175,20 +175,11 @@ export function formatLimitMessage(
   const remaining = Math.max(0, limit - current);
   
   switch (action) {
-    case 'process_video':
+    case 'generate_note':
       if (remaining === 0) {
-        return `You've reached your monthly limit of ${limit} videos. Upgrade to get unlimited video processing.`;
+        return `You've reached your monthly limit of ${limit} notes. Upgrade to get unlimited note generation.`;
       }
-      return `You have ${remaining} of ${limit} video${remaining !== 1 ? 's' : ''} remaining this month.`;
-      
-    case 'ask_ai_question':
-      if (limit === 0) {
-        return 'AI chat is not available with your current subscription. Upgrade to Student or Pro to unlock AI features.';
-      }
-      if (remaining === 0) {
-        return `You've used all ${limit} AI chat questions this month. Upgrade to Pro for unlimited AI chat.`;
-      }
-      return `You have ${remaining} of ${limit} AI chat question${remaining !== 1 ? 's' : ''} remaining this month.`;
+      return `You have ${remaining} of ${limit} note${remaining !== 1 ? 's' : ''} remaining this month.`;
       
     default:
       return `You have ${remaining} of ${limit} ${action} remaining.`;
@@ -203,29 +194,12 @@ export function getUpgradeSuggestion(
   action: string
 ): { suggestedTier: SubscriptionTier; reason: string; price: string } {
   switch (action) {
-    case 'process_video':
+    case 'generate_note':
       if (currentTier === 'free') {
         return {
-          suggestedTier: 'student',
-          reason: 'Get unlimited video processing',
-          price: '$9.99/month',
-        };
-      }
-      break;
-      
-    case 'ask_ai_question':
-      if (currentTier === 'free') {
-        return {
-          suggestedTier: 'student',
-          reason: 'Unlock AI chat features',
-          price: '$9.99/month',
-        };
-      }
-      if (currentTier === 'student') {
-        return {
-          suggestedTier: 'pro',
-          reason: 'Get unlimited AI chat',
-          price: '$19.99/month',
+          suggestedTier: 'basic',
+          reason: 'Get unlimited note generation',
+          price: '$3.99/month',
         };
       }
       break;
@@ -235,7 +209,7 @@ export function getUpgradeSuggestion(
   return {
     suggestedTier: 'pro',
     reason: 'Unlock all features and unlimited usage',
-    price: '$19.99/month',
+    price: '$9.99/month',
   };
 }
 
@@ -244,8 +218,8 @@ export function getUpgradeSuggestion(
  */
 export function canExportFormat(subscription: any, format: string): boolean {
   const allowedFormats = subscription.tier === 'free' 
-    ? ['pdf_with_watermark']
-    : subscription.tier === 'student'
+    ? ['pdf', 'markdown', 'html'] // All basic formats but with watermark
+    : subscription.tier === 'basic'
     ? ['pdf', 'markdown', 'html']
     : ['pdf', 'markdown', 'html', 'docx', 'pptx'];
     
@@ -259,7 +233,7 @@ export function getProcessingPriority(subscription: any): 'low' | 'medium' | 'hi
   switch (subscription.tier) {
     case 'pro':
       return 'high'; // 2x faster processing
-    case 'student':
+    case 'basic':
       return 'medium';
     case 'free':
     default:

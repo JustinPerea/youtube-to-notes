@@ -10,12 +10,12 @@ interface UsageResponse {
   subscription: {
     id: string;
     userId: string;
-    tier: 'free' | 'student' | 'pro';
+    tier: 'free' | 'basic' | 'pro';
     status: 'active' | 'canceled' | 'past_due' | 'incomplete';
     currentPeriodEnd?: Date;
     cancelAtPeriodEnd?: boolean;
     adminOverride?: {
-      tier: 'free' | 'student' | 'pro';
+      tier: 'free' | 'basic' | 'pro';
       expires?: Date;
     };
   };

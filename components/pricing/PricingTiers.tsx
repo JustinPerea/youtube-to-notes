@@ -25,12 +25,12 @@ const pricingTiers: PricingTier[] = [
     name: 'Free',
     price: 0,
     description: 'Perfect for trying out our AI-powered note generation',
-    videoLimit: '5 videos per month',
+    videoLimit: '5 notes per month',
     features: [
-      'Basic Summary format only',
+      'All note formats (Basic Summary, Study Notes, Presentation Slides)',
       'PDF export with watermark', 
       '100MB storage',
-      'Community support'
+      'Chatbot coming soon'
     ],
     ctaText: 'Get Started Free',
     ctaVariant: 'outline',
@@ -38,16 +38,16 @@ const pricingTiers: PricingTier[] = [
     unlimitedChat: false
   },
   {
-    id: 'student',
-    name: 'Student',
-    price: 9.99,
-    yearlyPrice: 99,
-    description: 'Unlimited entry point for serious learners',
+    id: 'basic',
+    name: 'Basic',
+    price: 3.99,
+    yearlyPrice: 39,
+    description: 'Unlimited notes for serious learners',
     videoLimit: 'UNLIMITED VIDEOS',
     features: [
       '🎯 UNLIMITED VIDEOS - Process any YouTube video',
       'All note formats (Basic Summary, Study Notes, Presentation Slides)',
-      '10 AI chat questions per month',
+      'Chatbot coming soon',
       '5GB storage',
       'Standard processing speed',
       'Email support'
@@ -60,15 +60,15 @@ const pricingTiers: PricingTier[] = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 19.99,
-    yearlyPrice: 199,
-    description: 'Most popular - Unlimited everything for power users',
+    price: 9.99,
+    yearlyPrice: 99,
+    description: 'Most popular - Unlimited videos with advanced features',
     videoLimit: 'UNLIMITED VIDEOS',
     popularBadge: true,
     features: [
       '🎯 UNLIMITED VIDEOS - Never worry about limits',
-      '💬 UNLIMITED AI CHAT - Ask anything about your notes',
       'All formats + advanced exports (Word, PowerPoint)',
+      'Chatbot coming soon',
       '50GB storage',
       'Priority processing (2x faster)',
       'Priority support'
@@ -333,11 +333,11 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
                 {tier.videoLimit}
               </div>
 
-              {/* Unlimited Chat Badge */}
-              {tier.unlimitedChat && (
-                <div className="text-xs font-bold text-green-600 bg-green-50 border border-green-200 rounded-full px-3 py-1 inline-flex items-center gap-1 mb-2">
+              {/* Coming Soon Badge for Chatbot */}
+              {tier.id !== 'free' && (
+                <div className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-3 py-1 inline-flex items-center gap-1 mb-2">
                   <Zap className="w-3 h-3" />
-                  UNLIMITED AI CHAT
+                  CHATBOT COMING SOON
                 </div>
               )}
             </div>

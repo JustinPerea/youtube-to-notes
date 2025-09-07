@@ -67,7 +67,7 @@ interface ProcessingResult {
 
 interface VideoUploadProcessorProps {
   videoUrl: string;
-  selectedTemplate: string;
+  selectedTemplates: string[];
   processingMode?: 'auto' | 'hybrid' | 'transcript-only' | 'video-only';
   onProcessingComplete?: () => void;
   onClose?: () => void;
@@ -77,7 +77,7 @@ interface VideoUploadProcessorProps {
 
 export function VideoUploadProcessor({ 
   videoUrl, 
-  selectedTemplate,
+  selectedTemplates,
   processingMode = 'hybrid',
   onProcessingComplete,
   onClose,
@@ -86,7 +86,8 @@ export function VideoUploadProcessor({
 }: VideoUploadProcessorProps) {
   const { data: session } = useSession();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<ProcessingResult | null>(null);
+  const [results, setResults] = useState<ProcessingResult[]>([]);
+  const [currentProcessingIndex, setCurrentProcessingIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showMarkdown, setShowMarkdown] = useState(true);
   const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('standard');
@@ -123,10 +124,10 @@ export function VideoUploadProcessor({
   };
 
   React.useEffect(() => {
-    if (videoUrl && selectedTemplate) {
+    if (videoUrl && selectedTemplates.length > 0) {
       handleProcess();
     }
-  }, [videoUrl, selectedTemplate]);
+  }, [videoUrl, selectedTemplates]);
 
   const addProcessingStep = (step: string, progressValue?: number) => {
     setProcessingStepsList(prev => [...prev, step]);
@@ -147,7 +148,7 @@ export function VideoUploadProcessor({
   const handleProcess = async () => {
     setIsProcessing(true);
     setError(null);
-    setResult(null);
+    setResults([]);
     setProcessingStepsList([]);
     setProgress(0);
     setStartTime(Date.now());
@@ -213,69 +214,59 @@ export function VideoUploadProcessor({
       await new Promise(resolve => setTimeout(resolve, 500));
       addProcessingStep('🚀 Initializing AI analysis pipeline...', 28);
 
-      // 🚀 STEP 1: Start comprehensive processing directly
-      addProcessingStep('📝 Extracting transcript data...', 30);
+      // 🚀 STEP 1: Process all selected templates
+      addProcessingStep(`📝 Processing ${selectedTemplates.length} note format${selectedTemplates.length > 1 ? 's' : ''}...`, 30);
       
-      const response = await fetch('/api/videos/process', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          videoUrl: videoUrl.trim(),
-          selectedTemplate,
-          processingMode
-        }),
-      });
-
-      // Continue with more detailed steps during API call
-      addProcessingStep('🔬 Analyzing video content...', 40);
+      const allResults: ProcessingResult[] = [];
       
-      // Simulate realistic processing phases
-      const processingPhases = [
-        { step: '📺 Processing visual elements...', progress: 45, delay: 2000 },
-        { step: '🎤 Analyzing audio content...', progress: 50, delay: 1800 },
-        { step: '🧠 Running AI content analysis...', progress: 60, delay: 2500 },
-        { step: '📚 Extracting key concepts...', progress: 70, delay: 2000 },
-        { step: '✨ Structuring information...', progress: 80, delay: 1500 },
-        { step: '🎨 Formatting notes...', progress: 85, delay: 1000 },
-      ];
-
-      // Run processing phases in parallel with API call
-      const phaseInterval = setInterval(() => {
-        const nextPhase = processingPhases.shift();
-        if (nextPhase) {
-          addProcessingStep(nextPhase.step, nextPhase.progress);
-        } else {
-          clearInterval(phaseInterval);
+      for (let i = 0; i < selectedTemplates.length; i++) {
+        const template = selectedTemplates[i];
+        setCurrentProcessingIndex(i);
+        
+        addProcessingStep(`📋 Processing format ${i + 1}/${selectedTemplates.length}: ${template}...`, 30 + (i * 50 / selectedTemplates.length));
+        
+        const response = await fetch('/api/videos/process', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            videoUrl: videoUrl.trim(),
+            selectedTemplate: template,
+            processingMode
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || `Failed to process ${template} format`);
         }
-      }, 2000);
-
-      const data = await response.json();
-      clearInterval(phaseInterval);
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to process video');
+        
+        allResults.push(data);
+        addProcessingStep(`✅ ${template} completed`, 30 + ((i + 1) * 50 / selectedTemplates.length));
       }
+
 
       // Show completion with technical details
-      addProcessingStep('📊 Processing completed successfully', 90);
+      addProcessingStep(`📊 All ${selectedTemplates.length} format${selectedTemplates.length > 1 ? 's' : ''} completed successfully`, 90);
       
-      if (data.processingMethod) {
-        addProcessingStep(`🔧 Method: ${data.processingMethod}`, 92);
+      const firstResult = allResults[0];
+      if (firstResult?.processingMethod) {
+        addProcessingStep(`🔧 Method: ${firstResult.processingMethod}`, 92);
       }
       
-      if (data.dataSourcesUsed) {
-        addProcessingStep(`📋 Sources: ${data.dataSourcesUsed.join(', ')}`, 94);
+      if (firstResult?.dataSourcesUsed) {
+        addProcessingStep(`📋 Sources: ${firstResult.dataSourcesUsed.join(', ')}`, 94);
       }
       
-      if (data.tokenUsage) {
-        addProcessingStep(`⚡ Processed ${data.tokenUsage} tokens`, 96);
+      if (firstResult?.tokenUsage) {
+        addProcessingStep(`⚡ Processed ${firstResult.tokenUsage} tokens`, 96);
       }
 
-      addProcessingStep('✅ Your notes are ready!', 100);
+      addProcessingStep(`✅ Your ${selectedTemplates.length} note format${selectedTemplates.length > 1 ? 's are' : ' is'} ready!`, 100);
 
-      setResult(data);
+      setResults(allResults);
       setCurrentVerbosity('standard');
       
       // Mark notes as complete
@@ -288,9 +279,9 @@ export function VideoUploadProcessor({
         status: 'processing'
       });
       
-      // Share processed notes with chatbot
-      if (onProcessedNotesUpdate && data.content) {
-        onProcessedNotesUpdate(data.content);
+      // Share processed notes with chatbot (use first result's content)
+      if (onProcessedNotesUpdate && allResults[0]?.content) {
+        onProcessedNotesUpdate(allResults[0].content);
       }
       
       // ✅ Show notes immediately to user
@@ -422,10 +413,10 @@ export function VideoUploadProcessor({
           // Transform database analysis into ChatbotVideoContext format
           const chatbotContext = {
             videoId,
-            title: result?.title || 'Processed Video',
+            title: results[0]?.title || 'Processed Video',
             youtubeUrl: videoUrl,
             duration: analysis.fullTranscript?.duration || 0,
-            currentlyViewingFormat: selectedTemplate,
+            currentlyViewingFormat: selectedTemplates[0],
             currentVerbosityLevel: 'standard',
             userSubscriptionTier: 'free',
             analysis: {
@@ -458,56 +449,63 @@ export function VideoUploadProcessor({
   };
 
   const saveNote = async () => {
-    if (!session?.user?.id || !result) return;
+    if (!session?.user?.id || results.length === 0) return;
 
     setIsSavingNote(true);
     setSaveNoteMessage(null);
 
     try {
-      const response = await fetch('/api/notes/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: result.title,
-          content: result.content,
-          templateId: selectedTemplate,
-          tags: ['youtube', 'ai-generated'],
-          youtubeUrl: videoUrl, // Add the YouTube URL to link note to video
-          verbosityVersions: result.allVerbosityLevels, // Fixed: Use allVerbosityLevels from API response
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setSaveNoteMessage('Note saved successfully!');
-        setTimeout(() => setSaveNoteMessage(null), 3000);
-      } else {
-        setSaveNoteMessage(data.error || 'Failed to save note');
+      // Save all generated notes
+      for (const result of results) {
+        const response = await fetch('/api/notes/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: `${result.title} - ${result.template}`,
+            content: result.content,
+            templateId: result.template,
+            tags: ['youtube', 'ai-generated'],
+            youtubeUrl: videoUrl,
+            verbosityVersions: result.allVerbosityLevels,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || `Failed to save ${result.template} note`);
+        }
       }
-    } catch (error) {
-      setSaveNoteMessage('Failed to save note');
-      console.error('Error saving note:', error);
+
+      setSaveNoteMessage(`All ${results.length} note${results.length > 1 ? 's' : ''} saved successfully!`);
+      setTimeout(() => setSaveNoteMessage(null), 3000);
+    } catch (error: any) {
+      setSaveNoteMessage(error.message || 'Failed to save notes');
+      console.error('Error saving notes:', error);
     } finally {
       setIsSavingNote(false);
     }
   };
 
   const adjustVerbosity = (newVerbosity: 'brief' | 'standard' | 'comprehensive') => {
-    if (!result) return;
-    
-    // Use the consistent allVerbosityLevels field
-    const verbosityData = result.allVerbosityLevels;
-    if (!verbosityData) return;
+    if (results.length === 0) return;
     
     setCurrentVerbosity(newVerbosity);
     
-    setResult({
-      ...result,
-      content: verbosityData[newVerbosity]
+    // Update all results with new verbosity
+    const updatedResults = results.map(result => {
+      const verbosityData = result.allVerbosityLevels;
+      if (!verbosityData) return result;
+      
+      return {
+        ...result,
+        content: verbosityData[newVerbosity]
+      };
     });
+    
+    setResults(updatedResults);
   };
 
   if (isProcessing) {
@@ -519,8 +517,17 @@ export function VideoUploadProcessor({
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--accent-pink)] mx-auto mb-6"></div>
             <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Converting Video</h3>
             <p className="text-[var(--text-secondary)] mb-6">
-Processing your video...
+              Processing your video into {selectedTemplates.length} format{selectedTemplates.length > 1 ? 's' : ''}...
             </p>
+            
+            {/* Show current processing template */}
+            {selectedTemplates.length > 1 && (
+              <div className="mb-4 p-3 bg-[var(--accent-pink)]/10 border border-[var(--accent-pink)]/20 rounded-lg">
+                <p className="text-sm text-[var(--accent-pink)]">
+                  Processing {currentProcessingIndex + 1} of {selectedTemplates.length}: {selectedTemplates[currentProcessingIndex]}
+                </p>
+              </div>
+            )}
             
             {/* Simplified Progress Indicator */}
             <div className="mb-6 p-4 bg-[var(--bg-primary)] rounded-lg border border-[var(--card-border)]">
@@ -600,13 +607,13 @@ Processing your video...
     );
   }
 
-  if (!result) return null;
+  if (results.length === 0) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center overflow-y-auto">
       <div className="bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6 max-w-4xl mx-4 my-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-semibold text-[var(--text-primary)]">{result.title}</h3>
+          <h3 className="text-2xl font-semibold text-[var(--text-primary)]">{results[0].title}</h3>
           <button
             onClick={onClose}
             className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-2xl"
@@ -615,9 +622,28 @@ Processing your video...
           </button>
         </div>
         
-        {result.template === 'presentation-slides' ? (
+        {/* Format tabs when multiple results */}
+        {results.length > 1 && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            {results.map((result, index) => (
+              <button
+                key={result.template}
+                onClick={() => setCurrentProcessingIndex(index)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  currentProcessingIndex === index
+                    ? 'bg-[var(--accent-pink)] text-white'
+                    : 'bg-[var(--card-border)] text-[var(--text-secondary)] hover:bg-[var(--accent-pink)]/20'
+                }`}
+              >
+                {result.template}
+              </button>
+            ))}
+          </div>
+        )}
+        
+        {results[currentProcessingIndex].template === 'presentation-slides' ? (
           <PresentationSlides 
-            content={result.content}
+            content={results[currentProcessingIndex].content}
             videoUrl={videoUrl}
           />
         ) : (
@@ -641,19 +667,19 @@ Processing your video...
                       pre: ({children}) => <pre className="bg-[var(--card-border)] p-3 rounded-lg overflow-x-auto mb-3">{children}</pre>,
                     }}
                   >
-                    {typeof result.content === 'string' ? result.content : String(result.content || '')}
+                    {typeof results[currentProcessingIndex].content === 'string' ? results[currentProcessingIndex].content : String(results[currentProcessingIndex].content || '')}
                   </ReactMarkdown>
                 </div>
               ) : (
                 <pre className="text-sm text-[var(--text-primary)] whitespace-pre-wrap font-mono">
-                  {result.content}
+                  {results[currentProcessingIndex].content}
                 </pre>
               )}
             </div>
 
 
             {/* Verbosity Controls */}
-            {result.allVerbosityLevels && (
+            {results[currentProcessingIndex].allVerbosityLevels && (
               <div className="mb-4 p-4 bg-[var(--bg-primary)] rounded-xl border border-[var(--card-border)]">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-[var(--text-primary)]">Adjust Detail Level</span>
@@ -686,13 +712,13 @@ Processing your video...
             )}
 
             {/* Transcript Viewer */}
-            {result.transcript && (
+            {results[currentProcessingIndex].transcript && (
               <div className="mb-4 p-4 bg-[var(--bg-primary)] rounded-xl border border-[var(--card-border)]">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium text-[var(--text-primary)]">Source Transcript</span>
                     <span className="px-2 py-1 bg-green-500/20 border border-green-500/30 rounded text-xs text-green-400">
-                      {result.processingStats?.method === 'transcript' ? 'Used for Processing' : 'Available'}
+                      {results[currentProcessingIndex].processingStats?.method === 'transcript' ? 'Used for Processing' : 'Available'}
                     </span>
                   </div>
                   <button
@@ -703,21 +729,21 @@ Processing your video...
                   </button>
                 </div>
                 
-                {result.transcript.metadata && (
+                {results[currentProcessingIndex].transcript.metadata && (
                   <div className="flex items-center space-x-4 mb-3 text-xs text-[var(--text-secondary)]">
-                    <span>📝 {result.transcript.metadata.wordCount} words</span>
-                    <span>⏱️ {Math.round(result.transcript.metadata.duration)}s duration</span>
-                    <span>🌐 {result.transcript.metadata.language}</span>
+                    <span>📝 {results[currentProcessingIndex].transcript.metadata.wordCount} words</span>
+                    <span>⏱️ {Math.round(results[currentProcessingIndex].transcript.metadata.duration)}s duration</span>
+                    <span>🌐 {results[currentProcessingIndex].transcript.metadata.language}</span>
                   </div>
                 )}
 
                 {showTranscript && (
                   <div className="max-h-64 overflow-y-auto bg-[var(--card-bg)] rounded-lg p-4 border border-[var(--card-border)]">
                     <div className="space-y-3">
-                      {result.transcript.segments && result.transcript.segments.length > 0 ? (
+                      {results[currentProcessingIndex].transcript.segments && results[currentProcessingIndex].transcript.segments.length > 0 ? (
                         <div className="space-y-2">
                           <h4 className="text-xs font-medium text-[var(--text-primary)] mb-2">Timestamped Transcript:</h4>
-                          {result.transcript.segments.map((segment, index) => {
+                          {results[currentProcessingIndex].transcript.segments.map((segment, index) => {
                             const minutes = Math.floor(segment.offset / 60);
                             const seconds = Math.floor(segment.offset % 60);
                             const timestamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -734,7 +760,7 @@ Processing your video...
                         <div>
                           <h4 className="text-xs font-medium text-[var(--text-primary)] mb-2">Full Transcript:</h4>
                           <p className="text-xs text-[var(--text-primary)] leading-relaxed">
-                            {result.transcript.fullText}
+                            {results[currentProcessingIndex].transcript.fullText}
                           </p>
                         </div>
                       )}
@@ -754,12 +780,12 @@ Processing your video...
                   {showMarkdown ? 'Show Raw' : 'Show Preview'}
                 </button>
                 <button
-                  onClick={() => copyToClipboard(result.content)}
+                  onClick={() => copyToClipboard(results[currentProcessingIndex].content)}
                   className="text-[var(--accent-pink)] hover:text-[var(--accent-pink)]/80 transition-colors"
                 >
                   Copy to Clipboard
                 </button>
-                {result.transcript && (
+                {results[currentProcessingIndex].transcript && (
                   <button
                     onClick={() => setShowTranscript(!showTranscript)}
                     className="text-[var(--accent-pink)] hover:text-[var(--accent-pink)]/80 transition-colors"
@@ -785,9 +811,9 @@ Processing your video...
                 {/* PDF Download */}
                 <div className="lg:w-64 flex flex-col justify-start">
                   <SimplePdfDownload
-                    content={typeof result.content === 'string' ? result.content : String(result.content || '')}
-                    title={result.title}
-                    template={result.template}
+                    content={typeof results[currentProcessingIndex].content === 'string' ? results[currentProcessingIndex].content : String(results[currentProcessingIndex].content || '')}
+                    title={results[currentProcessingIndex].title}
+                    template={results[currentProcessingIndex].template}
                   />
                 </div>
               </div>
@@ -804,7 +830,7 @@ Processing your video...
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  {isSavingNote ? 'Saving...' : 'Save Note'}
+                  {isSavingNote ? 'Saving...' : `Save ${results.length} Note${results.length > 1 ? 's' : ''}`}
                 </button>
                 {saveNoteMessage && (
                   <div className={`text-sm ${saveNoteMessage.includes('successfully') ? 'text-green-400' : 'text-red-400'}`}>

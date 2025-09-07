@@ -15,7 +15,7 @@ import FloatingChatbot from '../../components/chatbot/FloatingChatbot';
 import { ChatbotVideoContext } from '../../lib/types/enhanced-video-analysis';
 
 export default function ProcessPage() {
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('basic-summary');
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>(['basic-summary']);
   const [videoUrl, setVideoUrl] = useState('');
   const [videoInfo, setVideoInfo] = useState<ReturnType<typeof extractVideoInfo> | null>(null);
   const [showProcessor, setShowProcessor] = useState(false);
@@ -87,7 +87,7 @@ export default function ProcessPage() {
   };
 
   const handleGenerateNotes = () => {
-    if (validation.isValid && videoInfo?.isValid && selectedTemplate) {
+    if (validation.isValid && videoInfo?.isValid && selectedTemplates.length > 0) {
       setShowProcessor(true);
     }
   };
@@ -262,8 +262,14 @@ export default function ProcessPage() {
             {/* Format Selection Cards - Only show for authenticated users */}
             {isAuthenticated && validation.isValid && videoInfo && videoInfo.isValid && (
               <FormatCards 
-                selectedTemplate={selectedTemplate}
-                onTemplateChange={setSelectedTemplate}
+                selectedTemplates={selectedTemplates}
+                onTemplateToggle={(template) => {
+                  setSelectedTemplates(prev => 
+                    prev.includes(template)
+                      ? prev.filter(t => t !== template)
+                      : [...prev, template]
+                  );
+                }}
               />
             )}
 
@@ -283,7 +289,7 @@ export default function ProcessPage() {
                 >
                   {/* Ripple effect on hover */}
                   <div className="absolute top-1/2 left-1/2 w-0 h-0 rounded-full bg-white/30 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-600 group-hover:w-[300px] group-hover:h-[300px]"></div>
-                  <span className="relative z-10">Convert to Notes ✨</span>
+                  <span className="relative z-10">Convert to Notes{selectedTemplates.length > 1 ? ` (${selectedTemplates.length} selected)` : ''} ✨</span>
                 </button>
               </div>
             )}
@@ -292,8 +298,8 @@ export default function ProcessPage() {
           {/* Video Upload Section - Hidden but accessible for functionality */}
           <div id="video-upload" className="hidden">
             <VideoUpload 
-              selectedTemplate={selectedTemplate} 
-              onTemplateChange={setSelectedTemplate}
+              selectedTemplate={selectedTemplates[0] || 'basic-summary'} 
+              onTemplateChange={(template) => setSelectedTemplates([template])}
             />
           </div>
         </div>
@@ -306,7 +312,7 @@ export default function ProcessPage() {
       {isAuthenticated && showProcessor && videoInfo?.isValid && (
         <VideoUploadProcessor
           videoUrl={videoUrl}
-          selectedTemplate={selectedTemplate}
+          selectedTemplates={selectedTemplates}
           processingMode={processingMode}
           onProcessingComplete={() => {}}
           onClose={() => setShowProcessor(false)}
@@ -336,7 +342,7 @@ export default function ProcessPage() {
 
 **Next Steps:**
 After processing a video, go to the **Notes page** to access the full chatbot that can answer specific questions about your generated content with full context awareness.`}
-          currentFormat={videoContext ? selectedTemplate : "Getting Started Guide"}
+          currentFormat={videoContext ? selectedTemplates.join(', ') : "Getting Started Guide"}
         />
       )}
     </div>

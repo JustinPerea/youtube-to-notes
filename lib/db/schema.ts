@@ -22,7 +22,7 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   
   // Subscription and usage tracking
-  subscriptionTier: text('subscription_tier', { enum: ['free', 'student', 'pro'] }).default('free'),
+  subscriptionTier: text('subscription_tier', { enum: ['free', 'basic', 'pro'] }).default('free'),
   subscriptionStatus: text('subscription_status', { enum: ['active', 'canceled', 'past_due', 'incomplete'] }).default('active'),
   monthlyVideoLimit: integer('monthly_video_limit').default(5),
   videosProcessedThisMonth: integer('videos_processed_this_month').default(0),
@@ -42,7 +42,7 @@ export const users = pgTable('users', {
   storageLimitMb: integer('storage_limit_mb').default(100),
   
   // Admin testing override
-  adminOverrideTier: text('admin_override_tier', { enum: ['free', 'student', 'pro'] }),
+  adminOverrideTier: text('admin_override_tier', { enum: ['free', 'basic', 'pro'] }),
   adminOverrideExpires: timestamp('admin_override_expires'),
   
   // Settings
@@ -259,7 +259,7 @@ export const userMonthlyUsage = pgTable('user_monthly_usage', {
   storageLimitMb: integer('storage_limit_mb').notNull(),
   
   // Subscription info at time of usage
-  subscriptionTier: text('subscription_tier', { enum: ['free', 'student', 'pro'] }).notNull(),
+  subscriptionTier: text('subscription_tier', { enum: ['free', 'basic', 'pro'] }).notNull(),
   
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

@@ -30,17 +30,17 @@ export interface UsageData {
   subscription: UserSubscription;
   
   // Current usage
-  videosProcessed: number;
+  notesGenerated: number;
   aiQuestionsAsked: number;
   storageUsedMb: number;
   
   // Limits
-  videoLimit: number; // -1 = unlimited
+  noteLimit: number; // -1 = unlimited
   aiQuestionLimit: number; // -1 = unlimited, 0 = disabled
   storageLimitMb: number;
   
   // Status
-  canProcessVideo: boolean;
+  canGenerateNote: boolean;
   canUseAI: boolean;
   canUseStorage: boolean;
   
@@ -128,17 +128,17 @@ export async function getUserUsage(userId: string): Promise<UsageData | null> {
         },
         
         // Current usage
-        videosProcessed: 0,
+        notesGenerated: 0,
         aiQuestionsAsked: 0,
         storageUsedMb: 0,
         
         // Limits
-        videoLimit: limits.videosPerMonth,
+        noteLimit: limits.videosPerMonth, // Reusing videosPerMonth as noteLimit
         aiQuestionLimit: limits.aiQuestionsPerMonth,
         storageLimitMb: limits.storageGB * 1024,
         
         // Status checks
-        canProcessVideo: limits.videosPerMonth === -1 || 0 < limits.videosPerMonth,
+        canGenerateNote: limits.videosPerMonth === -1 || 0 < limits.videosPerMonth,
         canUseAI: limits.aiQuestionsPerMonth !== 0 && 
                   (limits.aiQuestionsPerMonth === -1 || 0 < limits.aiQuestionsPerMonth),
         canUseStorage: 0 < (limits.storageGB * 1024),
@@ -171,17 +171,17 @@ export async function getUserUsage(userId: string): Promise<UsageData | null> {
       subscription,
       
       // Current usage
-      videosProcessed: usage?.videosProcessed || 0,
+      notesGenerated: usage?.videosProcessed || 0, // Map videosProcessed to notesGenerated
       aiQuestionsAsked: usage?.aiQuestionsAsked || 0,
       storageUsedMb: usage?.storageUsedMb || 0,
       
       // Limits
-      videoLimit: limits.videosPerMonth,
+      noteLimit: limits.videosPerMonth, // Reusing videosPerMonth as noteLimit
       aiQuestionLimit: limits.aiQuestionsPerMonth,
       storageLimitMb: limits.storageGB * 1024,
       
       // Status checks
-      canProcessVideo: limits.videosPerMonth === -1 || (usage?.videosProcessed || 0) < limits.videosPerMonth,
+      canGenerateNote: limits.videosPerMonth === -1 || (usage?.videosProcessed || 0) < limits.videosPerMonth,
       canUseAI: limits.aiQuestionsPerMonth !== 0 && 
                 (limits.aiQuestionsPerMonth === -1 || (usage?.aiQuestionsAsked || 0) < limits.aiQuestionsPerMonth),
       canUseStorage: (usage?.storageUsedMb || 0) < (limits.storageGB * 1024),
@@ -198,7 +198,7 @@ export async function getUserUsage(userId: string): Promise<UsageData | null> {
 // Check if user can perform specific action
 export async function checkUsageLimit(
   userId: string,
-  action: 'process_video' | 'ask_ai_question' | 'use_storage',
+  action: 'generate_note' | 'ask_ai_question' | 'use_storage',
   amount: number = 1
 ): Promise<{
   allowed: boolean;
@@ -262,7 +262,7 @@ export async function checkUsageLimit(
           aiQuestionsLimit: limits.aiQuestionsPerMonth,
           storageLimitMb: storageLimitMB,
           subscriptionTier: subscription.tier,
-          videosProcessed: 0,
+          videosProcessed: 0, // Still using videosProcessed in DB
           aiQuestionsAsked: 0,
           storageUsedMb: 0,
         });
@@ -320,11 +320,11 @@ export async function checkUsageLimit(
       }
     }
 
-    if (action === 'process_video') {
-      const limit = currentUsage.videosLimit;
-      const current = currentUsage.videosProcessed || 0;
+    if (action === 'generate_note') {
+      const limit = currentUsage.videosLimit; // Still using videosLimit from DB
+      const current = currentUsage.videosProcessed || 0; // Still using videosProcessed from DB
 
-      console.log('🎥 Video limit check:', {
+      console.log('📝 Note limit check:', {
         limit,
         current,
         allowed: limit === -1 ? true : current < limit,
@@ -396,7 +396,7 @@ export async function checkUsageLimit(
 // Increment usage after successful action
 export async function incrementUsage(
   userId: string,
-  action: 'process_video' | 'ask_ai_question',
+  action: 'generate_note' | 'ask_ai_question',
   amount: number = 1
 ): Promise<boolean> {
   try {
@@ -434,7 +434,7 @@ export async function incrementUsage(
           aiQuestionsLimit: limits.aiQuestionsPerMonth,
           storageLimitMb: storageLimitMB,
           subscriptionTier: subscription.tier,
-          videosProcessed: action === 'process_video' ? amount : 0,
+          videosProcessed: action === 'generate_note' ? amount : 0,
           aiQuestionsAsked: action === 'ask_ai_question' ? amount : 0,
           storageUsedMb: 0,
         })
@@ -476,11 +476,11 @@ export async function incrementUsage(
     }
 
     // Update existing usage record
-    if (action === 'process_video') {
+    if (action === 'generate_note') {
       await db
         .update(userMonthlyUsage)
         .set({
-          videosProcessed: (currentUsage.videosProcessed || 0) + amount,
+          videosProcessed: (currentUsage.videosProcessed || 0) + amount, // Still using videosProcessed in DB
           updatedAt: new Date(),
         })
         .where(eq(userMonthlyUsage.id, currentUsage.id));

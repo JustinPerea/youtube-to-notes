@@ -4,7 +4,7 @@
 export interface StripePriceConfig {
   priceId: string;
   productId: string;
-  tier: 'student' | 'pro' | 'creator';
+  tier: 'basic' | 'pro';
   amount: number;
   currency: 'usd';
   interval: 'month' | 'year';
@@ -13,37 +13,37 @@ export interface StripePriceConfig {
 
 // Placeholder price IDs - will be replaced with actual Stripe price IDs
 export const STRIPE_PRICES: Record<string, StripePriceConfig> = {
-  // Student Tier
-  student_monthly: {
+  // Basic Tier
+  basic_monthly: {
     priceId: 'price_1S2uKwE61emw6urZuJa7iMo9',
     productId: 'prod_Sys4vA6ytiMkQr',
-    tier: 'student',
-    amount: 999, // $9.99 in cents
+    tier: 'basic',
+    amount: 399, // $3.99 in cents
     currency: 'usd',
     interval: 'month',
     features: [
-      '25 videos per month',
+      'Unlimited videos',
       'Study notes generation',
       'Presentation slides',
       'AI chat Q&A (10 questions/month)',
       'Educational templates',
-      '1GB storage'
+      '5GB storage'
     ]
   },
-  student_yearly: {
+  basic_yearly: {
     priceId: 'price_1S2uLKE61emw6urZCl9Ne0mu',
     productId: 'prod_Sys4vA6ytiMkQr',
-    tier: 'student',
-    amount: 9999, // $99.99/year in cents
+    tier: 'basic',
+    amount: 3999, // $39.99/year in cents
     currency: 'usd',
     interval: 'year',
     features: [
-      '25 videos per month',
+      'Unlimited videos',
       'Study notes generation',
       'Presentation slides',
       'AI chat Q&A (10 questions/month)',
       'Educational templates',
-      '1GB storage'
+      '5GB storage'
     ]
   },
 
@@ -52,16 +52,16 @@ export const STRIPE_PRICES: Record<string, StripePriceConfig> = {
     priceId: 'price_1S2uLYE61emw6urZoOGcTGfW',
     productId: 'prod_Sys4frgA3yQ4nM',
     tier: 'pro',
-    amount: 1999, // $19.99 in cents
+    amount: 999, // $9.99 in cents
     currency: 'usd',
     interval: 'month',
     features: [
-      '100 videos per month',
-      'Everything in Student',
+      'Unlimited videos',
+      'Everything in Basic',
       'Unlimited AI chat Q&A',
-      'All note formats + Mind maps',
-      'Advanced export formats',
-      '10GB storage',
+      'All note formats + Quick reference',
+      'Advanced export formats (DOCX, PPTX)',
+      '50GB storage',
       'Priority support'
     ]
   },
@@ -69,63 +69,25 @@ export const STRIPE_PRICES: Record<string, StripePriceConfig> = {
     priceId: 'price_1S2uLrE61emw6urZ20oHhP5r',
     productId: 'prod_Sys4frgA3yQ4nM',
     tier: 'pro',
-    amount: 19999, // $199.99/year in cents
+    amount: 9999, // $99.99/year in cents
     currency: 'usd',
     interval: 'year',
     features: [
-      '100 videos per month',
-      'Everything in Student',
+      'Unlimited videos',
+      'Everything in Basic',
       'Unlimited AI chat Q&A',
-      'All note formats + Mind maps',
-      'Advanced export formats',
-      '10GB storage',
+      'All note formats + Quick reference',
+      'Advanced export formats (DOCX, PPTX)',
+      '50GB storage',
       'Priority support'
-    ]
-  },
-
-  // Creator Tier
-  creator_monthly: {
-    priceId: 'price_1S2uM4E61emw6urZjCGcU3oc',
-    productId: 'prod_Sys4P0sB1FTLZE',
-    tier: 'creator',
-    amount: 4999, // $49.99 in cents
-    currency: 'usd',
-    interval: 'month',
-    features: [
-      'Unlimited videos',
-      'Everything in Pro',
-      'White-label options',
-      'API access',
-      'Custom branding',
-      'Revenue sharing opportunities',
-      'Unlimited storage',
-      'Dedicated support'
-    ]
-  },
-  creator_yearly: {
-    priceId: 'price_1S2uMVE61emw6urZ3wloIrMQ',
-    productId: 'prod_Sys4P0sB1FTLZE',
-    tier: 'creator',
-    amount: 49999, // $499.99/year in cents
-    currency: 'usd',
-    interval: 'year',
-    features: [
-      'Unlimited videos',
-      'Everything in Pro',
-      'White-label options',
-      'API access',
-      'Custom branding',
-      'Revenue sharing opportunities',
-      'Unlimited storage',
-      'Dedicated support'
     ]
   }
 };
 
-// Student verification discount configuration
-export const STUDENT_DISCOUNT = {
-  percentOff: 50,
-  couponId: 'student_verification_50_placeholder',
+// Educational discount configuration
+export const EDUCATIONAL_DISCOUNT = {
+  percentOff: 20,
+  couponId: 'educational_verification_20_placeholder',
   verificationRequired: true,
   providers: ['SheerID', 'UNiDAYS'] // Third-party verification services
 };
@@ -133,34 +95,22 @@ export const STUDENT_DISCOUNT = {
 // Usage limits for each tier
 export const USAGE_LIMITS = {
   free: {
-    videosPerMonth: 5,
-    aiQuestionsPerMonth: 0,
+    videosPerMonth: 5, // Actually means "notes per month" for free tier
     storageGB: 0.1, // 100MB
-    formats: ['basic_summary', 'pdf_export'],
+    formats: ['basic_summary', 'study_notes', 'presentation_slides', 'pdf_export'],
     watermark: true
   },
-  student: {
-    videosPerMonth: 25,
-    aiQuestionsPerMonth: 10,
-    storageGB: 1,
-    formats: ['basic_summary', 'study_notes', 'presentation_slides', 'pdf_export'],
+  basic: {
+    videosPerMonth: -1, // unlimited
+    storageGB: 5,
+    formats: ['basic_summary', 'study_notes', 'presentation_slides', 'pdf_export', 'markdown', 'html'],
     watermark: false
   },
   pro: {
-    videosPerMonth: 100,
-    aiQuestionsPerMonth: -1, // unlimited
-    storageGB: 10,
+    videosPerMonth: -1, // unlimited
+    storageGB: 50,
     formats: ['all'],
     watermark: false
-  },
-  creator: {
-    videosPerMonth: -1, // unlimited
-    aiQuestionsPerMonth: -1, // unlimited
-    storageGB: -1, // unlimited
-    formats: ['all'],
-    watermark: false,
-    apiAccess: true,
-    whiteLabel: true
   }
 };
 
@@ -174,7 +124,7 @@ export const STRIPE_CONFIG = {
 };
 
 // Helper function to get price ID based on tier and billing
-export function getStripePriceId(tier: 'student' | 'pro' | 'creator', billing: 'monthly' | 'yearly'): string {
+export function getStripePriceId(tier: 'basic' | 'pro', billing: 'monthly' | 'yearly'): string {
   const key = `${tier}_${billing}`;
   return STRIPE_PRICES[key]?.priceId || '';
 }

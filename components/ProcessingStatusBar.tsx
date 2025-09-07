@@ -28,7 +28,7 @@ export interface ProcessingStep {
 }
 
 interface ProcessingStatusBarProps {
-  steps: ProcessingStep[] | Record<ProcessingStepKey, ProcessingStepData>;
+  steps: ProcessingStep[] | Partial<Record<ProcessingStepKey, ProcessingStepData>>;
   className?: string;
   compact?: boolean;
   onFeatureClick?: (step: ProcessingStep) => void;

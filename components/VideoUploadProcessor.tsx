@@ -100,8 +100,6 @@ export function VideoUploadProcessor({
   const [progress, setProgress] = useState(0);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [videoMetadata, setVideoMetadata] = useState<{
     title?: string;
     duration?: string;
@@ -109,15 +107,15 @@ export function VideoUploadProcessor({
     publishedAt?: string;
     description?: string;
   } | null>(null);
-  const [processingSteps, setProcessingSteps] = useState({
-    notes: { status: 'pending' as const },
-    analysis: { status: 'pending' as const },
-    chatbot: { status: 'pending' as const }
+  const [processingSteps, setProcessingSteps] = useState<{
+    notes: { status: 'pending' | 'processing' | 'complete' | 'error'; message?: string; error?: string }
+  }>({
+    notes: { status: 'pending' }
   });
   // Simplified UI - removed unused state variables
 
   // Helper function to update specific processing step
-  const updateProcessingStep = (step: 'notes' | 'analysis' | 'chatbot', updates: { status: 'pending' | 'processing' | 'complete' | 'error', message?: string, error?: string }) => {
+  const updateProcessingStep = (step: 'notes', updates: { status: 'pending' | 'processing' | 'complete' | 'error', message?: string, error?: string }) => {
     setProcessingSteps(prev => ({
       ...prev,
       [step]: { ...prev[step], ...updates }
@@ -274,11 +272,6 @@ export function VideoUploadProcessor({
       updateProcessingStep('notes', { 
         status: 'complete'
       });
-
-      // Start analysis processing
-      updateProcessingStep('analysis', { 
-        status: 'processing'
-      });
       
       // Share processed notes with chatbot (use first result's content)
       if (onProcessedNotesUpdate && allResults[0]?.content) {
@@ -287,161 +280,12 @@ export function VideoUploadProcessor({
       
       // ✅ Show notes immediately to user
       onProcessingComplete?.();
-      
-      // 🔄 Start comprehensive analysis in background (don't await - let it run async)
-      generateComprehensiveAnalysis(videoUrl).catch(err => {
-        console.error('Background analysis failed:', err);
-        updateProcessingStep('analysis', { 
-          status: 'error',
-          error: 'Enhanced analysis failed, but your notes are ready!' 
-        });
-      });
     } catch (err: any) {
       const errorMessage = err.message || 'Something went wrong while converting your video';
       addProcessingStep('❌ Conversion failed: ' + errorMessage);
       setError(errorMessage);
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-
-  const generateComprehensiveAnalysis = async (videoUrl: string) => {
-    // Extract video ID from URL
-    const videoId = extractVideoId(videoUrl);
-    if (!videoId) {
-      console.error('Failed to extract video ID from URL:', videoUrl);
-      return;
-    }
-
-    setIsGeneratingAnalysis(true);
-    setAnalysisError(null);
-    
-    try {
-      addProcessingStep('🧠 Preparing enhanced features...', 92);
-      console.log('🔍 Starting comprehensive analysis generation for video:', videoId);
-      console.log('🔍 Making request to /api/videos/comprehensive-analysis');
-
-      const response = await fetch('/api/videos/comprehensive-analysis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          youtubeUrl: videoUrl,
-          videoId: videoId,
-          requestedTemplates: ['basic-summary', 'study-notes', 'presentation-slides']
-        }),
-      });
-
-      console.log('🔍 Comprehensive analysis response status:', response.status);
-      console.log('🔍 Response ok:', response.ok);
-
-      if (response.ok) {
-        const analysisResult = await response.json();
-        console.log('✅ Comprehensive analysis completed successfully:', analysisResult);
-        addProcessingStep('🧠 Enhanced features ready!', 98);
-        
-        // Mark analysis as complete
-        updateProcessingStep('analysis', { 
-          status: 'complete'
-        });
-
-        // Start chatbot processing
-        updateProcessingStep('chatbot', { 
-          status: 'processing'
-        });
-        
-        // Fetch the full analysis data for chatbot context
-        await fetchAndShareVideoContext(videoId);
-        
-        // Mark chatbot as ready
-        updateProcessingStep('chatbot', { 
-          status: 'complete'
-        });
-        
-        addProcessingStep('✅ All done! Your notes are ready to use.', 100);
-      } else {
-        const errorText = await response.text();
-        console.warn('⚠️ Comprehensive analysis failed with status:', response.status);
-        console.warn('⚠️ Error response:', errorText);
-        setAnalysisError(`Analysis generation failed: HTTP ${response.status}`);
-        
-        // Mark analysis as error
-        updateProcessingStep('analysis', { 
-          status: 'error',
-          error: `HTTP ${response.status}: ${errorText.substring(0, 100)}`
-        });
-        updateProcessingStep('chatbot', { 
-          status: 'error',
-          error: 'Analysis required for full functionality'
-        });
-        
-        addProcessingStep(`⚠️ Some features unavailable: HTTP ${response.status}`, 98);
-        addProcessingStep('✅ Your notes are ready!', 100);
-      }
-    } catch (error: any) {
-      console.warn('⚠️ Comprehensive analysis error:', error);
-      setAnalysisError(error.message || 'Analysis generation failed');
-      
-      // Mark analysis as error
-      updateProcessingStep('analysis', { 
-        status: 'error',
-        error: error.message || 'Unknown error'
-      });
-      updateProcessingStep('chatbot', { 
-        status: 'error',
-        error: 'Analysis required for full functionality'
-      });
-      
-      addProcessingStep(`⚠️ Some features unavailable: ${error.message || 'Unknown error'}`, 98);
-      addProcessingStep('✅ Your notes are ready!', 100);
-    } finally {
-      setIsGeneratingAnalysis(false);
-    }
-  };
-
-  const fetchAndShareVideoContext = async (videoId: string) => {
-    try {
-      // Fetch the full analysis data
-      const response = await fetch(`/api/videos/comprehensive-analysis?videoId=${videoId}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        const analysis = data.analysis;
-        
-        if (analysis && onVideoContextUpdate) {
-          // Transform database analysis into ChatbotVideoContext format
-          const chatbotContext = {
-            videoId,
-            title: results[0]?.title || 'Processed Video',
-            youtubeUrl: videoUrl,
-            duration: analysis.fullTranscript?.duration || 0,
-            currentlyViewingFormat: selectedTemplates[0],
-            currentVerbosityLevel: 'standard',
-            userSubscriptionTier: 'free',
-            analysis: {
-              difficultyLevel: analysis.difficultyLevel || 'intermediate',
-              primarySubject: analysis.primarySubject || 'general',
-              secondarySubjects: analysis.secondarySubjects || [],
-              contentTags: analysis.contentTags || [],
-              conceptMap: analysis.conceptMap || { concepts: [] },
-              fullTranscript: analysis.fullTranscript || { segments: [] },
-              visualAnalysis: analysis.visualAnalysis || { hasSlides: false, hasCharts: false },
-              keyTimestamps: analysis.keyTimestamps || [],
-              allTemplateOutputs: analysis.allTemplateOutputs || {},
-              suggestedQuestions: analysis.suggestedQuestions || []
-            }
-          };
-          
-          console.log('🤖 Sharing video context with chatbot:', chatbotContext.title);
-          onVideoContextUpdate(chatbotContext);
-        }
-      } else {
-        console.warn('⚠️ Could not fetch comprehensive analysis for chatbot context');
-      }
-    } catch (error) {
-      console.warn('⚠️ Error fetching video context for chatbot:', error);
     }
   };
 

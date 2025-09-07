@@ -662,25 +662,14 @@ async function fetchYouTubeMetadata(videoId: string): Promise<{
 async function ensureVideoRecord(request: NextRequest, videoUrl: string): Promise<void> {
   try {
     // Check if user is authenticated
-    const session = await getApiSession(request);
-    if (!session?.user?.email) {
+    const session = await getApiSessionWithDatabase(request);
+    if (!session?.user?.id) {
       console.log('No authenticated user for video record creation');
       return; // Don't create video record if no user
     }
 
-    // Get user from database
-    const userRecord = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, session.user.email))
-      .limit(1);
-
-    if (userRecord.length === 0) {
-      console.log('User not found in database for video record creation');
-      return;
-    }
-
-    const userId = userRecord[0].id;
+    // Use database UUID directly from session
+    const userId = session.user.id;
 
     // Extract video ID from URL
     const youtubeVideoId = extractVideoId(videoUrl);
@@ -737,25 +726,14 @@ async function updateVideoRecordStatus(
 ): Promise<void> {
   try {
     // Check if user is authenticated
-    const session = await getApiSession(request);
-    if (!session?.user?.email) {
+    const session = await getApiSessionWithDatabase(request);
+    if (!session?.user?.id) {
       console.log('No authenticated user for video record status update');
       return;
     }
 
-    // Get user from database
-    const userRecord = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, session.user.email))
-      .limit(1);
-
-    if (userRecord.length === 0) {
-      console.log('User not found in database for video record status update');
-      return;
-    }
-
-    const userId = userRecord[0].id;
+    // Use database UUID directly from session
+    const userId = session.user.id;
 
     // Extract video ID from URL
     const youtubeVideoId = extractVideoId(videoUrl);

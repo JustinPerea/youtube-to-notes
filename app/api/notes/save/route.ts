@@ -3,6 +3,7 @@ import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { NotesService } from '@/lib/services/notes';
 import { apiRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateNoteData } from '@/lib/validation';
+import { checkUsageLimit } from '@/lib/subscription/service';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,17 @@ export async function POST(request: NextRequest) {
         { error: 'Unauthorized. Please sign in.' },
         { status: 401 }
       );
+    }
+
+    // 🔐 SECURITY: Check storage limits before saving note
+    const limitCheck = await checkUsageLimit(session.user.id, 'use_storage');
+    if (!limitCheck.allowed) {
+      return NextResponse.json({
+        error: 'Storage limit reached',
+        details: limitCheck.reason,
+        limit: limitCheck.limit,
+        current: limitCheck.current,
+      }, { status: 429 });
     }
 
     // Parse and validate request body

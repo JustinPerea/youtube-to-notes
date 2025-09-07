@@ -4,6 +4,7 @@ import { videoProcessingRateLimiter, getClientIdentifier, applyRateLimit } from 
 import { validateVideoUrl } from '@/lib/validation';
 import { getApiSession } from '@/lib/auth-utils';
 import { geminiClient } from '@/lib/gemini/client';
+import { checkUsageLimit, incrementUsage } from '@/lib/subscription/service';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -73,6 +74,20 @@ export async function POST(request: NextRequest) {
     // Get user session
     const session = await getApiSession(request);
     const userId = session?.userId || 'anonymous';
+
+    // 🔐 SECURITY: Check subscription limits
+    if (userId !== 'anonymous') {
+      const limitCheck = await checkUsageLimit(userId, 'generate_note');
+      if (!limitCheck.allowed) {
+        return NextResponse.json({
+          error: 'Note generation limit reached',
+          details: limitCheck.reason,
+          limit: limitCheck.limit,
+          current: limitCheck.current,
+          resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
+        }, { status: 429 });
+      }
+    }
 
     console.log('🚀 Starting enhanced hybrid video processing...');
     console.log(`📺 Video: ${videoUrl}`);
@@ -146,6 +161,17 @@ export async function POST(request: NextRequest) {
                      dataSourcesUsed.length >= 2 ? 'detailed' : 'basic'
       }
     };
+
+    // 📊 SECURITY: Track successful note generation for subscription limits
+    if (userId !== 'anonymous') {
+      try {
+        await incrementUsage(userId, 'generate_note');
+        console.log('✅ Usage tracked successfully for hybrid processing:', userId);
+      } catch (error) {
+        console.error('Failed to track hybrid processing usage:', error);
+        // Don't fail the request if usage tracking fails
+      }
+    }
 
     return NextResponse.json(responseData);
 

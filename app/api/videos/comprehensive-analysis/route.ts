@@ -10,6 +10,7 @@ import { db } from '@/lib/db/drizzle';
 import { videos, videoAnalysis } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { EnhancedProcessingRequest } from '@/lib/types/enhanced-video-analysis';
+import { checkUsageLimit, incrementUsage } from '@/lib/subscription/service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,6 +31,19 @@ export async function POST(request: NextRequest) {
         { error: 'Authentication required' },
         { status: 401 }
       );
+    }
+
+    // 🔐 SECURITY: Check subscription limits
+    const userId = session.user.email; // Use email as userId for comprehensive analysis
+    const limitCheck = await checkUsageLimit(userId, 'generate_note');
+    if (!limitCheck.allowed) {
+      return NextResponse.json({
+        error: 'Note generation limit reached',
+        details: limitCheck.reason,
+        limit: limitCheck.limit,
+        current: limitCheck.current,
+        resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
+      }, { status: 429 });
     }
 
     // Parse request body
@@ -180,6 +194,15 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Comprehensive analysis completed and stored for video: ${videoId}`);
     console.log(`📊 Analysis results: ${result.analysis.conceptMap.concepts.length} concepts, ${result.analysis.fullTranscript.segments.length} transcript segments`);
     console.log(`💰 Processing cost: ${result.analysis.analysisCostInCents} cents`);
+
+    // 📊 SECURITY: Track successful note generation for subscription limits
+    try {
+      await incrementUsage(userId, 'generate_note');
+      console.log('✅ Usage tracked successfully for comprehensive analysis:', userId);
+    } catch (error) {
+      console.error('Failed to track comprehensive analysis usage:', error);
+      // Don't fail the request if usage tracking fails
+    }
 
     return NextResponse.json({
       success: true,

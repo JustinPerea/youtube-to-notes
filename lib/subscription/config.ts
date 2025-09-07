@@ -44,7 +44,7 @@ export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, TierLimits> = {
   },
   
   basic: {
-    videosPerMonth: -1, // Unlimited
+    videosPerMonth: 100, // 100 notes per month
     aiQuestionsPerMonth: 10,
     storageGB: 5,
     availableFormats: ['basic_summary', 'study_notes', 'presentation_slides'],
@@ -77,7 +77,7 @@ export function hasFeatureAccess(tier: SubscriptionTier, feature: string): boole
       return limits.aiQuestionsPerMonth !== 0;
     case 'unlimited_ai_chat':
       return limits.aiQuestionsPerMonth === -1;
-    case 'unlimited_videos':
+    case 'unlimited_notes':
       return limits.videosPerMonth === -1;
     case 'priority_processing':
       return limits.processingSpeed === 'priority';
@@ -148,9 +148,9 @@ function generateFeatureList(tier: SubscriptionTier): string[] {
   
   // Videos
   if (limits.videosPerMonth === -1) {
-    features.push('Unlimited videos');
+    features.push('Unlimited notes');
   } else {
-    features.push(`${limits.videosPerMonth} videos per month`);
+    features.push(`${limits.videosPerMonth} notes per month`);
   }
   
   // AI Chat

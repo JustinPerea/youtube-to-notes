@@ -288,6 +288,47 @@ export default function NotesPage() {
     }
   };
 
+  const deleteVideo = async (video: VideoWithNotes) => {
+    const confirmMessage = `⚠️ Delete "${video.title}"?\n\nThis will permanently delete:\n• The video and all its notes (${getUniqueFormats(video.noteFormats).length} format${getUniqueFormats(video.noteFormats).length !== 1 ? 's' : ''})\n• All analysis data\n• Free up storage space\n\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      console.log(`🗑️ Deleting video: ${video.videoId} (${video.title})`);
+      
+      const response = await fetch(`/api/videos/${video.videoId}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        console.log(`✅ Video deleted successfully:`, data.deleted);
+        
+        // Remove video from state
+        setVideos(prevVideos => 
+          prevVideos.filter(v => v.videoId !== video.videoId)
+        );
+        
+        // Reset selection if deleted video was selected
+        if (selectedVideo?.videoId === video.videoId) {
+          setSelectedVideo(null);
+          setSelectedFormat('');
+          setSelectedFormatContent(null);
+          setChatbotContext(null);
+        }
+        
+        // Show success message
+        alert(`✅ Video deleted successfully!\n\nDeleted:\n• "${data.deleted.video.title}"\n• ${data.deleted.relatedRecords.notes} notes\n• ${data.deleted.relatedRecords.analysis} analysis records\n\nStorage space has been freed up.`);
+      } else {
+        console.error('❌ Failed to delete video:', data.error);
+        setError(data.error || 'Failed to delete video');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting video:', error);
+      setError('Failed to delete video');
+    }
+  };
+
   const formatTemplateName = (templateId: string) => {
     return templateId
       .split('-')
@@ -484,33 +525,51 @@ export default function NotesPage() {
                 {videos.map((video) => (
                   <div
                     key={video.videoId || 'no-video'}
-                    className={`bg-[var(--card-bg)] backdrop-blur-md border border-[var(--card-border)] rounded-xl p-4 cursor-pointer transition-all duration-300 hover:transform hover:translate-y-[-1px] shadow-[var(--card-shadow)] ${
+                    className={`bg-[var(--card-bg)] backdrop-blur-md border border-[var(--card-border)] rounded-xl p-4 transition-all duration-300 hover:transform hover:translate-y-[-1px] shadow-[var(--card-shadow)] group relative ${
                       selectedVideo?.videoId === video.videoId 
                         ? 'ring-2 ring-[var(--accent-pink)] bg-[var(--accent-pink-soft)] border-[var(--accent-pink)]' 
                         : 'hover:bg-[var(--accent-pink-soft)] hover:border-[var(--accent-pink)]'
                     }`}
-                    onClick={() => handleVideoSelect(video)}
                   >
-                    <div className="flex items-start gap-3">
-                      {/* Add thumbnail */}
-                      <VideoThumbnail
-                        youtubeUrl={video.youtubeUrl}
-                        backupThumbnailUrl={video.thumbnailUrl}
-                        className="w-16 h-9 flex-shrink-0"
-                        alt={`Thumbnail for ${video.title}`}
-                      />
-                      
-                      {/* Video info */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-[var(--text-primary)] font-medium truncate">
-                          {video.title || 'Untitled Video'}
-                        </h3>
-                        <p className="text-[var(--text-secondary)] text-sm mt-1">
-                          {new Date(video.noteFormats[0]?.createdAt || Date.now()).toLocaleDateString()}
-                        </p>
-                        <p className="text-[var(--accent-pink)] text-xs mt-1 font-medium">
-                          {getUniqueFormats(video.noteFormats).length} format{getUniqueFormats(video.noteFormats).length !== 1 ? 's' : ''}
-                        </p>
+                    {/* Delete Video Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteVideo(video);
+                      }}
+                      className="absolute top-2 right-2 text-red-500 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 z-10"
+                      title={`Delete video "${video.title}" and all its data`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() => handleVideoSelect(video)}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Add thumbnail */}
+                        <VideoThumbnail
+                          youtubeUrl={video.youtubeUrl}
+                          backupThumbnailUrl={video.thumbnailUrl}
+                          className="w-16 h-9 flex-shrink-0"
+                          alt={`Thumbnail for ${video.title}`}
+                        />
+                        
+                        {/* Video info */}
+                        <div className="flex-1 min-w-0 pr-8">
+                          <h3 className="text-[var(--text-primary)] font-medium truncate">
+                            {video.title || 'Untitled Video'}
+                          </h3>
+                          <p className="text-[var(--text-secondary)] text-sm mt-1">
+                            {new Date(video.noteFormats[0]?.createdAt || Date.now()).toLocaleDateString()}
+                          </p>
+                          <p className="text-[var(--accent-pink)] text-xs mt-1 font-medium">
+                            {getUniqueFormats(video.noteFormats).length} format{getUniqueFormats(video.noteFormats).length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

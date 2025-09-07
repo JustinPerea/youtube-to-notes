@@ -101,7 +101,7 @@ export const USAGE_LIMITS = {
     watermark: true
   },
   basic: {
-    videosPerMonth: -1, // unlimited
+    videosPerMonth: 100, // 100 notes per month
     storageGB: 5,
     formats: ['basic_summary', 'study_notes', 'presentation_slides', 'pdf_export', 'markdown', 'html'],
     watermark: false

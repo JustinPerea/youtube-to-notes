@@ -42,19 +42,19 @@ const pricingTiers: PricingTier[] = [
     name: 'Basic',
     price: 3.99,
     yearlyPrice: 39,
-    description: 'Unlimited notes for serious learners',
-    videoLimit: 'UNLIMITED VIDEOS',
+    description: '100 notes monthly for serious learners',
+    videoLimit: '100 notes per month',
     features: [
-      '🎯 UNLIMITED VIDEOS - Process any YouTube video',
+      '📝 100 NOTES PER MONTH - Perfect for regular users',
       'All note formats (Basic Summary, Study Notes, Presentation Slides)',
       'Chatbot coming soon',
       '5GB storage',
       'Standard processing speed',
       'Email support'
     ],
-    ctaText: 'Get Unlimited Videos',
+    ctaText: 'Get 100 Notes Monthly',
     ctaVariant: 'outline',
-    unlimitedVideos: true,
+    unlimitedVideos: false,
     unlimitedChat: false
   },
   {
@@ -62,7 +62,7 @@ const pricingTiers: PricingTier[] = [
     name: 'Pro',
     price: 9.99,
     yearlyPrice: 99,
-    description: 'Most popular - Unlimited videos with advanced features',
+    description: 'Best cost - Unlimited videos with advanced features',
     videoLimit: 'UNLIMITED VIDEOS',
     popularBadge: true,
     features: [
@@ -286,7 +286,7 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
             {tier.popularBadge && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[var(--accent-pink)] to-[#FF8FB3] text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1 shadow-lg">
                 <Star className="w-4 h-4" />
-                Most Popular
+                Best Cost
               </div>
             )}
 

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { TEMPLATES } from '@/lib/templates';
 import { validateVideoUrl } from '@/lib/validation';
+import { getApiSession } from '@/lib/auth-utils';
+import { checkUsageLimit, incrementUsage } from '@/lib/subscription/service';
 
 // Async processing route for long videos with streaming response
 export const dynamic = 'force-dynamic';
@@ -19,7 +21,8 @@ const DURATION_THRESHOLDS = {
 async function processVideoInChunks(
   videoUrl: string, 
   template: any, 
-  estimatedDuration: number
+  estimatedDuration: number,
+  userId: string
 ): Promise<ReadableStream> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
   
@@ -58,6 +61,17 @@ async function processVideoInChunks(
         } else {
           // Multi-chunk processing for long videos
           await processMultipleChunks(controller, model, videoUrl, template, chunkStrategy.chunks);
+        }
+
+        // 📊 SECURITY: Track successful note generation for subscription limits
+        if (userId !== 'anonymous') {
+          try {
+            await incrementUsage(userId, 'generate_note');
+            console.log('✅ Usage tracked successfully for async processing:', userId);
+          } catch (error) {
+            console.error('Failed to track async processing usage:', error);
+            // Don't fail the request if usage tracking fails
+          }
         }
 
         controller.enqueue(new TextEncoder().encode(
@@ -240,6 +254,24 @@ export async function POST(request: NextRequest) {
   try {
     const { videoUrl, selectedTemplate = 'basic-summary', forceAsync = false } = await request.json();
 
+    // 🔐 SECURITY: Check authentication and subscription limits
+    const session = await getApiSession(request);
+    const userId = session?.userId || 'anonymous';
+    
+    // Check if user can generate notes (subscription limits)
+    if (userId !== 'anonymous') {
+      const limitCheck = await checkUsageLimit(userId, 'generate_note');
+      if (!limitCheck.allowed) {
+        return NextResponse.json({
+          error: 'Note generation limit reached',
+          details: limitCheck.reason,
+          limit: limitCheck.limit,
+          current: limitCheck.current,
+          resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
+        }, { status: 429 });
+      }
+    }
+
     // Validate video URL
     const urlValidation = validateVideoUrl(videoUrl);
     if (!urlValidation.isValid) {
@@ -266,7 +298,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create streaming response for long videos
-    const stream = await processVideoInChunks(videoUrl, template, estimatedDuration);
+    const stream = await processVideoInChunks(videoUrl, template, estimatedDuration, userId);
 
     return new Response(stream, {
       headers: {

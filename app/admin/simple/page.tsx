@@ -442,7 +442,7 @@ export default function SimpleAdminPage() {
               style={styles.input}
             >
               <option value="free">Free (5 notes)</option>
-              <option value="basic">Basic ($3.99 - Unlimited)</option>
+              <option value="basic">Basic ($3.99 - 100 notes/month)</option>
               <option value="pro">Pro ($9.99 - Unlimited + AI)</option>
             </select>
           </div>

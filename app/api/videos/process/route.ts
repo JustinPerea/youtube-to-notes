@@ -4,7 +4,7 @@ import { TEMPLATES, Template } from '@/lib/templates';
 import { videoProcessingRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateVideoUrl } from '@/lib/validation';
 import { extractTranscript, extractTranscriptEnhanced, cleanTranscriptText } from '@/lib/transcript/extractor';
-import { getApiSession } from '@/lib/auth-utils';
+import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { geminiClient } from '@/lib/gemini/client';
 import { db } from '@/lib/db/drizzle';
 import { videos, users } from '@/lib/db/schema';
@@ -841,26 +841,26 @@ export async function POST(request: NextRequest) {
     // NEW: Use enhanced GeminiClient with hybrid processing support
     console.log('🚀 Using enhanced GeminiClient with hybrid processing...');
     
-    // Get current user session for processing limits
-    const session = await getApiSession(request);
+    // Get current user session for processing limits - ensure user exists in database
+    const session = await getApiSessionWithDatabase(request);
     console.log('AUTH STATUS (process route):', {
       hasSession: !!session,
       hasUser: !!session?.user,
-      hasEmail: !!session?.user?.email,
+      hasUserId: !!session?.user?.id,
       userEmail: session?.user?.email
     });
     
     // Require authentication for video processing
-    if (!session?.user?.email) {
-      console.error('❌ Authentication failed - no valid session or email');
+    if (!session?.user?.id) {
+      console.error('❌ Authentication failed - no valid session or database user');
       return NextResponse.json({
         error: 'Authentication required',
         details: 'You must be signed in to process videos'
       }, { status: 401 });
     }
     
-    // Use email as userId for consistency with comprehensive analysis route
-    const userId = session.user.email;
+    // Use database UUID for consistency with admin overrides and subscription system
+    const userId = session.user.id;
     
     // Check if user can generate notes (subscription limits)
     const limitCheck = await checkUsageLimit(userId, 'generate_note');
@@ -967,7 +967,7 @@ export async function POST(request: NextRequest) {
       };
     }
     
-    // Track usage for authenticated users (userId is now always the email)
+    // Track usage for authenticated users (userId is now the database UUID)
     try {
       await incrementUsage(userId, 'generate_note');
       console.log('✅ Usage tracked successfully for user:', userId);

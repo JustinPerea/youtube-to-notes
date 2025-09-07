@@ -3,6 +3,8 @@ import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { db } from '@/lib/db/drizzle';
 import { videos, notes, videoAnalysis, processingResults, processingQueue, userUsageHistory } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { decrementStorageUsage } from '@/lib/subscription/service';
+import { calculateMinimumContentSizeMB, estimateVideoMetadataSizeMB } from '@/lib/utils/storage';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -56,7 +58,51 @@ export async function DELETE(
       usageHistory: 0
     };
 
-    // 1. Delete notes associated with this video
+    // 📊 STORAGE TRACKING: Calculate storage to be freed before deletion
+    let totalStorageFreedMB = 0;
+
+    // 1. Calculate storage used by notes before deleting
+    try {
+      const notesToDelete = await db
+        .select({
+          id: notes.id,
+          title: notes.title,
+          content: notes.content,
+          verbosityVersions: notes.verbosityVersions,
+        })
+        .from(notes)
+        .where(eq(notes.videoId, videoId));
+
+      for (const note of notesToDelete) {
+        const noteSize = calculateMinimumContentSizeMB({
+          title: note.title,
+          content: note.content,
+          verbosityVersions: note.verbosityVersions || undefined,
+        });
+        totalStorageFreedMB += noteSize;
+      }
+      
+      console.log(`📊 Notes to delete: ${notesToDelete.length}, total size: ${totalStorageFreedMB}MB`);
+    } catch (error) {
+      console.warn(`⚠️ Could not calculate notes storage:`, error);
+    }
+
+    // 2. Add video metadata storage estimate
+    try {
+      const videoMetadataSize = estimateVideoMetadataSizeMB({
+        title: video.title || undefined,
+        description: video.description || undefined,
+        thumbnailUrl: video.thumbnailUrl || undefined,
+        channelName: video.channelName || undefined,
+      });
+      totalStorageFreedMB += videoMetadataSize;
+      
+      console.log(`📊 Video metadata size: ${videoMetadataSize}MB, total freed: ${totalStorageFreedMB}MB`);
+    } catch (error) {
+      console.warn(`⚠️ Could not calculate video metadata storage:`, error);
+    }
+
+    // 3. Delete notes associated with this video
     try {
       const deletedNotes = await db
         .delete(notes)
@@ -100,11 +146,15 @@ export async function DELETE(
         .returning({ id: processingQueue.id });
       deletionResults.queueEntries = deletedQueue.length;
       console.log(`🔄 Deleted ${deletedQueue.length} queue entries`);
-    } catch (error) {
-      console.warn(`⚠️ Could not delete queue entries (table may not exist):`, error);
+    } catch (error: any) {
+      if (error.code === '42P01') {
+        console.log('ℹ️ Processing queue table does not exist - skipping');
+      } else {
+        console.warn(`⚠️ Could not delete queue entries:`, error);
+      }
     }
 
-    // 5. Delete usage history entries
+    // 5. Delete usage history entries (may not exist in current DB)
     try {
       const deletedUsage = await db
         .delete(userUsageHistory)
@@ -112,8 +162,12 @@ export async function DELETE(
         .returning({ id: userUsageHistory.id });
       deletionResults.usageHistory = deletedUsage.length;
       console.log(`📈 Deleted ${deletedUsage.length} usage history entries`);
-    } catch (error) {
-      console.warn(`⚠️ Could not delete usage history (table may not exist):`, error);
+    } catch (error: any) {
+      if (error.code === '42P01') {
+        console.log('ℹ️ Usage history table does not exist - skipping');
+      } else {
+        console.warn(`⚠️ Could not delete usage history:`, error);
+      }
     }
 
     // 6. Finally, delete the video itself
@@ -140,12 +194,24 @@ export async function DELETE(
     console.log(`✅ Successfully deleted video: "${deletedVideo[0].title}"`);
     console.log(`📊 Total cleanup: ${deletionResults.notes} notes, ${deletionResults.analysis} analysis, ${deletionResults.processingResults} results, ${deletionResults.queueEntries} queue, ${deletionResults.usageHistory} usage entries`);
 
+    // 📊 STORAGE TRACKING: Update user's storage usage after successful deletion
+    if (totalStorageFreedMB > 0) {
+      try {
+        await decrementStorageUsage(session.user.id, totalStorageFreedMB);
+        console.log(`📊 Storage tracking: Freed ${totalStorageFreedMB}MB for user ${session.user.id}`);
+      } catch (storageError) {
+        // Log storage tracking error but don't fail the request since deletion was successful
+        console.error('⚠️ Storage tracking failed (deletion was successful):', storageError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Video and all related data deleted successfully',
       deleted: {
         video: deletedVideo[0],
-        relatedRecords: deletionResults
+        relatedRecords: deletionResults,
+        storageFreedMB: totalStorageFreedMB
       }
     });
 

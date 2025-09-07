@@ -9,6 +9,8 @@ import { db } from '../db/connection';
 import { notes, users, videos } from '../db/schema';
 import { eq, desc, and, or, ilike, arrayContains } from 'drizzle-orm';
 import { fetchVideoMetadata, YouTubeVideoMetadata } from './youtube-api';
+import { decrementStorageUsage } from '../subscription/service';
+import { calculateMinimumContentSizeMB } from '../utils/storage';
 
 // Utility function to extract YouTube video ID from URL
 function extractVideoIdFromUrl(url: string): string | null {
@@ -545,9 +547,14 @@ export class NotesService {
     }
 
     try {
-      // Verify note exists and belongs to user
-      const noteExists = await db
-        .select({ id: notes.id })
+      // Get the note data before deleting to calculate storage
+      const noteToDelete = await db
+        .select({
+          id: notes.id,
+          title: notes.title,
+          content: notes.content,
+          verbosityVersions: notes.verbosityVersions,
+        })
         .from(notes)
         .where(
           and(
@@ -557,17 +564,37 @@ export class NotesService {
         )
         .limit(1);
 
-      if (noteExists.length === 0) {
+      if (noteToDelete.length === 0) {
         return { 
           success: false, 
           error: 'Note not found or access denied.' 
         };
       }
 
+      const note = noteToDelete[0];
+
+      // 📊 STORAGE TRACKING: Calculate storage to be freed
+      const storageFreedMB = calculateMinimumContentSizeMB({
+        title: note.title,
+        content: note.content,
+        verbosityVersions: note.verbosityVersions || undefined,
+      });
+
       // Delete the note
       await db
         .delete(notes)
         .where(eq(notes.id, noteId));
+
+      // 📊 STORAGE TRACKING: Update user's storage usage after successful deletion
+      if (storageFreedMB > 0) {
+        try {
+          await decrementStorageUsage(userId, storageFreedMB);
+          console.log(`📊 Storage tracking: Freed ${storageFreedMB}MB for user ${userId} (note deleted)`);
+        } catch (storageError) {
+          // Log storage tracking error but don't fail the request since deletion was successful
+          console.error('⚠️ Storage tracking failed (note deletion was successful):', storageError);
+        }
+      }
 
       return { success: true };
     } catch (error) {

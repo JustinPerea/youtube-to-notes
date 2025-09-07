@@ -19,13 +19,13 @@ interface UsageResponse {
       expires?: Date;
     };
   };
-  notesGenerated: number;
+  videosProcessed: number;
   aiQuestionsAsked: number;
   storageUsedMb: number;
-  noteLimit: number;
+  videoLimit: number;
   aiQuestionLimit: number;
   storageLimitMb: number;
-  canGenerateNote: boolean;
+  canProcessVideo: boolean;
   canUseAI: boolean;
   canUseStorage: boolean;
   resetDate: Date;
@@ -74,8 +74,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<UsageRespo
     console.log('Usage data retrieved successfully:', {
       userId: usageData.userId,
       tier: usageData.subscription.tier,
-      notesGenerated: usageData.notesGenerated,
-      noteLimit: usageData.noteLimit,
+      videosProcessed: usageData.videosProcessed,
+      videoLimit: usageData.videoLimit,
       aiQuestionsAsked: usageData.aiQuestionsAsked,
       aiQuestionLimit: usageData.aiQuestionLimit
     });

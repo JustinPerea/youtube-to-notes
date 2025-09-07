@@ -3,7 +3,8 @@ import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { NotesService } from '@/lib/services/notes';
 import { apiRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateNoteData } from '@/lib/validation';
-import { checkUsageLimit } from '@/lib/subscription/service';
+import { checkUsageLimit, incrementStorageUsage } from '@/lib/subscription/service';
+import { calculateMinimumContentSizeMB } from '@/lib/utils/storage';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -100,6 +101,23 @@ export async function POST(request: NextRequest) {
         { error: result.error || 'Failed to save note' },
         { status: 400 }
       );
+    }
+
+    // 📊 STORAGE TRACKING: Calculate and update storage usage after successful save
+    try {
+      const contentSizeMB = calculateMinimumContentSizeMB({
+        title: title || 'Untitled Note',
+        content: sanitizedData.content,
+        verbosityVersions: sanitizedData.verbosityVersions,
+      });
+
+      // Update user's storage usage atomically
+      await incrementStorageUsage(session.user.id, contentSizeMB);
+      
+      console.log(`📊 Storage tracking: Added ${contentSizeMB}MB for user ${session.user.id}`);
+    } catch (storageError) {
+      // Log storage tracking error but don't fail the request since note was saved successfully
+      console.error('⚠️ Storage tracking failed (note was saved successfully):', storageError);
     }
 
     return NextResponse.json({

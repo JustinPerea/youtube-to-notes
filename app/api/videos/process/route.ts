@@ -843,20 +843,35 @@ export async function POST(request: NextRequest) {
     
     // Get current user session for processing limits
     const session = await getApiSession(request);
-    const userId = session?.userId || 'anonymous';
+    console.log('AUTH STATUS (process route):', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      hasEmail: !!session?.user?.email,
+      userEmail: session?.user?.email
+    });
+    
+    // Require authentication for video processing
+    if (!session?.user?.email) {
+      console.error('❌ Authentication failed - no valid session or email');
+      return NextResponse.json({
+        error: 'Authentication required',
+        details: 'You must be signed in to process videos'
+      }, { status: 401 });
+    }
+    
+    // Use email as userId for consistency with comprehensive analysis route
+    const userId = session.user.email;
     
     // Check if user can generate notes (subscription limits)
-    if (userId !== 'anonymous') {
-      const limitCheck = await checkUsageLimit(userId, 'generate_note');
-      if (!limitCheck.allowed) {
-        return NextResponse.json({
-          error: 'Note generation limit reached',
-          details: limitCheck.reason,
-          limit: limitCheck.limit,
-          current: limitCheck.current,
-          resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
-        }, { status: 429 });
-      }
+    const limitCheck = await checkUsageLimit(userId, 'generate_note');
+    if (!limitCheck.allowed) {
+      return NextResponse.json({
+        error: 'Note generation limit reached',
+        details: limitCheck.reason,
+        limit: limitCheck.limit,
+        current: limitCheck.current,
+        resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
+      }, { status: 429 });
     }
     
     // Create processing request for GeminiClient
@@ -952,15 +967,13 @@ export async function POST(request: NextRequest) {
       };
     }
     
-    // Track usage for authenticated users
-    if (userId !== 'anonymous') {
-      try {
-        await incrementUsage(userId, 'generate_note');
-        console.log('✅ Usage tracked successfully for user:', userId);
-      } catch (error) {
-        console.error('Failed to track usage:', error);
-        // Don't fail the request if usage tracking fails
-      }
+    // Track usage for authenticated users (userId is now always the email)
+    try {
+      await incrementUsage(userId, 'generate_note');
+      console.log('✅ Usage tracked successfully for user:', userId);
+    } catch (error) {
+      console.error('Failed to track usage:', error);
+      // Don't fail the request if usage tracking fails
     }
     
     return NextResponse.json(responseData);

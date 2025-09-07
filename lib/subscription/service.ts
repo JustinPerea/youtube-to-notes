@@ -8,6 +8,12 @@ import { users, userMonthlyUsage, aiChatSessions } from '../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { SUBSCRIPTION_LIMITS, type SubscriptionTier, checkLimit, hasFeatureAccess } from './config';
 
+// UUID validation helper
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 export interface UserSubscription {
   id: string;
   userId: string;
@@ -30,17 +36,17 @@ export interface UsageData {
   subscription: UserSubscription;
   
   // Current usage
-  notesGenerated: number;
+  videosProcessed: number;
   aiQuestionsAsked: number;
   storageUsedMb: number;
   
   // Limits
-  noteLimit: number; // -1 = unlimited
+  videoLimit: number; // -1 = unlimited
   aiQuestionLimit: number; // -1 = unlimited, 0 = disabled
   storageLimitMb: number;
   
   // Status
-  canGenerateNote: boolean;
+  canProcessVideo: boolean;
   canUseAI: boolean;
   canUseStorage: boolean;
   
@@ -50,6 +56,12 @@ export interface UsageData {
 
 // Get user's current subscription with admin override support
 export async function getUserSubscription(userId: string): Promise<UserSubscription | null> {
+  // Validate UUID first
+  if (!userId || !isValidUUID(userId)) {
+    console.error('Invalid user ID provided to getUserSubscription:', userId);
+    return null;
+  }
+
   try {
     const user = await db
       .select({
@@ -107,6 +119,12 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
 
 // Get comprehensive usage data
 export async function getUserUsage(userId: string): Promise<UsageData | null> {
+  // Validate UUID first
+  if (!userId || !isValidUUID(userId)) {
+    console.error('Invalid user ID provided to getUserUsage:', userId);
+    return null;
+  }
+
   try {
     const subscription = await getUserSubscription(userId);
     if (!subscription) {
@@ -128,17 +146,17 @@ export async function getUserUsage(userId: string): Promise<UsageData | null> {
         },
         
         // Current usage
-        notesGenerated: 0,
+        videosProcessed: 0,
         aiQuestionsAsked: 0,
         storageUsedMb: 0,
         
         // Limits
-        noteLimit: limits.videosPerMonth, // Reusing videosPerMonth as noteLimit
+        videoLimit: limits.videosPerMonth,
         aiQuestionLimit: limits.aiQuestionsPerMonth,
         storageLimitMb: limits.storageGB * 1024,
         
         // Status checks
-        canGenerateNote: limits.videosPerMonth === -1 || 0 < limits.videosPerMonth,
+        canProcessVideo: limits.videosPerMonth === -1 || 0 < limits.videosPerMonth,
         canUseAI: limits.aiQuestionsPerMonth !== 0 && 
                   (limits.aiQuestionsPerMonth === -1 || 0 < limits.aiQuestionsPerMonth),
         canUseStorage: 0 < (limits.storageGB * 1024),
@@ -171,17 +189,17 @@ export async function getUserUsage(userId: string): Promise<UsageData | null> {
       subscription,
       
       // Current usage
-      notesGenerated: usage?.videosProcessed || 0, // Map videosProcessed to notesGenerated
+      videosProcessed: usage?.videosProcessed || 0,
       aiQuestionsAsked: usage?.aiQuestionsAsked || 0,
       storageUsedMb: usage?.storageUsedMb || 0,
       
       // Limits
-      noteLimit: limits.videosPerMonth, // Reusing videosPerMonth as noteLimit
+      videoLimit: limits.videosPerMonth,
       aiQuestionLimit: limits.aiQuestionsPerMonth,
       storageLimitMb: limits.storageGB * 1024,
       
       // Status checks
-      canGenerateNote: limits.videosPerMonth === -1 || (usage?.videosProcessed || 0) < limits.videosPerMonth,
+      canProcessVideo: limits.videosPerMonth === -1 || (usage?.videosProcessed || 0) < limits.videosPerMonth,
       canUseAI: limits.aiQuestionsPerMonth !== 0 && 
                 (limits.aiQuestionsPerMonth === -1 || (usage?.aiQuestionsAsked || 0) < limits.aiQuestionsPerMonth),
       canUseStorage: (usage?.storageUsedMb || 0) < (limits.storageGB * 1024),
@@ -626,4 +644,97 @@ export function hasWatermark(subscription: UserSubscription): boolean {
 
 export function getProcessingSpeed(subscription: UserSubscription): 'standard' | 'priority' {
   return SUBSCRIPTION_LIMITS[subscription.tier].processingSpeed;
+}
+
+// Increment storage usage (atomic operation)
+export async function incrementStorageUsage(
+  userId: string, 
+  sizeMB: number
+): Promise<void> {
+  try {
+    // Convert to integer MB - round up for any non-zero value to ensure we track storage properly
+    const integerMB = sizeMB > 0 ? Math.max(1, Math.ceil(sizeMB)) : 0;
+    
+    // Use atomic SQL increment to prevent race conditions
+    await db
+      .update(users)
+      .set({
+        storageUsedMb: sql`COALESCE(${users.storageUsedMb}, 0) + ${integerMB}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    console.log('Storage usage incremented successfully:', { userId, originalSizeMB: sizeMB, trackedMB: integerMB });
+  } catch (error) {
+    console.error('Error incrementing storage usage:', error);
+    throw error;
+  }
+}
+
+// Decrement storage usage (atomic operation)
+export async function decrementStorageUsage(
+  userId: string, 
+  sizeMB: number
+): Promise<void> {
+  try {
+    // Convert to integer MB - round up for any non-zero value to match increment logic
+    const integerMB = sizeMB > 0 ? Math.max(1, Math.ceil(sizeMB)) : 0;
+    
+    // Use atomic SQL decrement, ensuring storage never goes below 0
+    await db
+      .update(users)
+      .set({
+        storageUsedMb: sql`GREATEST(COALESCE(${users.storageUsedMb}, 0) - ${integerMB}, 0)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    console.log('Storage usage decremented successfully:', { userId, originalSizeMB: sizeMB, trackedMB: integerMB });
+  } catch (error) {
+    console.error('Error decrementing storage usage:', error);
+    throw error;
+  }
+}
+
+// Recalculate and correct storage usage for a user
+export async function recalculateUserStorage(userId: string): Promise<{
+  success: boolean;
+  oldUsage?: number;
+  newUsage?: number;
+  error?: string;
+}> {
+  try {
+    // This would require calculating actual stored content size
+    // For now, we'll implement a basic version that ensures consistency
+    const currentUser = await db
+      .select({ storageUsedMb: users.storageUsedMb })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!currentUser.length) {
+      return { success: false, error: 'User not found' };
+    }
+
+    const oldUsage = currentUser[0].storageUsedMb || 0;
+    
+    // TODO: In a future version, this could scan all user's notes and calculate actual size
+    // For now, just ensure the value is not negative
+    if (oldUsage < 0) {
+      await db
+        .update(users)
+        .set({
+          storageUsedMb: 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+      
+      return { success: true, oldUsage, newUsage: 0 };
+    }
+
+    return { success: true, oldUsage, newUsage: oldUsage };
+  } catch (error) {
+    console.error('Error recalculating storage usage:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to recalculate storage' };
+  }
 }

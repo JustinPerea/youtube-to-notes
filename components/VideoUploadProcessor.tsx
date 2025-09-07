@@ -63,6 +63,7 @@ interface ProcessingResult {
     processingTime?: number;
     transcriptWordCount?: number;
   };
+  tokensUsed?: number;
 }
 
 interface VideoUploadProcessorProps {
@@ -260,8 +261,8 @@ export function VideoUploadProcessor({
         addProcessingStep(`📋 Sources: ${firstResult.dataSourcesUsed.join(', ')}`, 94);
       }
       
-      if (firstResult?.tokenUsage) {
-        addProcessingStep(`⚡ Processed ${firstResult.tokenUsage} tokens`, 96);
+      if (firstResult?.tokensUsed) {
+        addProcessingStep(`⚡ Processed ${firstResult.tokensUsed} tokens`, 96);
       }
 
       addProcessingStep(`✅ Your ${selectedTemplates.length} note format${selectedTemplates.length > 1 ? 's are' : ' is'} ready!`, 100);

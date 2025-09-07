@@ -441,9 +441,9 @@ export default function SimpleAdminPage() {
               onChange={(e) => setTestTier(e.target.value as any)}
               style={styles.input}
             >
-              <option value="free">Free (5 videos)</option>
-              <option value="student">Student ($9.99 - Unlimited)</option>
-              <option value="pro">Pro ($19.99 - Unlimited + AI)</option>
+              <option value="free">Free (5 notes)</option>
+              <option value="basic">Basic ($3.99 - Unlimited)</option>
+              <option value="pro">Pro ($9.99 - Unlimited + AI)</option>
             </select>
           </div>
 

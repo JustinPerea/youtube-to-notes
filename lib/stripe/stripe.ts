@@ -82,7 +82,7 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
   }
 
   // Add trial period for premium tiers
-  if (tier === 'pro' || tier === 'creator') {
+  if (tier === 'pro') {
     sessionParams.subscription_data!.trial_period_days = 7;
   }
 

@@ -4,6 +4,7 @@ import './globals.css'
 import AuthProvider from '../components/AuthProvider'
 import { ThemeProvider } from '../components/ui/ThemeProvider'
 import { Header } from '../components/Header'
+import { OnboardingWrapper } from '../components/OnboardingWrapper'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -26,10 +27,12 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <AuthProvider>
-            <Header />
-            <main className="pt-16">
-              {children}
-            </main>
+            <OnboardingWrapper>
+              <Header />
+              <main className="pt-16">
+                {children}
+              </main>
+            </OnboardingWrapper>
           </AuthProvider>
         </ThemeProvider>
       </body>

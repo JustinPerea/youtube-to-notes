@@ -50,6 +50,21 @@ export const users = pgTable('users', {
   adminOverrideTier: text('admin_override_tier', { enum: ['free', 'basic', 'pro'] }),
   adminOverrideExpires: timestamp('admin_override_expires'),
   
+  // Legal agreements
+  tosAccepted: boolean('tos_accepted').default(false),
+  tosAcceptedAt: timestamp('tos_accepted_at'),
+  tosAcceptedVersion: text('tos_accepted_version'),
+  privacyAccepted: boolean('privacy_accepted').default(false),
+  privacyAcceptedAt: timestamp('privacy_accepted_at'),
+  privacyAcceptedVersion: text('privacy_accepted_version'),
+  marketingConsent: boolean('marketing_consent').default(false),
+  marketingConsentAt: timestamp('marketing_consent_at'),
+  ageVerified: boolean('age_verified').default(false),
+  
+  // Onboarding
+  onboardingCompleted: boolean('onboarding_completed').default(false),
+  onboardingCompletedAt: timestamp('onboarding_completed_at'),
+  
   // Settings
   preferences: json('preferences').$type<{
     defaultTemplate?: string;

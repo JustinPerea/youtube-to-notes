@@ -96,7 +96,8 @@ export default function Pricing() {
               <div className="faq-item bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">What payment methods do you accept?</h3>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  We accept all major credit cards, debit cards, and digital payment methods through Stripe. 
+                  We support multiple payment providers for your convenience: Stripe (all major credit cards, debit cards, digital payments) 
+                  and Polar (developer-friendly payments with competitive rates). 
                   Your payment information is always secure and encrypted.
                 </p>
               </div>

@@ -12,22 +12,7 @@ import { SUBSCRIPTION_LIMITS, type SubscriptionTier } from '@/lib/subscription/c
 import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-
-// Admin email addresses that can use testing overrides
-const ADMIN_EMAILS = [
-  'justinmperea@gmail.com', // Add your email here
-  // Add other admin emails as needed
-];
-
-async function isAdmin(email?: string | null): Promise<boolean> {
-  // Allow in development mode
-  if (process.env.NODE_ENV === 'development') {
-    return true;
-  }
-  
-  // Check admin email list in production
-  return email ? ADMIN_EMAILS.includes(email) : false;
-}
+import { isAdmin } from '@/lib/admin/config';
 
 // Helper function to ensure user exists in database
 async function ensureUserExists(sessionUser: { id: string; email: string; name?: string; image?: string }) {
@@ -92,7 +77,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    if (!(await isAdmin(session.user.email))) {
+    if (!isAdmin(session.user.email)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -176,7 +161,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    if (!(await isAdmin(session.user.email))) {
+    if (!isAdmin(session.user.email)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -226,7 +211,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    if (!(await isAdmin(session.user.email))) {
+    if (!isAdmin(session.user.email)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

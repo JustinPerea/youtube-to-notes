@@ -52,6 +52,9 @@ export function Header() {
             <Link href="/about" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               About
             </Link>
+            <Link href="/blog" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+              Blog
+            </Link>
             {session ? (
               <UserProfile />
             ) : (
@@ -129,6 +132,13 @@ export function Header() {
                 onClick={closeMobileMenu}
               >
                 About
+              </Link>
+              <Link 
+                href="/blog" 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                onClick={closeMobileMenu}
+              >
+                Blog
               </Link>
               {session ? (
                 <div className="flex items-center gap-3">

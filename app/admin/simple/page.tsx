@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
+import { canAccessAdmin } from '@/lib/admin/config';
 
 interface SubscriptionInfo {
   subscription: {
@@ -42,14 +43,13 @@ export default function SimpleAdminPage() {
   const [runningTest, setRunningTest] = useState<string>('');
 
   // Only show for admins in development or with admin email
-  const isAdmin = process.env.NODE_ENV === 'development' || 
-    session?.user?.email === 'justinmperea@gmail.com';
+  const isAdminUser = canAccessAdmin(session?.user?.email);
 
   useEffect(() => {
-    if (isAdmin && session) {
+    if (isAdminUser && session) {
       loadSubscriptionInfo();
     }
-  }, [isAdmin, session]);
+  }, [isAdminUser, session]);
 
   const loadSubscriptionInfo = async () => {
     if (!session?.user?.id) {
@@ -168,7 +168,43 @@ export default function SimpleAdminPage() {
     }
   };
 
-  if (!isAdmin) {
+  const createBlogPost = async (title: string, content: string, authorId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      const response = await fetch('/api/blog/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          content,
+          authorId,
+          status: 'published',
+          excerpt: content.substring(0, 150) + '...',
+          tags: ['admin-created'],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(`Blog post "${title}" created successfully!`);
+        setTimeout(() => setSuccess(null), 5000);
+      } else {
+        setError(data.error || 'Failed to create blog post');
+      }
+    } catch (err) {
+      setError('Failed to create blog post');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isAdminUser) {
     return (
       <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
         <h1>Access Denied</h1>
@@ -376,7 +412,7 @@ export default function SimpleAdminPage() {
             <p><strong>Session Status:</strong> {session ? 'Loaded' : 'Not loaded'}</p>
             <p><strong>User Email:</strong> {session?.user?.email || 'Not available'}</p>
             <p><strong>User ID:</strong> {session?.user?.id || 'Not available'}</p>
-            <p><strong>Is Admin:</strong> {isAdmin ? 'Yes' : 'No'}</p>
+            <p><strong>Is Admin:</strong> {isAdminUser ? 'Yes' : 'No'}</p>
           </div>
         </div>
       )}
@@ -630,6 +666,67 @@ export default function SimpleAdminPage() {
               <li style={{ marginBottom: '0.25rem' }}>• Priority processing</li>
             </ul>
           </div>
+        </div>
+      </div>
+
+      {/* Blog Management */}
+      <div style={styles.card}>
+        <h2 style={styles.sectionTitle}>📝 Blog Management</h2>
+        <p style={{ ...styles.text, marginBottom: '1.5rem' }}>
+          Manage blog posts for SEO and content marketing. Add, edit, and publish blog posts.
+        </p>
+        
+        <div style={styles.grid}>
+          <div>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#111827' }}>
+              Quick Actions
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button
+                onClick={() => window.open('/blog', '_blank')}
+                style={styles.button}
+              >
+                📖 View Blog
+              </button>
+              
+              <button
+                onClick={() => {
+                  const title = prompt('Enter blog post title:');
+                  const content = prompt('Enter blog post content:');
+                  if (title && content && session?.user?.id) {
+                    createBlogPost(title, content, session.user.id);
+                  }
+                }}
+                style={{...styles.button, backgroundColor: '#10b981'}}
+              >
+                ✍️ Create Post
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#111827' }}>
+              Content Tips
+            </h3>
+            <ul style={{ fontSize: '0.875rem', color: '#374151', lineHeight: '1.6', listStyle: 'disc', paddingLeft: '1.25rem' }}>
+              <li style={{ marginBottom: '0.25rem' }}>Write SEO-friendly titles</li>
+              <li style={{ marginBottom: '0.25rem' }}>Add relevant tags</li>
+              <li style={{ marginBottom: '0.25rem' }}>Include featured images</li>
+              <li style={{ marginBottom: '0.25rem' }}>Optimize for keywords</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div style={{ 
+          marginTop: '1.5rem', 
+          padding: '1rem', 
+          backgroundColor: '#f0f9ff', 
+          borderRadius: '6px', 
+          border: '1px solid #0ea5e9' 
+        }}>
+          <p style={{ fontSize: '0.875rem', color: '#0369a1', margin: '0', textAlign: 'center' }}>
+            💡 Blog posts help with SEO and establish expertise in your niche
+          </p>
         </div>
       </div>
 

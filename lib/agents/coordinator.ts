@@ -18,7 +18,7 @@ import { QAAgent } from './qa-agent';
 import { DebuggingAgent } from './debugging-agent';
 import { MemoryContextAgent } from './memory-context-agent';
 import { AgentQuestion, AgentDecision } from './base-agent';
-import { playwrightAgent } from '../mcp/playwright-agent';
+// import { playwrightAgent } from '../mcp/playwright-agent';
 import { githubAgent } from '../mcp/github-agent';
 
 export interface TaskRequest {
@@ -70,7 +70,7 @@ export class CoordinatorAgent {
     qa: new QAAgent(),
     debugging: new DebuggingAgent(),
     memory: new MemoryContextAgent(),
-    playwright: playwrightAgent,
+    // playwright: playwrightAgent,
     github: githubAgent
   };
 
@@ -438,7 +438,7 @@ export class CoordinatorAgent {
       frontend: this.agents.frontend,
       backend: this.agents.backend,
       research: this.agents.research,
-      playwright: this.agents.playwright,
+      // playwright: this.agents.playwright,
       github: this.agents.github,
       debugging: this.agents.debugging
     };

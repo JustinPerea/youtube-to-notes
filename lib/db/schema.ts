@@ -35,6 +35,11 @@ export const users = pgTable('users', {
   subscriptionCurrentPeriodEnd: timestamp('subscription_current_period_end'),
   subscriptionCancelAtPeriodEnd: boolean('subscription_cancel_at_period_end').default(false),
   
+  // Polar integration
+  polarCustomerId: text('polar_customer_id'),
+  polarSubscriptionId: text('polar_subscription_id'),
+  paymentProvider: text('payment_provider', { enum: ['stripe', 'polar'] }).default('stripe'),
+  
   // Usage tracking
   aiQuestionsUsedThisMonth: integer('ai_questions_used_this_month').default(0),
   aiQuestionsResetDate: timestamp('ai_questions_reset_date'),
@@ -311,6 +316,56 @@ export const exports = pgTable('exports', {
 });
 
 // =============================================================================
+// BLOG TABLES
+// =============================================================================
+export const blogPosts = pgTable('blog_posts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  authorId: uuid('author_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Content
+  title: text('title').notNull(),
+  slug: text('slug').notNull().unique(),
+  excerpt: text('excerpt'),
+  content: text('content').notNull(),
+  featuredImage: text('featured_image'),
+  
+  // SEO
+  metaTitle: text('meta_title'),
+  metaDescription: text('meta_description'),
+  tags: text('tags').array(),
+  
+  // Status and visibility
+  status: text('status', { enum: ['draft', 'published', 'archived'] }).default('draft'),
+  publishedAt: timestamp('published_at'),
+  
+  // Engagement
+  viewCount: integer('view_count').default(0),
+  readingTime: integer('reading_time'), // in minutes
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const blogCategories = pgTable('blog_categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  color: text('color'), // hex color for UI
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const blogPostCategories = pgTable('blog_post_categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  postId: uuid('post_id').references(() => blogPosts.id, { onDelete: 'cascade' }).notNull(),
+  categoryId: uuid('category_id').references(() => blogCategories.id, { onDelete: 'cascade' }).notNull(),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =============================================================================
 // RELATIONS
 // =============================================================================
 export const usersRelations = relations(users, ({ many }) => ({
@@ -320,6 +375,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   notes: many(notes),
   monthlyUsage: many(userMonthlyUsage),
   aiChatSessions: many(aiChatSessions),
+  blogPosts: many(blogPosts),
 }));
 
 export const videosRelations = relations(videos, ({ one, many }) => ({
@@ -391,6 +447,29 @@ export const aiChatSessionsRelations = relations(aiChatSessions, ({ one }) => ({
   }),
 }));
 
+export const blogPostsRelations = relations(blogPosts, ({ one, many }) => ({
+  author: one(users, {
+    fields: [blogPosts.authorId],
+    references: [users.id],
+  }),
+  categories: many(blogPostCategories),
+}));
+
+export const blogCategoriesRelations = relations(blogCategories, ({ many }) => ({
+  posts: many(blogPostCategories),
+}));
+
+export const blogPostCategoriesRelations = relations(blogPostCategories, ({ one }) => ({
+  post: one(blogPosts, {
+    fields: [blogPostCategories.postId],
+    references: [blogPosts.id],
+  }),
+  category: one(blogCategories, {
+    fields: [blogPostCategories.categoryId],
+    references: [blogCategories.id],
+  }),
+}));
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -423,3 +502,12 @@ export type NewUserMonthlyUsage = typeof userMonthlyUsage.$inferInsert;
 
 export type AiChatSession = typeof aiChatSessions.$inferSelect;
 export type NewAiChatSession = typeof aiChatSessions.$inferInsert;
+
+export type BlogPost = typeof blogPosts.$inferSelect;
+export type NewBlogPost = typeof blogPosts.$inferInsert;
+
+export type BlogCategory = typeof blogCategories.$inferSelect;
+export type NewBlogCategory = typeof blogCategories.$inferInsert;
+
+export type BlogPostCategory = typeof blogPostCategories.$inferSelect;
+export type NewBlogPostCategory = typeof blogPostCategories.$inferInsert;

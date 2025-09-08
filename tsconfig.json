@@ -39,6 +39,10 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "lib/mcp/playwright-controller.ts",
+    "lib/mcp/playwright-agent.ts",
+    "scripts/demo-playwright.ts",
+    "google-cloud-mcp/**/*"
   ]
 }

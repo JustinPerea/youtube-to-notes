@@ -325,19 +325,23 @@ async function handleSubscriptionCanceled(subscription: any) {
 }
 
 async function handleOrderPaid(order: any) {
-  console.log('Order paid:', order.id);
+  console.log('🔄 Order paid webhook received:', order.id);
   
   // Extract key data from the order
   const customerEmail = order.customer?.email || order.user?.email;
   const productId = order.product_id;
   const subscriptionId = order.subscription_id;
   
+  console.log(`📧 Extracted email: ${customerEmail}`);
+  console.log(`📦 Product ID: ${productId}`);
+  console.log(`🔗 Subscription ID: ${subscriptionId}`);
+  
   if (!customerEmail) {
     console.error('❌ No customer email in order.paid webhook');
     return;
   }
   
-  console.log(`Processing paid order for ${customerEmail}, product: ${productId}`);
+  console.log(`💰 Processing paid order for ${customerEmail}, product: ${productId}`);
   
   // Find user by email
   const existingUsers = await db
@@ -357,6 +361,8 @@ async function handleOrderPaid(order: any) {
   let tier: SubscriptionTier = 'free';
   const proProductId = process.env.POLAR_PRO_PRODUCT_ID;
   const basicProductId = process.env.POLAR_BASIC_PRODUCT_ID;
+  
+  console.log(`🔍 Product matching: webhook=${productId}, env=${proProductId}, match=${productId === proProductId}`);
   
   if (productId === proProductId) {
     tier = 'pro';

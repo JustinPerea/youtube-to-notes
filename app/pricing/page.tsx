@@ -1,17 +1,15 @@
 'use client';
 
 import type { Metadata } from 'next'
-import { useState } from 'react';
 import { OrbBackground } from '../../components/ui/OrbBackground';
 import { ThemeToggle } from '../../components/ui/ThemeToggle';
 import { Footer } from '../../components/Footer';
-import { PricingTiers, PricingToggle } from '../../components/pricing/PricingTiers';
+import { PricingTiers } from '../../components/pricing/PricingTiers';
 
 // Note: Since this is a client component, we can't export metadata directly
 // The metadata will be handled differently for client components
 
 export default function Pricing() {
-  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
 
   return (
     <div className="min-h-screen">
@@ -31,14 +29,13 @@ export default function Pricing() {
               Simple, Transparent Pricing
             </h1>
             <p className="hero-subtitle text-[22px] text-[var(--text-secondary)] mb-12 max-w-[700px] mx-auto leading-relaxed">
-              Turn ANY YouTube video into study notes - unlimited, forever. Choose the plan that works best for your learning journey.
+              Turn ANY YouTube video into study notes with our simple monthly pricing. No annual commitments required.
             </p>
           </section>
 
           {/* Pricing Section */}
           <section className="pricing-section py-10">
-            <PricingToggle billing={billing} onBillingChange={setBilling} />
-            <PricingTiers billing={billing} />
+            <PricingTiers />
           </section>
 
           {/* FAQ Section */}

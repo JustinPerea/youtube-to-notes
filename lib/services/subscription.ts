@@ -7,6 +7,7 @@ import { users } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { USAGE_LIMITS } from '../stripe/config';
 import { memoryCache, CacheKeys, CacheTTL } from '../cache/memory-cache';
+import { auditLogger } from '../audit/logger';
 
 export interface UserSubscription {
   id: string;
@@ -247,7 +248,127 @@ export async function getUserUsage(userId: string): Promise<UsageData> {
   }
 }
 
-// Check if user can perform an action based on their tier and usage
+// 🔒 SECURITY: Atomic usage reservation to prevent race conditions
+export async function reserveUsage(
+  userId: string, 
+  action: 'generate_note' | 'use_storage',
+  amount: number = 1
+): Promise<{ success: boolean; reason?: string; reservationId?: string }> {
+  try {
+    const subscription = await getUserSubscription(userId);
+    if (!subscription) {
+      return { success: false, reason: 'No subscription found' };
+    }
+
+    const limits = USAGE_LIMITS[subscription.tier];
+    const reservationId = crypto.randomUUID();
+    
+    // Use database transaction for atomic check-and-reserve
+    const result = await db.transaction(async (tx) => {
+      // Get current usage within transaction
+      const currentUser = await tx
+        .select({
+          videosProcessedThisMonth: users.videosProcessedThisMonth,
+          storageUsedMb: users.storageUsedMb,
+          resetDate: users.resetDate,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!currentUser.length) {
+        throw new Error('User not found');
+      }
+
+      const userData = currentUser[0];
+      
+      // Check if monthly reset is needed
+      const now = new Date();
+      const shouldReset = !userData.resetDate || userData.resetDate < new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      let currentUsage = userData.videosProcessedThisMonth || 0;
+      if (shouldReset && action === 'generate_note') {
+        currentUsage = 0;
+      }
+      
+      // Check limits
+      switch (action) {
+        case 'generate_note':
+          if (limits.videosPerMonth !== -1 && currentUsage + amount > limits.videosPerMonth) {
+            throw new Error('Monthly note generation limit would be exceeded');
+          }
+          
+          // Atomically increment usage
+          const updateData: any = {
+            videosProcessedThisMonth: sql`COALESCE(${users.videosProcessedThisMonth}, 0) + ${amount}`,
+            updatedAt: new Date(),
+          };
+          
+          if (shouldReset) {
+            updateData.resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            updateData.videosProcessedThisMonth = amount; // Start fresh
+          }
+          
+          await tx.update(users).set(updateData).where(eq(users.id, userId));
+          break;
+          
+        case 'use_storage':
+          const storageLimitMB = limits.storageGB === -1 ? Number.MAX_SAFE_INTEGER : limits.storageGB * 1024;
+          const currentStorageMB = userData.storageUsedMb || 0;
+          
+          if (currentStorageMB + amount > storageLimitMB) {
+            throw new Error('Storage limit would be exceeded');
+          }
+          
+          await tx.update(users)
+            .set({
+              storageUsedMb: sql`COALESCE(${users.storageUsedMb}, 0) + ${amount}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, userId));
+          break;
+          
+        default:
+          throw new Error('Unknown action');
+      }
+      
+      return reservationId;
+    });
+
+    // 🔒 AUDIT: Log successful usage reservation
+    await auditLogger.logEvent({
+      eventType: 'data_access',
+      userId,
+      action: 'usage_reserved',
+      details: { action, amount, reservationId: result },
+      severity: 'low',
+      source: 'subscription_service'
+    });
+    
+    console.log('🔒 Usage reserved successfully:', { userId, action, amount, reservationId: result });
+    return { success: true, reservationId: result };
+    
+  } catch (error) {
+    console.error('🔒 Error reserving usage:', error);
+    
+    // 🔒 AUDIT: Log usage reservation failure
+    await auditLogger.logUsageLimitExceeded(
+      userId,
+      action,
+      0, // Current usage not available in error case
+      -1, // Limit not available in error case  
+      `reserve_${action}`,
+      { error: error instanceof Error ? error.message : 'Unknown error' }
+    );
+    
+    return { 
+      success: false, 
+      reason: error instanceof Error ? error.message : 'Error reserving usage' 
+    };
+  }
+}
+
+// Check if user can perform an action (read-only check, no reservation)
 export async function checkUsageLimit(
   userId: string, 
   action: 'generate_note' | 'use_storage'

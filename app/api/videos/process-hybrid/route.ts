@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TEMPLATES } from '@/lib/templates';
 import { videoProcessingRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateVideoUrl } from '@/lib/validation';
-import { getApiSession } from '@/lib/auth-utils';
+import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { geminiClient } from '@/lib/gemini/client';
-import { checkUsageLimit, incrementUsage } from '@/lib/subscription/service';
+import { reserveUsage } from '@/lib/subscription/service';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -71,22 +71,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid template selected' }, { status: 400 });
     }
 
-    // Get user session
-    const session = await getApiSession(request);
-    const userId = session?.userId || 'anonymous';
+    // 🔒 SECURITY: Require authentication - no anonymous processing
+    const session = await getApiSessionWithDatabase(request);
+    if (!session?.user?.id) {
+      return NextResponse.json({
+        error: 'Authentication required',
+        details: 'You must be signed in to process videos'
+      }, { status: 401 });
+    }
+    
+    const userId = session.user.id;
 
-    // 🔐 SECURITY: Check subscription limits
-    if (userId !== 'anonymous') {
-      const limitCheck = await checkUsageLimit(userId, 'generate_note');
-      if (!limitCheck.allowed) {
-        return NextResponse.json({
-          error: 'Note generation limit reached',
-          details: limitCheck.reason,
-          limit: limitCheck.limit,
-          current: limitCheck.current,
-          resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
-        }, { status: 429 });
-      }
+    // 🔒 SECURITY: Reserve usage atomically to prevent race conditions
+    const usageReservation = await reserveUsage(userId, 'generate_note', 1);
+    if (!usageReservation.success) {
+      return NextResponse.json({
+        error: 'Note generation limit reached',
+        details: usageReservation.reason,
+        resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
+      }, { status: 429 });
     }
 
     console.log('🚀 Starting enhanced hybrid video processing...');
@@ -162,16 +165,8 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    // 📊 SECURITY: Track successful note generation for subscription limits
-    if (userId !== 'anonymous') {
-      try {
-        await incrementUsage(userId, 'generate_note');
-        console.log('✅ Usage tracked successfully for hybrid processing:', userId);
-      } catch (error) {
-        console.error('Failed to track hybrid processing usage:', error);
-        // Don't fail the request if usage tracking fails
-      }
-    }
+    // Usage already tracked via atomic reservation system
+    console.log('✅ Usage tracking completed via atomic reservation system');
 
     return NextResponse.json(responseData);
 

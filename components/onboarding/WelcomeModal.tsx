@@ -26,17 +26,30 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
     ageVerified: false
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!agreements.tosAccepted || !agreements.privacyAccepted || !agreements.ageVerified) {
       return; // Required fields not checked
     }
 
+    // Check if user is authenticated
+    if (!session?.user) {
+      setError('Please sign in to complete onboarding');
+      return;
+    }
+
     setIsSubmitting(true);
+    setError(null);
+    
     try {
+      console.log('Session:', session);
+      console.log('Submitting onboarding data:', agreements);
       await onComplete(agreements);
+      console.log('Onboarding completed successfully');
     } catch (error) {
       console.error('Error completing onboarding:', error);
+      setError(error instanceof Error ? error.message : 'Failed to complete onboarding. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -182,6 +195,15 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
             </div>
           </label>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+            <p className="text-red-800 dark:text-red-200 text-sm font-medium">
+              ⚠️ {error}
+            </p>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex flex-col gap-4">

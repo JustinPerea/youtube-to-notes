@@ -8,7 +8,6 @@ export interface PricingTier {
   id: string;
   name: string;
   price: number;
-  yearlyPrice?: number;
   description: string;
   videoLimit: string;
   features: string[];
@@ -41,7 +40,6 @@ const pricingTiers: PricingTier[] = [
     id: 'basic',
     name: 'Basic',
     price: 3.99,
-    yearlyPrice: 39,
     description: '100 notes monthly for serious learners',
     videoLimit: '100 notes per month',
     features: [
@@ -61,8 +59,7 @@ const pricingTiers: PricingTier[] = [
     id: 'pro',
     name: 'Pro',
     price: 9.99,
-    yearlyPrice: 99,
-    description: 'Best cost - Unlimited videos with advanced features',
+    description: 'Best value - Unlimited videos with advanced features',
     videoLimit: 'UNLIMITED VIDEOS',
     popularBadge: true,
     features: [
@@ -81,7 +78,6 @@ const pricingTiers: PricingTier[] = [
 ];
 
 interface PricingTiersProps {
-  billing?: 'monthly' | 'yearly';
   onSelectPlan?: (tierId: string) => void;
 }
 
@@ -89,7 +85,7 @@ interface CheckoutState {
   [key: string]: boolean;
 }
 
-export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiersProps) {
+export function PricingTiers({ onSelectPlan }: PricingTiersProps) {
   const { data: session, status } = useSession();
   const [loadingStates, setLoadingStates] = useState<CheckoutState>({});
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +102,6 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tier,
-          billing,
           studentDiscount: false, // Can be enhanced later for student verification
         }),
       });
@@ -157,7 +152,7 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
     } finally {
       setLoadingStates(prev => ({ ...prev, [tier]: false }));
     }
-  }, [billing]);
+  }, []);
 
   // Check for stored checkout intent after authentication
   useEffect(() => {
@@ -267,12 +262,6 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
       )}
 
       {pricingTiers.map((tier) => {
-        const displayPrice = billing === 'yearly' && tier.yearlyPrice 
-          ? tier.yearlyPrice / 12 
-          : tier.price;
-        const yearlyDiscount = tier.yearlyPrice 
-          ? Math.round(((tier.price * 12 - tier.yearlyPrice) / (tier.price * 12)) * 100)
-          : 0;
         const isLoading = loadingStates[tier.id];
 
         return (
@@ -287,7 +276,7 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
             {tier.popularBadge && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[var(--accent-pink)] to-[#FF8FB3] text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1 shadow-lg">
                 <Star className="w-4 h-4" />
-                Best Cost
+                Best Value
               </div>
             )}
 
@@ -309,20 +298,14 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
               
               <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-3xl font-bold text-[var(--text-primary)]">
-                  ${displayPrice.toFixed(displayPrice % 1 === 0 ? 0 : 2)}
+                  ${tier.price.toFixed(tier.price % 1 === 0 ? 0 : 2)}
                 </span>
                 {tier.price > 0 && (
                   <span className="text-sm text-[var(--text-secondary)]">
-                    /{billing === 'monthly' ? 'month' : 'month'}
+                    /month
                   </span>
                 )}
               </div>
-
-              {billing === 'yearly' && yearlyDiscount > 0 && (
-                <div className="text-xs text-green-600 font-medium mb-2">
-                  Save {yearlyDiscount}% yearly (${tier.yearlyPrice}/year)
-                </div>
-              )}
 
               {/* Hero Video Limit Display */}
               <div className={`text-sm font-bold mb-4 flex items-center gap-2 ${
@@ -380,40 +363,3 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
   );
 }
 
-export function PricingToggle({ 
-  billing, 
-  onBillingChange 
-}: { 
-  billing: 'monthly' | 'yearly';
-  onBillingChange: (billing: 'monthly' | 'yearly') => void;
-}) {
-  return (
-    <div className="flex items-center justify-center mb-12">
-      <div className="bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-full p-1">
-        <button
-          onClick={() => onBillingChange('monthly')}
-          className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-            billing === 'monthly'
-              ? 'bg-[var(--accent-pink)] text-white shadow-[0_4px_16px_rgba(255,107,157,0.3)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          Monthly
-        </button>
-        <button
-          onClick={() => onBillingChange('yearly')}
-          className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 relative ${
-            billing === 'yearly'
-              ? 'bg-[var(--accent-pink)] text-white shadow-[0_4px_16px_rgba(255,107,157,0.3)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          Yearly
-          <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
-            Save 10%
-          </span>
-        </button>
-      </div>
-    </div>
-  );
-}

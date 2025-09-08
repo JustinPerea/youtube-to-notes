@@ -8,6 +8,7 @@ import { db } from "@/lib/db/connection";
 import { users, userMonthlyUsage } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import crypto from 'crypto';
+import { auditLogger } from "@/lib/audit/logger";
 
 // Subscription tier limits
 const SUBSCRIPTION_LIMITS = {
@@ -24,36 +25,139 @@ const SUBSCRIPTION_LIMITS = {
 } as const;
 
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
+  if (!signature || !secret || !payload) {
+    console.error('❌ Missing required parameters for webhook verification');
+    return false;
+  }
   
-  return crypto.timingSafeEqual(
-    Buffer.from(`sha256=${expectedSignature}`),
-    Buffer.from(signature)
-  );
+  // Validate signature format
+  if (!signature.startsWith('sha256=')) {
+    console.error('❌ Invalid signature format - must start with sha256=');
+    return false;
+  }
+  
+  try {
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(payload, 'utf8')
+      .digest('hex');
+    
+    const receivedSignature = signature.replace('sha256=', '');
+    
+    // Use timing-safe comparison
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(expectedSignature, 'hex'),
+      Buffer.from(receivedSignature, 'hex')
+    );
+    
+    if (!isValid) {
+      console.error('❌ Webhook signature verification failed');
+    }
+    
+    return isValid;
+  } catch (error) {
+    console.error('❌ Error during signature verification:', error);
+    return false;
+  }
+}
+
+// 🔒 SECURITY: Rate limiting for webhook endpoints
+const webhookAttempts = new Map<string, { count: number; lastAttempt: number }>();
+
+function checkWebhookRateLimit(clientIp: string): boolean {
+  const now = Date.now();
+  const windowMs = 60000; // 1 minute window
+  const maxAttempts = 100; // Max 100 webhooks per minute per IP
+  
+  const attempts = webhookAttempts.get(clientIp) || { count: 0, lastAttempt: 0 };
+  
+  // Reset counter if window expired
+  if (now - attempts.lastAttempt > windowMs) {
+    attempts.count = 0;
+  }
+  
+  attempts.count++;
+  attempts.lastAttempt = now;
+  webhookAttempts.set(clientIp, attempts);
+  
+  return attempts.count <= maxAttempts;
 }
 
 export async function POST(req: NextRequest) {
+  const clientIp = req.ip || req.headers.get('x-forwarded-for') || 'unknown';
+  
   try {
+    // 🔒 SECURITY: Rate limiting
+    if (!checkWebhookRateLimit(clientIp)) {
+      console.error(`❌ Rate limit exceeded for IP: ${clientIp}`);
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+    
     const payload = await req.text();
     const signature = req.headers.get('polar-signature');
     const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
 
+    // 🔒 SECURITY: Enhanced validation
     if (!signature || !webhookSecret) {
-      console.error('Missing webhook signature or secret');
+      console.error('❌ Missing webhook signature or secret');
+      
+      // 🔒 AUDIT: Log security violation
+      await auditLogger.logSecurityViolation(
+        'unauthorized_access',
+        { reason: 'missing_webhook_credentials', endpoint: 'polar_webhook' },
+        clientIp
+      );
+      
       return NextResponse.json({ error: 'Webhook configuration error' }, { status: 400 });
     }
+    
+    // Validate payload size (prevent DoS attacks)
+    if (payload.length > 1024 * 1024) { // 1MB limit
+      console.error(`❌ Webhook payload too large: ${payload.length} bytes`);
+      return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+    }
 
-    // Verify webhook signature
+    // 🔒 SECURITY: Verify webhook signature with enhanced validation
     if (!verifyWebhookSignature(payload, signature, webhookSecret)) {
-      console.error('Invalid webhook signature');
+      console.error(`❌ Invalid webhook signature from IP: ${clientIp}`);
+      
+      // 🔒 AUDIT: Log security violation
+      await auditLogger.logSecurityViolation(
+        'invalid_signature',
+        { provider: 'polar', endpoint: 'webhook', signatureProvided: !!signature },
+        clientIp
+      );
+      
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    const event = JSON.parse(payload);
-    console.log('Polar webhook received:', event.type);
+    // 🔒 SECURITY: Safe JSON parsing with validation
+    let event: any;
+    try {
+      event = JSON.parse(payload);
+      
+      // Validate required event structure
+      if (!event.type || typeof event.type !== 'string') {
+        console.error('❌ Invalid webhook event structure - missing or invalid type');
+        return NextResponse.json({ error: 'Invalid event structure' }, { status: 400 });
+      }
+      
+      // 🔒 AUDIT: Log webhook reception
+      await auditLogger.logWebhook(
+        'received',
+        'polar',
+        event.type,
+        { eventId: event.id || 'unknown' },
+        clientIp
+      );
+      
+      // Log securely (don't log sensitive data)
+      console.log('✅ Polar webhook received:', event.type);
+      
+    } catch (parseError) {
+      console.error('❌ Failed to parse webhook payload:', parseError);
+      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    }
 
     switch (event.type) {
       case 'checkout.created':
@@ -201,10 +305,26 @@ async function updateUserSubscription(
   details: any
 ) {
   try {
+    // 🔒 SECURITY: Validate inputs
+    if (!userId || typeof userId !== 'string' || !userId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      console.error('❌ Invalid user ID format:', userId);
+      return;
+    }
+    
+    if (!['basic', 'pro'].includes(tier)) {
+      console.error('❌ Invalid subscription tier:', tier);
+      return;
+    }
+    
+    if (!['polar', 'stripe'].includes(provider)) {
+      console.error('❌ Invalid provider:', provider);
+      return;
+    }
+    
     const limits = SUBSCRIPTION_LIMITS[tier as keyof typeof SUBSCRIPTION_LIMITS];
     
     if (!limits) {
-      console.error('Invalid subscription tier:', tier);
+      console.error('❌ Invalid subscription tier limits:', tier);
       return;
     }
 
@@ -251,7 +371,13 @@ async function updateUserSubscription(
         }
       });
 
-    console.log(`✅ User ${userId} subscription updated to ${tier} via ${provider}`);
+    // 🔒 SECURITY: Audit log for subscription changes
+    console.log(`✅ AUDIT: User subscription updated`, {
+      userId: userId.substring(0, 8) + '***', // Partial ID for privacy
+      tier,
+      provider,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     console.error('Error updating user subscription:', error);

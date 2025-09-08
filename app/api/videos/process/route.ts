@@ -10,8 +10,9 @@ import { db } from '@/lib/db/drizzle';
 import { videos, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { extractVideoId } from '@/lib/utils/youtube';
-import { getUserSubscription, checkUsageLimit, incrementUsage } from '@/lib/subscription/service';
+import { getUserSubscription, reserveUsage } from '@/lib/subscription/service';
 import { NotesService } from '@/lib/services/notes';
+import { auditLogger } from '@/lib/audit/logger';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -840,17 +841,48 @@ export async function POST(request: NextRequest) {
     // Use database UUID for consistency with admin overrides and subscription system
     const userId = session.user.id;
     
-    // Check if user can generate notes (subscription limits)
-    const limitCheck = await checkUsageLimit(userId, 'generate_note');
-    if (!limitCheck.allowed) {
+    // 🔒 SECURITY: Reserve usage atomically to prevent race conditions
+    const usageReservation = await reserveUsage(userId, 'generate_note', 1);
+    if (!usageReservation.success) {
+      // 🔒 AUDIT: Log usage limit exceeded
+      await auditLogger.logUsageLimitExceeded(
+        userId,
+        'generate_note',
+        0, // Current usage not available
+        -1, // Limit not available
+        'video_processing',
+        { 
+          videoUrl, 
+          template: selectedTemplate, 
+          reason: usageReservation.reason,
+          ipAddress: request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+        }
+      );
+      
       return NextResponse.json({
         error: 'Note generation limit reached',
-        details: limitCheck.reason,
-        limit: limitCheck.limit,
-        current: limitCheck.current,
+        details: usageReservation.reason,
         resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
       }, { status: 429 });
     }
+    
+    console.log('✅ Usage reservation successful:', usageReservation.reservationId);
+    
+    // 🔒 AUDIT: Log video processing start
+    await auditLogger.logEvent({
+      eventType: 'data_access',
+      userId,
+      action: 'video_processing_started',
+      details: {
+        videoUrl,
+        template: selectedTemplate,
+        processingMode,
+        reservationId: usageReservation.reservationId
+      },
+      severity: 'low',
+      source: 'video_processing_api',
+      ipAddress: request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+    });
     
     // Create processing request for GeminiClient
     const processingRequest = {
@@ -945,14 +977,8 @@ export async function POST(request: NextRequest) {
       };
     }
     
-    // Track usage for authenticated users (userId is now the database UUID)
-    try {
-      await incrementUsage(userId, 'generate_note');
-      console.log('✅ Usage tracked successfully for user:', userId);
-    } catch (error) {
-      console.error('Failed to track usage:', error);
-      // Don't fail the request if usage tracking fails
-    }
+    // Usage already tracked via atomic reservation system
+    console.log('✅ Usage tracking completed via atomic reservation system');
     
     return NextResponse.json(responseData);
 

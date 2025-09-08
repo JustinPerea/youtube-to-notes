@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { TEMPLATES } from '@/lib/templates';
 import { validateVideoUrl } from '@/lib/validation';
-import { getApiSession } from '@/lib/auth-utils';
-import { checkUsageLimit, incrementUsage } from '@/lib/subscription/service';
+import { getApiSessionWithDatabase } from '@/lib/auth-utils';
+import { reserveUsage } from '@/lib/subscription/service';
 
 // Async processing route for long videos with streaming response
 export const dynamic = 'force-dynamic';
@@ -63,16 +63,8 @@ async function processVideoInChunks(
           await processMultipleChunks(controller, model, videoUrl, template, chunkStrategy.chunks);
         }
 
-        // 📊 SECURITY: Track successful note generation for subscription limits
-        if (userId !== 'anonymous') {
-          try {
-            await incrementUsage(userId, 'generate_note');
-            console.log('✅ Usage tracked successfully for async processing:', userId);
-          } catch (error) {
-            console.error('Failed to track async processing usage:', error);
-            // Don't fail the request if usage tracking fails
-          }
-        }
+        // Usage already tracked via atomic reservation system
+        console.log('✅ Usage tracking completed via atomic reservation system');
 
         controller.enqueue(new TextEncoder().encode(
           `data: ${JSON.stringify({ type: 'complete', progress: 100 })}\n\n`
@@ -254,22 +246,25 @@ export async function POST(request: NextRequest) {
   try {
     const { videoUrl, selectedTemplate = 'basic-summary', forceAsync = false } = await request.json();
 
-    // 🔐 SECURITY: Check authentication and subscription limits
-    const session = await getApiSession(request);
-    const userId = session?.userId || 'anonymous';
+    // 🔒 SECURITY: Require authentication - no anonymous processing
+    const session = await getApiSessionWithDatabase(request);
+    if (!session?.user?.id) {
+      return NextResponse.json({
+        error: 'Authentication required',
+        details: 'You must be signed in to process videos'
+      }, { status: 401 });
+    }
     
-    // Check if user can generate notes (subscription limits)
-    if (userId !== 'anonymous') {
-      const limitCheck = await checkUsageLimit(userId, 'generate_note');
-      if (!limitCheck.allowed) {
-        return NextResponse.json({
-          error: 'Note generation limit reached',
-          details: limitCheck.reason,
-          limit: limitCheck.limit,
-          current: limitCheck.current,
-          resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
-        }, { status: 429 });
-      }
+    const userId = session.user.id;
+    
+    // 🔒 SECURITY: Reserve usage atomically to prevent race conditions
+    const usageReservation = await reserveUsage(userId, 'generate_note', 1);
+    if (!usageReservation.success) {
+      return NextResponse.json({
+        error: 'Note generation limit reached',
+        details: usageReservation.reason,
+        resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
+      }, { status: 429 });
     }
 
     // Validate video URL

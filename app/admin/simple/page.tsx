@@ -385,7 +385,7 @@ export default function SimpleAdminPage() {
                 padding: '1rem 2rem',
               }}
             >
-              🚀 Sign In with Google
+              🚀 Continue with Google
             </button>
           </div>
         </div>

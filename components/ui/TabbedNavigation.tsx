@@ -3,25 +3,22 @@
 import { useState, useEffect } from 'react';
 import { HowItWorks } from './HowItWorks';
 import { FeaturesGrid } from './FeaturesGrid';
-import { PricingTiers, PricingToggle } from '../pricing/PricingTiers';
+import { PricingTiers } from '../pricing/PricingTiers';
 
 // Pricing Section Component
 function PricingSection() {
-  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
-
   return (
     <div className="py-8">
       <div className="text-center mb-12">
         <h2 className="text-4xl font-bold mb-4 bg-gradient-to-br from-[var(--text-primary)] to-[var(--accent-pink)] bg-clip-text text-transparent">
-          Unlimited Learning at Unbeatable Prices
+          Simple Monthly Pricing
         </h2>
         <p className="text-lg text-[var(--text-secondary)] max-w-[700px] mx-auto leading-relaxed mb-8">
-          Turn ANY YouTube video into study notes - unlimited, forever.
+          Turn ANY YouTube video into study notes with straightforward monthly plans. No annual commitments.
         </p>
       </div>
 
-      <PricingToggle billing={billing} onBillingChange={setBilling} />
-      <PricingTiers billing={billing} />
+      <PricingTiers />
     </div>
   );
 }

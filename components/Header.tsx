@@ -62,7 +62,7 @@ export function Header() {
                 onClick={() => signIn('google')}
                 className="sign-in-btn px-6 py-2 bg-[var(--accent-pink)] text-white border-none rounded-[50px] font-semibold cursor-pointer transition-all duration-300 hover:transform hover:translate-y-[-2px] hover:shadow-[0_4px_12px_rgba(255,107,157,0.3)] shadow-[0_2px_8px_rgba(255,107,157,0.2)]"
               >
-                Sign In
+                Get Started
               </button>
             )}
           </nav>
@@ -161,7 +161,7 @@ export function Header() {
                   }}
                   className="bg-[var(--accent-pink)] text-white border-none rounded-xl px-4 py-2 font-semibold transition-all duration-300"
                 >
-                  Sign In
+                  Get Started
                 </button>
               )}
             </nav>

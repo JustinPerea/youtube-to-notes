@@ -13,6 +13,7 @@ import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { isAdmin } from '@/lib/admin/config';
+import { auditLogger } from '@/lib/audit/logger';
 
 // Helper function to ensure user exists in database
 async function ensureUserExists(sessionUser: { id: string; email: string; name?: string; image?: string }) {
@@ -106,6 +107,18 @@ export async function POST(req: NextRequest) {
       image: session.user.image ?? undefined
     });
 
+    // 🔒 AUDIT: Log admin override action
+    await auditLogger.logEvent({
+      eventType: 'admin_override',
+      userId: dbUserId,
+      userEmail: session.user.email!,
+      action: 'subscription_override_set',
+      details: { tier, expiresInHours, adminUser: session.user.email },
+      severity: 'high',
+      source: 'admin_api',
+      ipAddress: req.ip || req.headers.get('x-forwarded-for') || 'unknown'
+    });
+    
     // Set the override using database user ID, not session user ID
     console.log('🔧 Setting admin override:', { dbUserId, tier, expiresInHours });
     await setAdminOverride(dbUserId, tier as SubscriptionTier, expiresInHours);
@@ -175,6 +188,18 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // 🔒 AUDIT: Log admin override removal
+    await auditLogger.logEvent({
+      eventType: 'admin_override',
+      userId: userId,
+      userEmail: session.user.email!,
+      action: 'subscription_override_cleared',
+      details: { adminUser: session.user.email },
+      severity: 'high',
+      source: 'admin_api',
+      ipAddress: req.ip || req.headers.get('x-forwarded-for') || 'unknown'
+    });
+    
     await clearAdminOverride(userId);
 
     // Get updated subscription info

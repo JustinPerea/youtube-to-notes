@@ -29,21 +29,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get user from database
-    const dbUsers = await db
+    // Get user from database or create if not exists
+    let dbUsers = await db
       .select()
       .from(users)
       .where(eq(users.oauthId, session.user.id))
       .limit(1);
 
+    let user;
     if (dbUsers.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
+      // Create user if they don't exist
+      const newUserData = {
+        email: session.user.email!,
+        name: session.user.name || null,
+        image: session.user.image || null,
+        oauthId: session.user.id,
+        oauthProvider: 'google',
+        emailVerified: new Date(),
+      };
 
-    const user = dbUsers[0];
+      const createdUsers = await db
+        .insert(users)
+        .values(newUserData)
+        .returning();
+      
+      user = createdUsers[0];
+    } else {
+      user = dbUsers[0];
+    }
     const now = new Date();
     const currentVersion = '1.0'; // Update this when you change T&C
 
@@ -90,8 +103,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get user agreements status
-    const dbUsers = await db
+    // Get user agreements status, create user if they don't exist
+    let dbUsers = await db
       .select({
         tosAccepted: users.tosAccepted,
         tosAcceptedAt: users.tosAcceptedAt,
@@ -110,10 +123,34 @@ export async function GET(req: NextRequest) {
       .limit(1);
 
     if (dbUsers.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      // Create user if they don't exist and return default values
+      const newUserData = {
+        email: session.user.email!,
+        name: session.user.name || null,
+        image: session.user.image || null,
+        oauthId: session.user.id,
+        oauthProvider: 'google',
+        emailVerified: new Date(),
+      };
+
+      await db.insert(users).values(newUserData);
+
+      // Return default agreement values for new user
+      return NextResponse.json({
+        agreements: {
+          tosAccepted: false,
+          tosAcceptedAt: null,
+          tosAcceptedVersion: null,
+          privacyAccepted: false,
+          privacyAcceptedAt: null,
+          privacyAcceptedVersion: null,
+          marketingConsent: false,
+          marketingConsentAt: null,
+          ageVerified: false,
+          onboardingCompleted: false,
+          onboardingCompletedAt: null
+        }
+      });
     }
 
     return NextResponse.json({

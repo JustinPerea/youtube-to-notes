@@ -7,47 +7,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/connection";
 import { users, userMonthlyUsage } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import crypto from 'crypto';
+import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks";
 import { auditLogger } from "@/lib/audit/logger";
 import { updateUserSubscription } from "@/lib/subscription/service";
 import { SUBSCRIPTION_LIMITS, type SubscriptionTier } from "@/lib/subscription/config";
-
-function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
-  if (!signature || !secret || !payload) {
-    console.error('❌ Missing required parameters for webhook verification');
-    return false;
-  }
-  
-  // Validate signature format
-  if (!signature.startsWith('sha256=')) {
-    console.error('❌ Invalid signature format - must start with sha256=');
-    return false;
-  }
-  
-  try {
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(payload, 'utf8')
-      .digest('hex');
-    
-    const receivedSignature = signature.replace('sha256=', '');
-    
-    // Use timing-safe comparison
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(expectedSignature, 'hex'),
-      Buffer.from(receivedSignature, 'hex')
-    );
-    
-    if (!isValid) {
-      console.error('❌ Webhook signature verification failed');
-    }
-    
-    return isValid;
-  } catch (error) {
-    console.error('❌ Error during signature verification:', error);
-    return false;
-  }
-}
 
 // 🔒 SECURITY: Rate limiting for webhook endpoints
 const webhookAttempts = new Map<string, { count: number; lastAttempt: number }>();
@@ -82,17 +45,16 @@ export async function POST(req: NextRequest) {
     }
     
     const payload = await req.text();
-    const signature = req.headers.get('polar-signature');
     const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
 
     // 🔒 SECURITY: Enhanced validation
-    if (!signature || !webhookSecret) {
-      console.error('❌ Missing webhook signature or secret');
+    if (!webhookSecret) {
+      console.error('❌ Missing webhook secret');
       
       // 🔒 AUDIT: Log security violation
       await auditLogger.logSecurityViolation(
         'unauthorized_access',
-        { reason: 'missing_webhook_credentials', endpoint: 'polar_webhook' },
+        { reason: 'missing_webhook_secret', endpoint: 'polar_webhook' },
         clientIp
       );
       
@@ -105,30 +67,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
     }
 
-    // 🔒 SECURITY: Verify webhook signature with enhanced validation
-    if (!verifyWebhookSignature(payload, signature, webhookSecret)) {
-      console.error(`❌ Invalid webhook signature from IP: ${clientIp}`);
-      
-      // 🔒 AUDIT: Log security violation
-      await auditLogger.logSecurityViolation(
-        'invalid_signature',
-        { provider: 'polar', endpoint: 'webhook', signatureProvided: !!signature },
-        clientIp
-      );
-      
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
-
-    // 🔒 SECURITY: Safe JSON parsing with validation
+    // 🔒 SECURITY: Use official Polar SDK for webhook validation
     let event: any;
     try {
-      event = JSON.parse(payload);
-      
-      // Validate required event structure
-      if (!event.type || typeof event.type !== 'string') {
-        console.error('❌ Invalid webhook event structure - missing or invalid type');
-        return NextResponse.json({ error: 'Invalid event structure' }, { status: 400 });
-      }
+      // Convert headers to the format expected by Polar SDK
+      const headers: Record<string, string> = {};
+      req.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+
+      // Validate event using Polar SDK
+      event = validateEvent(
+        Buffer.from(payload, 'utf8'),
+        headers,
+        webhookSecret
+      );
       
       // 🔒 AUDIT: Log webhook reception
       await auditLogger.logWebhook(
@@ -140,11 +93,24 @@ export async function POST(req: NextRequest) {
       );
       
       // Log securely (don't log sensitive data)
-      console.log('✅ Polar webhook received:', event.type);
+      console.log('✅ Polar webhook received and verified:', event.type);
       
-    } catch (parseError) {
-      console.error('❌ Failed to parse webhook payload:', parseError);
-      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    } catch (error) {
+      if (error instanceof WebhookVerificationError) {
+        console.error('❌ Polar webhook signature verification failed:', error.message);
+        
+        // 🔒 AUDIT: Log security violation
+        await auditLogger.logSecurityViolation(
+          'invalid_signature',
+          { provider: 'polar', endpoint: 'webhook', error: error.message },
+          clientIp
+        );
+        
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+      } else {
+        console.error('❌ Failed to process webhook payload:', error);
+        return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
+      }
     }
 
     switch (event.type) {

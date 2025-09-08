@@ -168,6 +168,10 @@ export async function POST(req: NextRequest) {
         await handleSubscriptionCanceled(event.data);
         break;
         
+      case 'order.paid':
+        await handleOrderPaid(event.data);
+        break;
+        
       default:
         console.log(`Unhandled webhook event: ${event.type}`);
     }
@@ -352,6 +356,88 @@ async function handleSubscriptionCanceled(subscription: any) {
   });
 
   console.log(`✅ Subscription canceled successfully - user ${user.id} reverted to ${hasActiveAdminOverride ? 'admin override tier' : 'free tier'}`);
+}
+
+async function handleOrderPaid(order: any) {
+  console.log('Order paid:', order.id);
+  
+  // Extract key data from the order
+  const customerEmail = order.customer?.email || order.user?.email;
+  const productId = order.product_id;
+  const subscriptionId = order.subscription_id;
+  
+  if (!customerEmail) {
+    console.error('❌ No customer email in order.paid webhook');
+    return;
+  }
+  
+  console.log(`Processing paid order for ${customerEmail}, product: ${productId}`);
+  
+  // Find user by email
+  const existingUsers = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, customerEmail))
+    .limit(1);
+
+  if (!existingUsers.length) {
+    console.error(`❌ User not found with email: ${customerEmail}`);
+    return;
+  }
+
+  const user = existingUsers[0];
+  
+  // Determine subscription tier based on product ID
+  let tier: SubscriptionTier = 'free';
+  const proProductId = process.env.POLAR_PRO_PRODUCT_ID;
+  const basicProductId = process.env.POLAR_BASIC_PRODUCT_ID;
+  
+  if (productId === proProductId) {
+    tier = 'pro';
+  } else if (productId === basicProductId) {
+    tier = 'basic';
+  } else {
+    console.warn(`⚠️ Unknown product ID: ${productId}, defaulting to free tier`);
+  }
+
+  // Don't override admin override tiers
+  const hasActiveAdminOverride = user.adminOverrideTier && 
+    (!user.adminOverrideExpires || user.adminOverrideExpires > new Date());
+
+  if (hasActiveAdminOverride) {
+    console.log(`ℹ️ User ${user.id} has active admin override (${user.adminOverrideTier}), skipping tier update`);
+  }
+
+  // Update user subscription directly (includes Polar-specific fields)
+  const updateData: any = {
+    subscriptionStatus: 'active',
+    currentPeriodStart: order.subscription?.current_period_start ? new Date(order.subscription.current_period_start) : new Date(),
+    currentPeriodEnd: order.subscription?.current_period_end ? new Date(order.subscription.current_period_end) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    polarCustomerId: order.customer_id,
+    polarSubscriptionId: subscriptionId,
+    paymentProvider: 'polar',
+    updatedAt: new Date(),
+  };
+
+  // Only update tier if no active admin override
+  if (!hasActiveAdminOverride) {
+    updateData.subscriptionTier = tier;
+  }
+
+  await db
+    .update(users)
+    .set(updateData)
+    .where(eq(users.id, user.id));
+
+  // Also use centralized service to sync limits and monthly usage
+  await updateUserSubscription(user.id, {
+    tier: hasActiveAdminOverride ? undefined : tier,
+    status: 'active',
+    currentPeriodStart: updateData.currentPeriodStart,
+    currentPeriodEnd: updateData.currentPeriodEnd,
+  });
+
+  console.log(`✅ Order processed successfully - user ${user.id} (${customerEmail}) upgraded to ${hasActiveAdminOverride ? 'admin override tier' : tier}`);
 }
 
 // Note: Now using centralized updateUserSubscription from @/lib/subscription/service

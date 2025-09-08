@@ -12,7 +12,6 @@ export const dynamic = 'force-dynamic';
 // Request validation schema
 const CheckoutRequestSchema = z.object({
   tier: z.enum(['basic', 'pro']),
-  billing: z.enum(['monthly', 'yearly']),
   educationalDiscount: z.boolean().optional().default(false),
 });
 
@@ -43,14 +42,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validatedData = CheckoutRequestSchema.parse(body);
 
-    const { tier, billing, educationalDiscount } = validatedData;
+    const { tier, educationalDiscount } = validatedData;
 
     // Create Stripe Checkout Session
     const checkoutSession = await createCheckoutSession({
       userId: session.user.id,
       email: session.user.email!,
       tier,
-      billing,
       educationalDiscount,
     });
 

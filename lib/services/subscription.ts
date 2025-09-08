@@ -5,6 +5,7 @@
 import { db } from '../db/connection';
 import { users } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
 import { USAGE_LIMITS } from '../stripe/config';
 import { memoryCache, CacheKeys, CacheTTL } from '../cache/memory-cache';
 import { auditLogger } from '../audit/logger';
@@ -264,7 +265,7 @@ export async function reserveUsage(
     const reservationId = crypto.randomUUID();
     
     // Use database transaction for atomic check-and-reserve
-    const result = await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx: PgTransaction<any, any, any>) => {
       // Get current usage within transaction
       const currentUser = await tx
         .select({

@@ -22,7 +22,6 @@ export interface CreateCheckoutSessionParams {
   userId: string;
   email: string;
   tier: 'basic' | 'pro';
-  billing: 'monthly' | 'yearly';
   educationalDiscount?: boolean;
 }
 
@@ -37,11 +36,11 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
     throw new Error('Stripe not configured. Please set up your business email and Stripe account first.');
   }
 
-  const { userId, email, tier, billing, educationalDiscount = false } = params;
-  const priceId = getStripePriceId(tier, billing);
+  const { userId, email, tier, educationalDiscount = false } = params;
+  const priceId = getStripePriceId(tier);
 
   if (!priceId) {
-    throw new Error(`Invalid pricing tier: ${tier} ${billing}`);
+    throw new Error(`Invalid pricing tier: ${tier}`);
   }
 
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -60,14 +59,12 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
     metadata: {
       userId,
       tier,
-      billing,
       educationalDiscount: educationalDiscount.toString(),
     },
     subscription_data: {
       metadata: {
         userId,
         tier,
-        billing,
       },
     },
   };

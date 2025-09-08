@@ -113,7 +113,6 @@ export function PricingTiers({ onSelectPlan }: PricingTiersProps) {
           // User not authenticated - store checkout intent and redirect to sign in
           const checkoutIntent = {
             tier,
-            billing,
             timestamp: Date.now()
           };
           

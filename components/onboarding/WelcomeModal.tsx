@@ -47,25 +47,25 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-gray-100 dark:border-gray-800">
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-[var(--accent-pink)]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-8 h-8 text-[var(--accent-pink)]" />
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <span className="text-3xl">🐕</span>
           </div>
-          <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
-            Welcome to KyotoScribe! 🎉
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-3">
+            Welcome to KyotoScribe!
           </h2>
-          <p className="text-[var(--text-secondary)]">
+          <p className="text-gray-600 dark:text-gray-300 text-lg">
             Hi {session?.user?.name?.split(' ')[0] || 'there'}! Let's get you set up with a few quick agreements.
           </p>
         </div>
 
         {/* Agreements */}
-        <div className="space-y-4 mb-6">
+        <div className="space-y-5 mb-8">
           {/* Age Verification */}
-          <label className="flex items-start gap-3 cursor-pointer group">
+          <label className="flex items-start gap-4 cursor-pointer group p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-500 transition-all duration-200 hover:shadow-md">
             <div className="relative mt-1">
               <input
                 type="checkbox"
@@ -73,27 +73,27 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
                 onChange={(e) => setAgreements(prev => ({ ...prev, ageVerified: e.target.checked }))}
                 className="sr-only"
               />
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${
                 agreements.ageVerified 
-                  ? 'bg-[var(--accent-pink)] border-[var(--accent-pink)]' 
-                  : 'border-gray-300 group-hover:border-[var(--accent-pink)]'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 border-pink-500 shadow-lg' 
+                  : 'border-gray-300 dark:border-gray-600 group-hover:border-pink-400'
               }`}>
-                {agreements.ageVerified && <Check className="w-3 h-3 text-white" />}
+                {agreements.ageVerified && <Check className="w-4 h-4 text-white" />}
               </div>
             </div>
             <div className="flex-1">
-              <span className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Age Verification <span className="text-red-500">*</span>
+              <span className="text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-pink-500" />
+                Age Verification <span className="text-red-500 text-lg">*</span>
               </span>
-              <p className="text-xs text-[var(--text-secondary)] mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 I confirm that I am 13 years of age or older.
               </p>
             </div>
           </label>
 
           {/* Terms of Service */}
-          <label className="flex items-start gap-3 cursor-pointer group">
+          <label className="flex items-start gap-4 cursor-pointer group p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-500 transition-all duration-200 hover:shadow-md">
             <div className="relative mt-1">
               <input
                 type="checkbox"
@@ -101,22 +101,22 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
                 onChange={(e) => setAgreements(prev => ({ ...prev, tosAccepted: e.target.checked }))}
                 className="sr-only"
               />
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${
                 agreements.tosAccepted 
-                  ? 'bg-[var(--accent-pink)] border-[var(--accent-pink)]' 
-                  : 'border-gray-300 group-hover:border-[var(--accent-pink)]'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 border-pink-500 shadow-lg' 
+                  : 'border-gray-300 dark:border-gray-600 group-hover:border-pink-400'
               }`}>
-                {agreements.tosAccepted && <Check className="w-3 h-3 text-white" />}
+                {agreements.tosAccepted && <Check className="w-4 h-4 text-white" />}
               </div>
             </div>
             <div className="flex-1">
-              <span className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Terms of Service <span className="text-red-500">*</span>
+              <span className="text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-pink-500" />
+                Terms of Service <span className="text-red-500 text-lg">*</span>
               </span>
-              <p className="text-xs text-[var(--text-secondary)] mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 I agree to the{' '}
-                <a href="/terms" target="_blank" className="text-[var(--accent-pink)] hover:underline">
+                <a href="/terms" target="_blank" className="text-pink-500 hover:text-pink-600 font-medium hover:underline transition-colors">
                   Terms of Service
                 </a>
               </p>
@@ -124,7 +124,7 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
           </label>
 
           {/* Privacy Policy */}
-          <label className="flex items-start gap-3 cursor-pointer group">
+          <label className="flex items-start gap-4 cursor-pointer group p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-500 transition-all duration-200 hover:shadow-md">
             <div className="relative mt-1">
               <input
                 type="checkbox"
@@ -132,22 +132,22 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
                 onChange={(e) => setAgreements(prev => ({ ...prev, privacyAccepted: e.target.checked }))}
                 className="sr-only"
               />
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${
                 agreements.privacyAccepted 
-                  ? 'bg-[var(--accent-pink)] border-[var(--accent-pink)]' 
-                  : 'border-gray-300 group-hover:border-[var(--accent-pink)]'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 border-pink-500 shadow-lg' 
+                  : 'border-gray-300 dark:border-gray-600 group-hover:border-pink-400'
               }`}>
-                {agreements.privacyAccepted && <Check className="w-3 h-3 text-white" />}
+                {agreements.privacyAccepted && <Check className="w-4 h-4 text-white" />}
               </div>
             </div>
             <div className="flex-1">
-              <span className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Privacy Policy <span className="text-red-500">*</span>
+              <span className="text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                <Shield className="w-5 h-5 text-pink-500" />
+                Privacy Policy <span className="text-red-500 text-lg">*</span>
               </span>
-              <p className="text-xs text-[var(--text-secondary)] mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 I agree to the{' '}
-                <a href="/privacy" target="_blank" className="text-[var(--accent-pink)] hover:underline">
+                <a href="/privacy" target="_blank" className="text-pink-500 hover:text-pink-600 font-medium hover:underline transition-colors">
                   Privacy Policy
                 </a>
               </p>
@@ -155,7 +155,7 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
           </label>
 
           {/* Marketing Consent (Optional) */}
-          <label className="flex items-start gap-3 cursor-pointer group">
+          <label className="flex items-start gap-4 cursor-pointer group p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-500 transition-all duration-200 hover:shadow-md">
             <div className="relative mt-1">
               <input
                 type="checkbox"
@@ -163,20 +163,20 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
                 onChange={(e) => setAgreements(prev => ({ ...prev, marketingConsent: e.target.checked }))}
                 className="sr-only"
               />
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${
                 agreements.marketingConsent 
-                  ? 'bg-[var(--accent-pink)] border-[var(--accent-pink)]' 
-                  : 'border-gray-300 group-hover:border-[var(--accent-pink)]'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 border-green-500 shadow-lg' 
+                  : 'border-gray-300 dark:border-gray-600 group-hover:border-green-400'
               }`}>
-                {agreements.marketingConsent && <Check className="w-3 h-3 text-white" />}
+                {agreements.marketingConsent && <Check className="w-4 h-4 text-white" />}
               </div>
             </div>
             <div className="flex-1">
-              <span className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
-                <Mail className="w-4 h-4" />
+              <span className="text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                <Mail className="w-5 h-5 text-green-500" />
                 Marketing Updates
               </span>
-              <p className="text-xs text-[var(--text-secondary)] mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 I'd like to receive helpful tips and product updates via email. (Optional)
               </p>
             </div>
@@ -184,32 +184,42 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <button
             onClick={handleSubmit}
             disabled={!canProceed || isSubmitting}
-            className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-300 ${
+            className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-300 transform ${
               canProceed && !isSubmitting
-                ? 'bg-gradient-to-r from-[var(--accent-pink)] to-[#FF8FB3] text-white hover:shadow-lg'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
+                : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             }`}
           >
-            {isSubmitting ? 'Setting up your account...' : 'Get Started! 🚀'}
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Setting up your account...
+              </span>
+            ) : (
+              'Get Started! 🚀'
+            )}
           </button>
           
           {onSkip && (
             <button
               onClick={onSkip}
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm underline"
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm font-medium transition-colors"
             >
               Skip for now
             </button>
           )}
         </div>
 
-        <p className="text-xs text-[var(--text-secondary)] text-center mt-4">
-          <span className="text-red-500">*</span> Required fields
-        </p>
+        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-center flex items-center justify-center gap-1">
+            <span className="text-red-500 text-base">*</span>
+            <span>Required fields</span>
+          </p>
+        </div>
       </div>
     </div>
   );

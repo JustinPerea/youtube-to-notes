@@ -1,226 +1,216 @@
-import { Footer } from '../../components/Footer';
-import { ThemeToggle } from '../../components/ui/ThemeToggle';
-import { OrbBackground } from '../../components/ui/OrbBackground';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy - KyotoScribe',
+  description: 'Privacy Policy for KyotoScribe AI video processing service',
+};
 
 export default function PrivacyPolicy() {
   return (
-    <main className="min-h-screen">
-      {/* Animated Orbs Background */}
-      <OrbBackground />
-      
-      {/* Content Wrapper */}
-      <div className="content-wrapper relative z-10">
-        {/* Theme Toggle */}
-        <ThemeToggle />
-        
-        {/* Main Container */}
-        <div className="container max-w-4xl mx-auto pt-[100px] pb-10 px-5">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-br from-[var(--text-primary)] to-[var(--accent-pink)] bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Privacy Policy
             </h1>
-            <p className="text-lg text-[var(--text-secondary)]">
-              How we collect, use, and protect your information
-            </p>
-            <p className="text-sm text-[var(--text-muted)] mt-2">
-              Effective Date: September 1, 2025 | Last Updated: September 1, 2025
+            <p className="text-gray-600 dark:text-gray-300">
+              Last updated: September 2025
             </p>
           </div>
 
-          {/* Content */}
-          <div className="prose prose-lg max-w-none">
-            <div className="bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-8 mb-8">
-              
-              {/* AI Disclosure Banner */}
-              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 rounded">
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-3 mt-1 text-white text-xs font-bold">AI</div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-blue-800 mb-2">
-                      AI Transparency Notice
-                    </h3>
-                    <p className="text-blue-700 text-sm">
-                      This platform uses artificial intelligence (Google Gemini AI) to generate study notes from YouTube videos. 
-                      All AI-generated content is clearly marked and may contain errors that should be verified independently.
-                    </p>
-                  </div>
+          <div className="prose prose-gray dark:prose-invert max-w-none space-y-6">
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">1. Introduction</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                At KyotoScribe, we respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered video processing service. Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the service.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">2. Information We Collect</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Personal Information</h3>
+                  <p>When you create an account or use our Service, we may collect:</p>
+                  <ul className="list-disc pl-6 mt-2 space-y-1">
+                    <li>Name and email address (via OAuth providers like Google)</li>
+                    <li>Profile picture and basic profile information</li>
+                    <li>Payment information (processed securely through third-party providers)</li>
+                    <li>Communication preferences and marketing consent</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Usage Information</h3>
+                  <p>We automatically collect certain information when you use our Service:</p>
+                  <ul className="list-disc pl-6 mt-2 space-y-1">
+                    <li>Video URLs and metadata that you submit for processing</li>
+                    <li>Generated content and processing results</li>
+                    <li>Usage patterns, preferences, and interaction data</li>
+                    <li>Device information, IP address, and browser type</li>
+                    <li>Log files and analytics data</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Cookies and Tracking Technologies</h3>
+                  <p>We use cookies and similar tracking technologies to:</p>
+                  <ul className="list-disc pl-6 mt-2 space-y-1">
+                    <li>Maintain your session and authentication status</li>
+                    <li>Remember your preferences and settings</li>
+                    <li>Analyze usage patterns and improve our Service</li>
+                    <li>Provide personalized content and recommendations</li>
+                  </ul>
                 </div>
               </div>
+            </section>
 
-              <div className="space-y-8 text-[var(--text-secondary)]">
-                
-                {/* Introduction */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">1. Introduction</h2>
-                  <p className="leading-relaxed mb-4">
-                    Kyoto Scribe ("we," "us," or "our") operates an AI-powered educational platform that transforms YouTube videos 
-                    into study notes. This Privacy Policy explains how we collect, use, and protect your information.
-                  </p>
-                  <p className="leading-relaxed">
-                    We are committed to protecting your privacy and being transparent about our data practices, especially 
-                    regarding our use of artificial intelligence.
-                  </p>
-                </section>
-
-                {/* Information We Collect */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">2. Information We Collect</h2>
-                  
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Information You Provide</h3>
-                  <ul className="list-disc pl-6 mb-4 space-y-2">
-                    <li><strong>Account Information:</strong> Name and email address (via Google OAuth)</li>
-                    <li><strong>Content Data:</strong> YouTube video URLs you submit for AI processing</li>
-                    <li><strong>Generated Notes:</strong> AI-created study materials you save or download</li>
-                    <li><strong>User Settings:</strong> Your preferences and customizations</li>
-                  </ul>
-
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Information Collected Automatically</h3>
-                  <ul className="list-disc pl-6 mb-4 space-y-2">
-                    <li><strong>Usage Data:</strong> How you interact with our platform and AI features</li>
-                    <li><strong>Technical Data:</strong> Browser type, device information, IP address</li>
-                    <li><strong>AI Processing Data:</strong> Interactions with our AI system for improvement</li>
-                  </ul>
-                </section>
-
-                {/* How We Use Your Information */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">3. How We Use Your Information</h2>
-                  <ul className="list-disc pl-6 space-y-2">
-                    <li><strong>Service Provision:</strong> Generate AI-powered study notes from your YouTube videos</li>
-                    <li><strong>Account Management:</strong> Maintain your account and authenticate access</li>
-                    <li><strong>Service Improvement:</strong> Enhance our AI capabilities and user experience</li>
-                    <li><strong>Communication:</strong> Send important service updates and notifications</li>
-                    <li><strong>Legal Compliance:</strong> Meet our regulatory obligations</li>
-                  </ul>
-                </section>
-
-                {/* AI Processing */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">4. AI Processing & Third-Party Services</h2>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <h4 className="font-semibold text-yellow-800 mb-2">Google Gemini AI</h4>
-                    <p className="text-yellow-700 text-sm">
-                      We use Google's Gemini AI to process YouTube videos and generate study notes. Your content may be 
-                      processed by Google's systems according to their privacy policies and terms of service.
-                    </p>
-                  </div>
-                  
-                  <p className="leading-relaxed mb-4">
-                    <strong>Other Third-Party Services:</strong>
-                  </p>
-                  <ul className="list-disc pl-6 space-y-2">
-                    <li><strong>Google OAuth:</strong> For secure account authentication</li>
-                    <li><strong>YouTube API:</strong> To access video metadata and thumbnails</li>
-                    <li><strong>Supabase:</strong> For secure data storage and database management</li>
-                    <li><strong>Vercel:</strong> For hosting and content delivery</li>
-                  </ul>
-                </section>
-
-                {/* Data Sharing */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">5. Data Sharing</h2>
-                  <p className="leading-relaxed mb-4">
-                    <strong>We do not sell your personal information.</strong> We only share data with:
-                  </p>
-                  <ul className="list-disc pl-6 space-y-2">
-                    <li><strong>Service Providers:</strong> Companies that help us operate our platform (Google, Supabase, Vercel)</li>
-                    <li><strong>Legal Requirements:</strong> When required by law or to protect rights and safety</li>
-                    <li><strong>Business Transfers:</strong> In case of merger, acquisition, or sale (users will be notified)</li>
-                  </ul>
-                </section>
-
-                {/* Your Rights */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">6. Your Rights</h2>
-                  <p className="leading-relaxed mb-4">You have the right to:</p>
-                  <ul className="list-disc pl-6 space-y-2">
-                    <li><strong>Access:</strong> Request a copy of your personal data</li>
-                    <li><strong>Correct:</strong> Update inaccurate information</li>
-                    <li><strong>Delete:</strong> Request deletion of your account and data</li>
-                    <li><strong>Export:</strong> Download your data in a portable format</li>
-                    <li><strong>Opt-Out:</strong> Limit certain data processing activities</li>
-                  </ul>
-                  <p className="mt-4 text-sm bg-gray-50 p-3 rounded border">
-                    <strong>To exercise your rights:</strong> Contact us at{' '}
-                    <a href="mailto:privacy@kyotoscribe.com" className="text-blue-600 hover:underline">
-                      privacy@kyotoscribe.com
-                    </a>{' '}
-                    or through your account settings.
-                  </p>
-                </section>
-
-                {/* Data Security */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">7. Data Security</h2>
-                  <p className="leading-relaxed mb-4">
-                    We implement industry-standard security measures to protect your information:
-                  </p>
-                  <ul className="list-disc pl-6 space-y-2">
-                    <li>Encryption of data in transit and at rest</li>
-                    <li>Secure authentication through Google OAuth</li>
-                    <li>Regular security updates and monitoring</li>
-                    <li>Limited access to personal data on a need-to-know basis</li>
-                  </ul>
-                </section>
-
-                {/* Children's Privacy */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">8. Children's Privacy</h2>
-                  <p className="leading-relaxed">
-                    Our service is intended for users 13 years and older. We do not knowingly collect personal information 
-                    from children under 13. If you believe we have collected such information, please contact us immediately.
-                  </p>
-                </section>
-
-                {/* International Users */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">9. International Users</h2>
-                  <p className="leading-relaxed mb-4">
-                    Our services are operated from the United States. If you are located outside the US, your information 
-                    may be transferred to and processed in the US, which may have different data protection laws than your country.
-                  </p>
-                  <p className="leading-relaxed">
-                    <strong>EU/UK Users:</strong> We comply with GDPR requirements and your data protection rights as outlined above.
-                  </p>
-                </section>
-
-                {/* Updates */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">10. Updates to This Policy</h2>
-                  <p className="leading-relaxed">
-                    We may update this Privacy Policy from time to time. We will notify you of any material changes by 
-                    posting the new policy on this page and updating the "Last Updated" date. Your continued use of our 
-                    service after changes constitutes acceptance of the updated policy.
-                  </p>
-                </section>
-
-                {/* Contact */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">11. Contact Us</h2>
-                  <div className="bg-gray-50 p-6 rounded-lg border">
-                    <p className="leading-relaxed mb-4">
-                      If you have questions about this Privacy Policy or our data practices, please contact us:
-                    </p>
-                    <ul className="space-y-2">
-                      <li><strong>Email:</strong> <a href="mailto:support@kyotoscribe.com" className="text-blue-600 hover:underline">support@kyotoscribe.com</a></li>
-                      <li><strong>General:</strong> <a href="mailto:contact@kyotoscribe.com" className="text-blue-600 hover:underline">contact@kyotoscribe.com</a></li>
-                      <li><strong>Website:</strong> <a href="/" className="text-blue-600 hover:underline">kyotoscribe.com</a></li>
-                    </ul>
-                    <p className="mt-4 text-sm text-gray-600">
-                      We will respond to your inquiry within 30 days.
-                    </p>
-                  </div>
-                </section>
-
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">3. How We Use Your Information</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>We use the collected information for the following purposes:</p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li><strong>Service Provision:</strong> To provide, maintain, and improve our AI video processing service</li>
+                  <li><strong>Content Generation:</strong> To process your video inputs and generate requested content formats</li>
+                  <li><strong>Account Management:</strong> To create and manage your user account and subscription</li>
+                  <li><strong>Communication:</strong> To send you service updates, security alerts, and support messages</li>
+                  <li><strong>Marketing:</strong> To send promotional materials and updates (only with your consent)</li>
+                  <li><strong>Analytics:</strong> To analyze usage patterns and improve our service quality</li>
+                  <li><strong>Legal Compliance:</strong> To comply with applicable laws and regulations</li>
+                  <li><strong>Security:</strong> To detect, prevent, and address technical issues and security threats</li>
+                </ul>
               </div>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">4. Information Sharing and Disclosure</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-4">
+                <p>We do not sell, trade, or rent your personal information to third parties. We may share your information in the following circumstances:</p>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">Service Providers</h3>
+                  <p>We work with trusted third-party service providers who assist us in operating our Service:</p>
+                  <ul className="list-disc pl-6 mt-2 space-y-1">
+                    <li>Google AI/Gemini for video content processing</li>
+                    <li>Authentication providers (Google OAuth)</li>
+                    <li>Payment processors (Polar.sh)</li>
+                    <li>Cloud hosting and storage providers (Supabase, Vercel)</li>
+                    <li>Analytics and monitoring services</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Legal Requirements</h3>
+                  <p>We may disclose your information if required to do so by law or in response to valid legal requests, such as:</p>
+                  <ul className="list-disc pl-6 mt-2 space-y-1">
+                    <li>Court orders or government investigations</li>
+                    <li>Protection of our rights, property, or safety</li>
+                    <li>Prevention of fraud or illegal activities</li>
+                    <li>Compliance with regulatory requirements</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Business Transfers</h3>
+                  <p>In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction, with appropriate notice provided to you.</p>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">5. Data Security</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>We implement comprehensive security measures to protect your personal information:</p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li><strong>Encryption:</strong> All data transmission is encrypted using industry-standard protocols</li>
+                  <li><strong>Access Controls:</strong> Strict access controls and authentication requirements for our systems</li>
+                  <li><strong>Regular Audits:</strong> Regular security assessments and vulnerability testing</li>
+                  <li><strong>Data Minimization:</strong> We collect and retain only the data necessary for our Service</li>
+                  <li><strong>Secure Storage:</strong> Personal data is stored in secure, access-controlled environments</li>
+                  <li><strong>Incident Response:</strong> Procedures in place for detecting and responding to security incidents</li>
+                </ul>
+                <p>However, no method of transmission over the internet or electronic storage is 100% secure. While we strive to protect your personal information, we cannot guarantee its absolute security.</p>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">6. Your Rights and Choices</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>You have the following rights regarding your personal information:</p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li><strong>Access:</strong> Request access to your personal data that we hold</li>
+                  <li><strong>Rectification:</strong> Request correction of inaccurate or incomplete data</li>
+                  <li><strong>Erasure:</strong> Request deletion of your personal data (subject to certain limitations)</li>
+                  <li><strong>Portability:</strong> Request a copy of your data in a structured, machine-readable format</li>
+                  <li><strong>Restriction:</strong> Request limitation of processing of your personal data</li>
+                  <li><strong>Objection:</strong> Object to processing of your personal data for marketing purposes</li>
+                  <li><strong>Withdrawal of Consent:</strong> Withdraw consent for data processing where applicable</li>
+                </ul>
+                <p>To exercise these rights, please contact us through the support channels available in our application.</p>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">7. Data Retention</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                We retain your personal information for as long as necessary to provide our Service and fulfill the purposes outlined in this Privacy Policy. When you delete your account, we will delete your personal information within a reasonable timeframe, except where we are required to retain certain data for legal, regulatory, or legitimate business purposes. Generated content and processing results may be retained for a longer period to improve our AI models and service quality, but will be anonymized and disassociated from your personal identity.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">8. International Data Transfers</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                Our Service may involve the transfer of your information to countries other than your country of residence. These countries may have different data protection laws than your jurisdiction. When we transfer your information internationally, we ensure appropriate safeguards are in place to protect your data in accordance with applicable privacy laws including those of Delaware, United States.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">9. Children's Privacy</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                Our Service is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. Users must be at least 13 years of age to use our Service. If we become aware that we have collected personal information from a child under 13 without parental consent, we will take steps to delete that information promptly.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">10. Changes to This Privacy Policy</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                We may update this Privacy Policy from time to time to reflect changes in our practices or applicable laws. We will notify you of any material changes by posting the updated Privacy Policy on our Service and updating the "Last updated" date. Your continued use of the Service after such changes constitutes acceptance of the updated Privacy Policy.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">11. Third-Party Links and Services</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                Our Service may contain links to third-party websites or integrate with third-party services. This Privacy Policy does not apply to these external sites or services. We encourage you to review the privacy policies of any third-party services you access through our platform.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">12. Contact Information</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>
+                  If you have any questions about this Privacy Policy, your personal data, or your rights, please contact us through:
+                </p>
+                <ul className="list-disc pl-6 space-y-1">
+                  <li>Support channels available in the application</li>
+                  <li>Email support (available through our website)</li>
+                  <li>In-app help and support features</li>
+                </ul>
+                <p>
+                  We will respond to your privacy-related inquiries within a reasonable timeframe and in accordance with applicable privacy laws.
+                </p>
+              </div>
+            </section>
+
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mt-8">
+              <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
+                This Privacy Policy is effective as of September 2025 and applies to all users of the KyotoScribe service.
+              </p>
             </div>
           </div>
         </div>
-        
-        {/* Footer */}
-        <Footer />
       </div>
-    </main>
+    </div>
   );
 }

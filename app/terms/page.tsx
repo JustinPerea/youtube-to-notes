@@ -1,297 +1,166 @@
-import { Footer } from '../../components/Footer';
-import { ThemeToggle } from '../../components/ui/ThemeToggle';
-import { OrbBackground } from '../../components/ui/OrbBackground';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service - KyotoScribe',
+  description: 'Terms of Service for KyotoScribe AI video processing service',
+};
 
 export default function TermsOfService() {
   return (
-    <main className="min-h-screen">
-      {/* Animated Orbs Background */}
-      <OrbBackground />
-      
-      {/* Content Wrapper */}
-      <div className="content-wrapper relative z-10">
-        {/* Theme Toggle */}
-        <ThemeToggle />
-        
-        {/* Main Container */}
-        <div className="container max-w-4xl mx-auto pt-[100px] pb-10 px-5">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-br from-[var(--text-primary)] to-[var(--accent-pink)] bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Terms of Service
             </h1>
-            <p className="text-lg text-[var(--text-secondary)]">
-              Your agreement for using Kyoto Scribe
-            </p>
-            <p className="text-sm text-[var(--text-muted)] mt-2">
-              Effective Date: September 1, 2025 | Last Updated: September 1, 2025
+            <p className="text-gray-600 dark:text-gray-300">
+              Last updated: September 2025
             </p>
           </div>
 
-          {/* Content */}
-          <div className="prose prose-lg max-w-none">
-            <div className="bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-8 mb-8">
-              
-              {/* AI Bot Disclosure */}
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 rounded">
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center mr-3 mt-1 text-white text-xs font-bold">AI</div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-                      AI System Disclosure
-                    </h3>
-                    <p className="text-yellow-700 text-sm">
-                      <strong>California SB 1001 Compliance:</strong> You are interacting with an AI-powered educational system, 
-                      not a human tutor. This service uses artificial intelligence to generate study materials that may contain errors.
-                    </p>
-                  </div>
-                </div>
+          <div className="prose prose-gray dark:prose-invert max-w-none space-y-6">
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">1. Acceptance of Terms</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                By accessing and using KyotoScribe ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">2. Description of Service</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                KyotoScribe is an AI-powered platform that transforms YouTube videos into various content formats including notes, study guides, presentations, and tutorials. Our service utilizes artificial intelligence to analyze video content and generate structured, educational materials.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">3. User Accounts and Registration</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>
+                  To access certain features of our Service, you may be required to create an account. You must be at least 13 years of age to use our Service. You agree to:
+                </p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>Provide accurate, current, and complete information during registration</li>
+                  <li>Maintain and promptly update your account information</li>
+                  <li>Maintain the security of your password and account</li>
+                  <li>Accept all risks of unauthorized access to your account</li>
+                  <li>Notify us immediately of any suspected unauthorized use of your account</li>
+                </ul>
               </div>
+            </section>
 
-              <div className="space-y-8 text-[var(--text-secondary)]">
-                
-                {/* Acceptance */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">1. Acceptance of Terms</h2>
-                  <p className="leading-relaxed mb-4">
-                    By accessing or using Kyoto Scribe ("Service"), you agree to be bound by these Terms of Service ("Terms"). 
-                    If you disagree with any part of these terms, you may not access the Service.
-                  </p>
-                  <p className="leading-relaxed">
-                    These terms apply to all visitors, users, and others who access or use the Service.
-                  </p>
-                </section>
-
-                {/* Service Description */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">2. Service Description</h2>
-                  <p className="leading-relaxed mb-4">
-                    Kyoto Scribe is an AI-powered educational platform that:
-                  </p>
-                  <ul className="list-disc pl-6 mb-4 space-y-2">
-                    <li>Transforms YouTube videos into structured study notes using Google Gemini AI</li>
-                    <li>Provides various note formats (summaries, study guides, presentation slides)</li>
-                    <li>Offers both free and premium service tiers</li>
-                    <li>Serves as a supplemental learning tool for educational content</li>
-                  </ul>
-                  
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-red-800 mb-2">Important Limitations</h4>
-                    <ul className="text-red-700 text-sm space-y-1">
-                      <li>• AI-generated content may contain errors and should be verified</li>
-                      <li>• This is NOT a replacement for professional education or tutoring</li>
-                      <li>• Generated notes are for supplemental learning purposes only</li>
-                      <li>• We do not guarantee 100% accuracy of AI outputs</li>
-                    </ul>
-                  </div>
-                </section>
-
-                {/* User Accounts */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">3. User Accounts</h2>
-                  <p className="leading-relaxed mb-4">
-                    <strong>Account Requirements:</strong>
-                  </p>
-                  <ul className="list-disc pl-6 mb-4 space-y-2">
-                    <li>You must be at least 13 years old to use this Service</li>
-                    <li>You must provide accurate registration information</li>
-                    <li>You are responsible for maintaining account security</li>
-                    <li>One person may not maintain more than one account</li>
-                  </ul>
-                  
-                  <p className="leading-relaxed">
-                    <strong>Account Security:</strong> You are responsible for all activities under your account. 
-                    Notify us immediately of any unauthorized access.
-                  </p>
-                </section>
-
-                {/* Service Tiers */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">4. Service Tiers</h2>
-                  
-                  <div className="grid md:grid-cols-2 gap-6 mb-6">
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Free Tier</h3>
-                      <ul className="text-sm space-y-1">
-                        <li>• Limited monthly usage</li>
-                        <li>• Basic note formats</li>
-                        <li>• Community support</li>
-                        <li>• Usage data may help improve AI</li>
-                      </ul>
-                    </div>
-                    
-                    <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                      <h3 className="text-lg font-semibold text-blue-800 mb-2">Premium Tier</h3>
-                      <ul className="text-sm text-blue-700 space-y-1">
-                        <li>• Unlimited monthly usage</li>
-                        <li>• Advanced note formats</li>
-                        <li>• Priority support</li>
-                        <li>• Enhanced data protection</li>
-                      </ul>
-                    </div>
-                  </div>
-                  
-                  <p className="text-sm text-[var(--text-muted)]">
-                    Pricing and features subject to change. Current subscribers will be notified 30 days before any changes.
-                  </p>
-                </section>
-
-                {/* Acceptable Use */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">5. Acceptable Use Policy</h2>
-                  
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Permitted Uses</h3>
-                  <ul className="list-disc pl-6 mb-4 space-y-2">
-                    <li>Generate study notes from publicly accessible YouTube videos</li>
-                    <li>Create educational materials for personal learning</li>
-                    <li>Use AI features for legitimate educational purposes</li>
-                    <li>Share generated content for non-commercial educational use</li>
-                  </ul>
-
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Prohibited Uses</h3>
-                  <ul className="list-disc pl-6 space-y-2">
-                    <li>Process private, restricted, or copyrighted content without permission</li>
-                    <li>Use for academic dishonesty, cheating, or plagiarism</li>
-                    <li>Attempt to reverse engineer or copy our AI technology</li>
-                    <li>Circumvent usage limitations or safety measures</li>
-                    <li>Use generated content for commercial purposes without permission</li>
-                    <li>Violate YouTube's Terms of Service or any applicable laws</li>
-                    <li>Harass, abuse, or harm other users</li>
-                  </ul>
-                </section>
-
-                {/* Intellectual Property */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">6. Intellectual Property</h2>
-                  
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Your Content</h3>
-                  <p className="leading-relaxed mb-4">
-                    You retain ownership of notes and annotations you create. You grant us a license to process and 
-                    store your content for service provision only.
-                  </p>
-
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">AI-Generated Content</h3>
-                  <p className="leading-relaxed mb-4">
-                    Study notes generated by our AI are provided for your personal educational use. You may use, modify, 
-                    and share this content for non-commercial educational purposes. Commercial use requires written permission.
-                  </p>
-
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">YouTube Content</h3>
-                  <ul className="list-disc pl-6 space-y-2">
-                    <li>We access YouTube videos only through official YouTube API</li>
-                    <li>We do not download, store, or redistribute video content</li>
-                    <li>All rights in original videos remain with their creators</li>
-                    <li>You must respect YouTube's Terms of Service</li>
-                  </ul>
-                </section>
-
-                {/* Privacy */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">7. Privacy and Data Protection</h2>
-                  <p className="leading-relaxed mb-4">
-                    Your privacy is important to us. Our collection, use, and protection of your personal information 
-                    is governed by our{' '}
-                    <a href="/privacy" className="text-blue-600 hover:underline font-medium">Privacy Policy</a>.
-                  </p>
-                  <p className="leading-relaxed">
-                    Key points: We don't sell your data, we use industry-standard security measures, and you have 
-                    rights to access, correct, and delete your information.
-                  </p>
-                </section>
-
-                {/* Disclaimers */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">8. Disclaimers and Limitations</h2>
-                  
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Service Warranty</h3>
-                  <p className="leading-relaxed mb-4">
-                    THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. We don't guarantee uninterrupted, 
-                    error-free, or completely accurate service.
-                  </p>
-
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">AI Content Disclaimer</h3>
-                  <div className="bg-gray-50 p-4 rounded border mb-4">
-                    <p className="font-semibold text-gray-800 mb-2">
-                      AI-Generated Content May Be Inaccurate
-                    </p>
-                    <p className="text-sm text-gray-700">
-                      Our AI system may produce content that is incorrect, incomplete, biased, or inappropriate. 
-                      Users must verify all information and use critical thinking. We are not responsible for 
-                      decisions made based on AI-generated content.
-                    </p>
-                  </div>
-
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-3">Limitation of Liability</h3>
-                  <p className="leading-relaxed">
-                    To the maximum extent permitted by law, we are not liable for indirect, consequential, or punitive damages. 
-                    Our total liability is limited to the amount you paid for the service in the past 12 months.
-                  </p>
-                </section>
-
-                {/* Termination */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">9. Termination</h2>
-                  
-                  <p className="leading-relaxed mb-4">
-                    <strong>You may terminate:</strong> Your account at any time through account settings.
-                  </p>
-                  
-                  <p className="leading-relaxed mb-4">
-                    <strong>We may terminate or suspend:</strong> Accounts that violate these terms, engage in 
-                    fraudulent activity, or pose security risks.
-                  </p>
-                  
-                  <p className="leading-relaxed">
-                    <strong>Upon termination:</strong> Your access ends immediately, but you may export your data 
-                    for 30 days. Certain provisions survive termination.
-                  </p>
-                </section>
-
-                {/* Changes */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">10. Changes to Terms</h2>
-                  <p className="leading-relaxed">
-                    We may update these Terms from time to time. We will notify users of material changes via email 
-                    or prominent notice on our platform. Continued use after changes constitutes acceptance of the updated Terms.
-                  </p>
-                </section>
-
-                {/* Governing Law */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">11. Governing Law</h2>
-                  <p className="leading-relaxed">
-                    These Terms are governed by the laws of the jurisdiction where our business is established, 
-                    without regard to conflict of law provisions. Any disputes will be resolved in the appropriate 
-                    courts of that jurisdiction.
-                  </p>
-                </section>
-
-                {/* Contact */}
-                <section>
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">12. Contact Information</h2>
-                  <div className="bg-gray-50 p-6 rounded-lg border">
-                    <p className="leading-relaxed mb-4">
-                      If you have questions about these Terms of Service, please contact us:
-                    </p>
-                    <ul className="space-y-2">
-                      <li><strong>Email:</strong> <a href="mailto:support@kyotoscribe.com" className="text-blue-600 hover:underline">support@kyotoscribe.com</a></li>
-                      <li><strong>General:</strong> <a href="mailto:contact@kyotoscribe.com" className="text-blue-600 hover:underline">contact@kyotoscribe.com</a></li>
-                      <li><strong>Website:</strong> <a href="/" className="text-blue-600 hover:underline">kyotoscribe.com</a></li>
-                    </ul>
-                    <p className="mt-4 text-sm text-gray-600">
-                      We will respond to your inquiry within 5 business days.
-                    </p>
-                  </div>
-                </section>
-
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">4. Acceptable Use Policy</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>You agree not to use the Service to:</p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>Upload, post, or transmit any content that is illegal, harmful, threatening, abusive, harassing, defamatory, vulgar, obscene, or otherwise objectionable</li>
+                  <li>Process videos that infringe upon the intellectual property rights of others</li>
+                  <li>Attempt to gain unauthorized access to our systems or networks</li>
+                  <li>Use the Service for any commercial purpose without our express written consent</li>
+                  <li>Interfere with or disrupt the Service or servers or networks connected to the Service</li>
+                  <li>Use the Service to process content that contains personal information of individuals without proper consent</li>
+                </ul>
               </div>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">5. Content and Intellectual Property</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>
+                  <strong>Your Content:</strong> You retain ownership of any content you submit to our Service. By using our Service, you grant us a non-exclusive, worldwide, royalty-free license to use, reproduce, and process your content solely for the purpose of providing our Service to you.
+                </p>
+                <p>
+                  <strong>Generated Content:</strong> Content generated by our AI service based on your input is provided to you for your personal use. You are responsible for ensuring that your use of this generated content complies with applicable laws and respects the rights of others.
+                </p>
+                <p>
+                  <strong>Service Content:</strong> The Service and its original content, features, and functionality are and will remain the exclusive property of KyotoScribe and its licensors.
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">6. Subscription and Payment</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>
+                  Certain features of the Service may require payment. By subscribing to a paid plan:
+                </p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>You agree to pay all fees associated with your chosen subscription plan</li>
+                  <li>Subscription fees are billed in advance on a recurring basis</li>
+                  <li>You may cancel your subscription at any time through Polar.sh or by contacting support</li>
+                  <li>Refunds are handled in accordance with our refund policy</li>
+                  <li>We reserve the right to change our pricing with reasonable notice</li>
+                </ul>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">7. Privacy</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the Service, to understand our practices regarding the collection and use of your information.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">8. Disclaimers and Limitations of Liability</h2>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>
+                  <strong>Service Availability:</strong> We strive to maintain the Service's availability but cannot guarantee uninterrupted access. The Service is provided "as is" without warranties of any kind.
+                </p>
+                <p>
+                  <strong>AI-Generated Content:</strong> Content generated by our AI service is for informational purposes only. We do not guarantee the accuracy, completeness, or reliability of AI-generated content.
+                </p>
+                <p>
+                  <strong>Limitation of Liability:</strong> To the maximum extent permitted by law, KyotoScribe shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the Service.
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">9. Indemnification</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                You agree to defend, indemnify, and hold harmless KyotoScribe, its officers, directors, employees, and agents from and against any claims, damages, obligations, losses, liabilities, costs, or debt, and expenses (including but not limited to attorney's fees) arising from your use of and access to the Service or your violation of these Terms.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">10. Termination</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                We may terminate or suspend your account and bar access to the Service immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms. You may also terminate your account at any time by contacting us or using the account deletion features in your account settings.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">11. Changes to Terms</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will try to provide at least 30 days notice prior to any new terms taking effect. Your continued use of the Service after such modifications constitutes your acceptance of the updated Terms.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">12. Governing Law</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                These Terms shall be interpreted and governed by the laws of Delaware, United States, without regard to its conflict of law provisions. Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">13. Contact Information</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                If you have any questions about these Terms of Service, please contact us through our support channels available in the application or website.
+              </p>
+            </section>
+
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mt-8">
+              <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
+                These Terms of Service are effective as of September 2025 and apply to all users of the KyotoScribe service.
+              </p>
             </div>
           </div>
         </div>
-        
-        {/* Footer */}
-        <Footer />
       </div>
-    </main>
+    </div>
   );
 }

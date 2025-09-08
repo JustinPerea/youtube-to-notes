@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const email = searchParams.get('email');
+    const action = searchParams.get('action') || 'upgrade'; // 'upgrade' or 'cancel'
     
     if (!email) {
       return NextResponse.json({ error: 'Email parameter required' }, { status: 400 });

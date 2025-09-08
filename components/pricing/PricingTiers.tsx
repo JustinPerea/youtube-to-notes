@@ -100,7 +100,8 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
       setError(null);
       setLoadingStates(prev => ({ ...prev, [tier]: true }));
 
-      const response = await fetch('/api/stripe/checkout', {
+      // Use Polar for all checkouts
+      const response = await fetch('/api/polar/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,7 +146,7 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('checkout_intent');
         }
-        // Redirect to Stripe checkout
+        // Redirect to Polar checkout
         window.location.href = data.url;
       } else {
         throw new Error('No checkout URL received');
@@ -240,15 +241,15 @@ export function PricingTiers({ billing = 'monthly', onSelectPlan }: PricingTiers
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-      {/* Resuming Checkout Message */}
-      {resumingCheckout && (
-        <div className="col-span-full mb-6">
-          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg flex items-center gap-3">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <p className="text-sm font-medium">{resumingCheckout}</p>
+        {/* Resuming Checkout Message */}
+        {resumingCheckout && (
+          <div className="col-span-full mb-6">
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <p className="text-sm font-medium">{resumingCheckout}</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       
       {/* Error Message */}
       {error && (

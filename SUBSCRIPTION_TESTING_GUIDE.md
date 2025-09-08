@@ -312,10 +312,10 @@ AND umu.videos_limit > 0;
 When deploying to production:
 
 1. **Remove/secure admin endpoints** - Restrict admin API to specific IPs
-2. **Set up Stripe webhooks** - For real subscription updates
+2. **Set up Polar webhooks** - For real subscription updates
 3. **Configure monthly reset job** - Cron job to reset usage counters
 4. **Monitor usage patterns** - Set up alerts for unusual usage
-5. **Test payment flows** - Ensure Stripe integration works correctly
+5. **Test payment flows** - Ensure Polar integration works correctly
 
 ---
 

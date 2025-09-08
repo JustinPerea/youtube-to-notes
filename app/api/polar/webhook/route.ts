@@ -9,20 +9,8 @@ import { users, userMonthlyUsage } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import crypto from 'crypto';
 import { auditLogger } from "@/lib/audit/logger";
-
-// Subscription tier limits
-const SUBSCRIPTION_LIMITS = {
-  basic: {
-    monthlyVideoLimit: 50,
-    aiQuestionsLimit: 100,
-    storageLimitMb: 1000
-  },
-  pro: {
-    monthlyVideoLimit: -1, // unlimited
-    aiQuestionsLimit: -1,  // unlimited
-    storageLimitMb: 10000
-  }
-} as const;
+import { updateUserSubscription } from "@/lib/subscription/service";
+import { SUBSCRIPTION_LIMITS, type SubscriptionTier } from "@/lib/subscription/config";
 
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
   if (!signature || !secret || !payload) {
@@ -202,76 +190,94 @@ async function handleCheckoutCreated(checkout: any) {
 
 async function handleCheckoutUpdated(checkout: any) {
   if (checkout.status === 'succeeded') {
-    console.log('Checkout succeeded:', checkout.id);
+    console.log('✅ Polar checkout succeeded:', checkout.id);
     
     // Extract user info from checkout metadata or custom fields
     const userId = checkout.metadata?.userId;
-    const tier = checkout.metadata?.tier;
+    let tier = checkout.metadata?.tier;
     
-    if (!userId || !tier) {
-      console.error('Missing user ID or tier in checkout metadata');
+    if (!userId) {
+      console.error('❌ Missing user ID in checkout metadata');
       return;
     }
 
-    await updateUserSubscription(userId, tier, 'polar', {
-      polarCheckoutId: checkout.id,
-      polarCustomerId: checkout.customer_id,
-      amount: checkout.amount,
-      currency: checkout.currency
+    if (!tier) {
+      console.error('❌ Missing tier in checkout metadata');
+      return;
+    }
+
+    // 🔒 Validate and normalize tier
+    if (!['basic', 'pro'].includes(tier)) {
+      console.error('❌ Invalid subscription tier in checkout:', tier);
+      return;
+    }
+
+    tier = tier as SubscriptionTier;
+    console.log(`💳 Processing checkout for user ${userId} with tier: ${tier}`);
+
+    // Use centralized subscription service
+    await updateUserSubscription(userId, {
+      tier,
+      status: 'active',
+      // Don't set these here - Polar doesn't use recurring subscriptions via checkout
+      // These will be set when the actual subscription is created
     });
+
+    console.log(`✅ Checkout processed successfully - user ${userId} upgraded to ${tier}`);
   }
 }
 
 async function handleSubscriptionCreated(subscription: any) {
-  console.log('Subscription created:', subscription.id);
+  console.log('✅ Polar subscription created:', subscription.id);
   
   const userId = subscription.metadata?.userId;
-  const tier = subscription.metadata?.tier;
+  let tier = subscription.metadata?.tier;
   
-  if (!userId || !tier) {
-    console.error('Missing user ID or tier in subscription metadata');
+  if (!userId) {
+    console.error('❌ Missing user ID in subscription metadata');
     return;
   }
 
-  await updateUserSubscription(userId, tier, 'polar', {
-    polarSubscriptionId: subscription.id,
-    polarCustomerId: subscription.customer_id,
-    currentPeriodStart: new Date(subscription.current_period_start),
-    currentPeriodEnd: new Date(subscription.current_period_end),
-    status: subscription.status
+  if (!tier) {
+    console.error('❌ Missing tier in subscription metadata');
+    return;
+  }
+
+  // 🔒 Validate and normalize tier
+  if (!['basic', 'pro'].includes(tier)) {
+    console.error('❌ Invalid subscription tier in subscription:', tier);
+    return;
+  }
+
+  tier = tier as SubscriptionTier;
+  console.log(`🔄 Creating subscription for user ${userId} with tier: ${tier}`);
+
+  // Use centralized subscription service
+  await updateUserSubscription(userId, {
+    tier,
+    status: 'active',
+    // Polar-specific fields would need to be added to updateUserSubscription
+    // For now, we'll update them separately
   });
-}
 
-async function handleSubscriptionUpdated(subscription: any) {
-  console.log('Subscription updated:', subscription.id);
-  
-  // Find user by polar subscription ID
-  const dbUsers = await db
-    .select()
-    .from(users)
-    .where(eq(users.polarSubscriptionId, subscription.id))
-    .limit(1);
-
-  if (dbUsers.length === 0) {
-    console.error('User not found for subscription:', subscription.id);
-    return;
-  }
-
-  const user = dbUsers[0];
-  
+  // Update Polar-specific fields directly
   await db
     .update(users)
     .set({
-      subscriptionStatus: subscription.status === 'active' ? 'active' : 'canceled',
+      polarSubscriptionId: subscription.id,
+      polarCustomerId: subscription.customer_id,
+      paymentProvider: 'polar',
       subscriptionCurrentPeriodStart: new Date(subscription.current_period_start),
       subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end),
       updatedAt: new Date(),
     })
-    .where(eq(users.id, user.id));
+    .where(eq(users.id, userId));
+
+  console.log(`✅ Subscription created successfully - user ${userId} has ${tier} tier`);
 }
 
-async function handleSubscriptionCanceled(subscription: any) {
-  console.log('Subscription canceled:', subscription.id);
+async function handleSubscriptionUpdated(subscription: any) {
+  console.log('🔄 Polar subscription updated:', subscription.id);
   
   // Find user by polar subscription ID
   const dbUsers = await db
@@ -281,106 +287,72 @@ async function handleSubscriptionCanceled(subscription: any) {
     .limit(1);
 
   if (dbUsers.length === 0) {
-    console.error('User not found for subscription:', subscription.id);
+    console.error('❌ User not found for subscription:', subscription.id);
     return;
   }
 
   const user = dbUsers[0];
+  console.log(`🔄 Updating subscription for user ${user.id} - Status: ${subscription.status}`);
   
-  await db
-    .update(users)
-    .set({
-      subscriptionStatus: 'canceled',
-      subscriptionTier: 'free',
-      monthlyVideoLimit: 5,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, user.id));
+  // Map Polar status to our status
+  const statusMapping: Record<string, 'active' | 'canceled' | 'past_due' | 'incomplete'> = {
+    'active': 'active',
+    'canceled': 'canceled', 
+    'cancelled': 'canceled',
+    'past_due': 'past_due',
+    'incomplete': 'incomplete',
+    'trialing': 'active',
+  };
+  
+  const status = statusMapping[subscription.status] || 'incomplete';
+
+  // Use centralized subscription service for consistency
+  await updateUserSubscription(user.id, {
+    status,
+    // Don't change tier unless explicitly provided
+    currentPeriodStart: new Date(subscription.current_period_start),
+    currentPeriodEnd: new Date(subscription.current_period_end),
+  });
+
+  console.log(`✅ Subscription updated successfully - user ${user.id} status: ${status}`);
 }
 
-async function updateUserSubscription(
-  userId: string, 
-  tier: string, 
-  provider: 'polar' | 'stripe',
-  details: any
-) {
-  try {
-    // 🔒 SECURITY: Validate inputs
-    if (!userId || typeof userId !== 'string' || !userId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-      console.error('❌ Invalid user ID format:', userId);
-      return;
-    }
-    
-    if (!['basic', 'pro'].includes(tier)) {
-      console.error('❌ Invalid subscription tier:', tier);
-      return;
-    }
-    
-    if (!['polar', 'stripe'].includes(provider)) {
-      console.error('❌ Invalid provider:', provider);
-      return;
-    }
-    
-    const limits = SUBSCRIPTION_LIMITS[tier as keyof typeof SUBSCRIPTION_LIMITS];
-    
-    if (!limits) {
-      console.error('❌ Invalid subscription tier limits:', tier);
-      return;
-    }
+async function handleSubscriptionCanceled(subscription: any) {
+  console.log('❌ Polar subscription canceled:', subscription.id);
+  
+  // Find user by polar subscription ID
+  const dbUsers = await db
+    .select()
+    .from(users)
+    .where(eq(users.polarSubscriptionId, subscription.id))
+    .limit(1);
 
-    // Update user subscription
-    await db
-      .update(users)
-      .set({
-        subscriptionTier: tier as 'basic' | 'pro',
-        subscriptionStatus: 'active',
-        monthlyVideoLimit: limits.monthlyVideoLimit,
-        storageLimitMb: limits.storageLimitMb,
-        // Polar-specific fields
-        ...(provider === 'polar' && {
-          polarCustomerId: details.polarCustomerId,
-          polarSubscriptionId: details.polarSubscriptionId,
-          subscriptionCurrentPeriodStart: details.currentPeriodStart,
-          subscriptionCurrentPeriodEnd: details.currentPeriodEnd,
-        }),
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-
-    // Create/update monthly usage record
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-    
-    await db
-      .insert(userMonthlyUsage)
-      .values({
-        userId,
-        monthYear: currentMonth,
-        videosLimit: limits.monthlyVideoLimit,
-        aiQuestionsLimit: limits.aiQuestionsLimit,
-        storageLimitMb: limits.storageLimitMb,
-        subscriptionTier: tier as 'basic' | 'pro',
-      })
-      .onConflictDoUpdate({
-        target: [userMonthlyUsage.userId, userMonthlyUsage.monthYear],
-        set: {
-          videosLimit: limits.monthlyVideoLimit,
-          aiQuestionsLimit: limits.aiQuestionsLimit,
-          storageLimitMb: limits.storageLimitMb,
-          subscriptionTier: tier as 'basic' | 'pro',
-          updatedAt: new Date(),
-        }
-      });
-
-    // 🔒 SECURITY: Audit log for subscription changes
-    console.log(`✅ AUDIT: User subscription updated`, {
-      userId: userId.substring(0, 8) + '***', // Partial ID for privacy
-      tier,
-      provider,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('Error updating user subscription:', error);
-    throw error;
+  if (dbUsers.length === 0) {
+    console.error('❌ User not found for subscription:', subscription.id);
+    return;
   }
+
+  const user = dbUsers[0];
+  console.log(`🔄 Canceling subscription for user ${user.id} - reverting to free tier`);
+
+  // Check for admin override - don't downgrade if user has active admin override
+  const hasActiveAdminOverride = user.adminOverrideTier && 
+    (!user.adminOverrideExpires || user.adminOverrideExpires > new Date());
+
+  if (hasActiveAdminOverride) {
+    console.log(`⚠️ User ${user.id} has active admin override - preserving tier but updating status`);
+  }
+
+  // Use centralized subscription service
+  await updateUserSubscription(user.id, {
+    tier: hasActiveAdminOverride ? undefined : 'free', // Don't override admin tier
+    status: 'canceled',
+    currentPeriodStart: new Date(subscription.current_period_start),
+    currentPeriodEnd: new Date(subscription.current_period_end),
+  });
+
+  console.log(`✅ Subscription canceled successfully - user ${user.id} reverted to ${hasActiveAdminOverride ? 'admin override tier' : 'free tier'}`);
 }
+
+// Note: Now using centralized updateUserSubscription from @/lib/subscription/service
+// This ensures consistency across all subscription updates and proper limit enforcement

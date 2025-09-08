@@ -380,36 +380,60 @@ async function handleOrderPaid(order: any) {
     console.log(`ℹ️ User ${user.id} has active admin override (${user.adminOverrideTier}), skipping tier update`);
   }
 
-  // Update user subscription directly (includes Polar-specific fields)
-  const updateData: any = {
-    subscriptionStatus: 'active',
-    currentPeriodStart: order.subscription?.current_period_start ? new Date(order.subscription.current_period_start) : new Date(),
-    currentPeriodEnd: order.subscription?.current_period_end ? new Date(order.subscription.current_period_end) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    polarCustomerId: order.customer_id,
-    polarSubscriptionId: subscriptionId,
-    paymentProvider: 'polar',
-    updatedAt: new Date(),
-  };
+  // Update user subscription directly (includes Polar-specific fields) with better error handling
+  try {
+    const updateData: any = {
+      subscriptionStatus: 'active',
+      currentPeriodStart: order.subscription?.current_period_start ? new Date(order.subscription.current_period_start) : new Date(),
+      currentPeriodEnd: order.subscription?.current_period_end ? new Date(order.subscription.current_period_end) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      polarCustomerId: order.customer_id,
+      polarSubscriptionId: subscriptionId,
+      paymentProvider: 'polar',
+      updatedAt: new Date(),
+    };
 
-  // Only update tier if no active admin override
-  if (!hasActiveAdminOverride) {
-    updateData.subscriptionTier = tier;
+    // Only update tier if no active admin override
+    if (!hasActiveAdminOverride) {
+      updateData.subscriptionTier = tier;
+      console.log(`🎯 Updating user ${user.id} to tier: ${tier}`);
+    } else {
+      console.log(`ℹ️ User ${user.id} has admin override - preserving existing tier`);
+    }
+
+    console.log(`💾 Executing database update...`);
+    const result = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, user.id));
+
+    console.log(`💾 Database update completed successfully`);
+
+    // Also use centralized service to sync limits and monthly usage
+    console.log(`🔄 Syncing with centralized subscription service...`);
+    await updateUserSubscription(user.id, {
+      tier: hasActiveAdminOverride ? undefined : tier,
+      status: 'active',
+      currentPeriodStart: updateData.currentPeriodStart,
+      currentPeriodEnd: updateData.currentPeriodEnd,
+    });
+
+    console.log(`✅ Order processed successfully - user ${user.id} (${customerEmail}) upgraded to ${hasActiveAdminOverride ? 'admin override tier' : tier}`);
+
+    // Verify the update actually worked by re-querying the user
+    const verifyUser = await db
+      .select({ subscriptionTier: users.subscriptionTier, subscriptionStatus: users.subscriptionStatus })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+
+    if (verifyUser.length > 0) {
+      console.log(`✅ Verification: User now has tier=${verifyUser[0].subscriptionTier}, status=${verifyUser[0].subscriptionStatus}`);
+    }
+
+  } catch (dbError) {
+    console.error(`❌ Database update failed for user ${user.id}:`, dbError);
+    throw dbError; // Re-throw to ensure webhook fails properly
   }
-
-  await db
-    .update(users)
-    .set(updateData)
-    .where(eq(users.id, user.id));
-
-  // Also use centralized service to sync limits and monthly usage
-  await updateUserSubscription(user.id, {
-    tier: hasActiveAdminOverride ? undefined : tier,
-    status: 'active',
-    currentPeriodStart: updateData.currentPeriodStart,
-    currentPeriodEnd: updateData.currentPeriodEnd,
-  });
-
-  console.log(`✅ Order processed successfully - user ${user.id} (${customerEmail}) upgraded to ${hasActiveAdminOverride ? 'admin override tier' : tier}`);
 }
 
 // Note: Now using centralized updateUserSubscription from @/lib/subscription/service

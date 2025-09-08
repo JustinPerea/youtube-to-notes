@@ -39,7 +39,7 @@ export default function ClearOverridePage() {
       const data = await response.json();
       setUserState(data);
     } catch (error) {
-      setMessage(`Error: ${error.message}`);
+      setMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -69,7 +69,7 @@ export default function ClearOverridePage() {
       }, 1500);
       
     } catch (error) {
-      setMessage(`❌ Error: ${error.message}`);
+      setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setClearing(false);
     }

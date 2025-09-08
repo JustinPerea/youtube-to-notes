@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
         // Timestamps
         createdAt: dbUser.createdAt,
         updatedAt: dbUser.updatedAt,
-      },
+      } as any,
 
       // Processed subscription data from service
       processedSubscriptionData: subscription,
@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
       usageServiceData: usageData,
 
       // Monthly usage records
-      monthlyUsageRecords: monthlyUsageData.map(record => ({
+      monthlyUsageRecords: monthlyUsageData.map((record: any) => ({
         monthYear: record.monthYear,
         subscriptionTier: record.subscriptionTier,
         videosLimit: record.videosLimit,
@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
       })),
 
       // Potential issues detected
-      potentialIssues: [],
+      potentialIssues: [] as string[],
     };
 
     // 6. Analyze for potential issues
@@ -143,7 +143,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check for inconsistent monthly usage records
-    const currentMonthRecord = monthlyUsageData.find(r => r.monthYear === currentMonth);
+    const currentMonthRecord = monthlyUsageData.find((r: any) => r.monthYear === currentMonth);
     if (currentMonthRecord && currentMonthRecord.subscriptionTier !== dbUser.subscriptionTier) {
       issues.push(`Current month usage record tier (${currentMonthRecord.subscriptionTier}) differs from user tier (${dbUser.subscriptionTier})`);
     }
@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
 
     if (!isAdmin) {
       // Remove sensitive data for non-admin users
-      delete debugInfo.rawDatabaseData;
+      debugInfo.rawDatabaseData = undefined;
       debugInfo.potentialIssues = ['Debug access restricted - admin only'];
     }
 
@@ -173,13 +173,15 @@ export async function GET(req: NextRequest) {
       }
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in subscription debug endpoint:', error);
     
     return NextResponse.json(
       { 
         error: 'Debug endpoint failed',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal error'
+        details: process.env.NODE_ENV === 'development' ? 
+          (error instanceof Error ? error.message : 'Unknown error') : 
+          'Internal error'
       },
       { status: 500 }
     );
@@ -280,13 +282,15 @@ export async function POST(req: NextRequest) {
       result
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in subscription debug fix:', error);
     
     return NextResponse.json(
       { 
         error: 'Fix action failed',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal error'
+        details: process.env.NODE_ENV === 'development' ? 
+          (error instanceof Error ? error.message : 'Unknown error') : 
+          'Internal error'
       },
       { status: 500 }
     );

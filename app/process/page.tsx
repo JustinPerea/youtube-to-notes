@@ -13,6 +13,7 @@ import { VideoUploadProcessor } from '../../components/VideoUploadProcessor';
 import UserProfile from '../../components/UserProfile';
 import FloatingChatbot from '../../components/chatbot/FloatingChatbot';
 import { ChatbotVideoContext } from '../../lib/types/enhanced-video-analysis';
+import { ProcessPageAd } from '../../components/ads/FreeUserAdBanner';
 
 export default function ProcessPage() {
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>(['basic-summary']);
@@ -258,6 +259,9 @@ export default function ProcessPage() {
                 />
               </div>
             )}
+            
+            {/* Ad Banner for Free Users */}
+            <ProcessPageAd />
             
             {/* Format Selection Cards - Only show for authenticated users */}
             {isAuthenticated && validation.isValid && videoInfo && videoInfo.isValid && (

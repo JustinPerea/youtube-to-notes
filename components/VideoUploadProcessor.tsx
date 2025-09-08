@@ -8,6 +8,7 @@ import SimplePdfDownload from './SimplePdfDownload';
 import ProcessingStatusBar from './ProcessingStatusBar';
 import { useSession } from 'next-auth/react';
 import { extractVideoId } from '@/lib/utils/youtube';
+import { ResultsCompletionAd } from './ads/FreeUserAdBanner';
 // Simplified UI - removed complex quality indicators
 
 interface ProcessingResult {
@@ -663,6 +664,9 @@ export function VideoUploadProcessor({
                 </div>
               </div>
             </div>
+
+            {/* Ad Banner for Free Users */}
+            <ResultsCompletionAd />
 
             {/* Save Note */}
             {session?.user?.id && (

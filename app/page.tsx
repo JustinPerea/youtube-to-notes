@@ -6,6 +6,7 @@ import { OrbBackground } from '../components/ui/OrbBackground';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { TabbedNavigation } from '../components/ui/TabbedNavigation';
 import { HowItWorks } from '../components/ui/HowItWorks';
+import { HomePageAd } from '../components/ads/FreeUserAdBanner';
 
 export default function Home() {
   const router = useRouter();
@@ -59,6 +60,9 @@ export default function Home() {
 
           {/* How It Works Section */}
           <HowItWorks />
+
+          {/* Ad Banner for Free Users */}
+          <HomePageAd />
 
           {/* Tabbed Navigation Section */}
           <section className="tabbed-section py-20 mb-32">

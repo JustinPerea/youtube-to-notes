@@ -5,6 +5,7 @@ import AuthProvider from '../components/AuthProvider'
 import { ThemeProvider } from '../components/ui/ThemeProvider'
 import { Header } from '../components/Header'
 import { OnboardingWrapper } from '../components/OnboardingWrapper'
+import { AdSenseScript } from '../components/ads/AdSenseScript'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -25,6 +26,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className={inter.className}>
+        <AdSenseScript />
         <ThemeProvider>
           <AuthProvider>
             <OnboardingWrapper>

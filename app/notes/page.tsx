@@ -10,6 +10,7 @@ import SimplePdfDownload from '@/components/SimplePdfDownload';
 import ProcessingStatusBar, { ProcessingStep } from '@/components/ProcessingStatusBar';
 import FloatingChatbot from '@/components/chatbot/FloatingChatbot';
 import { ChatbotVideoContext } from '@/lib/types/enhanced-video-analysis';
+import { NotesPageAd } from '@/components/ads/FreeUserAdBanner';
 
 interface VideoWithNotes {
   videoId: string; // Database UUID
@@ -486,6 +487,9 @@ export default function NotesPage() {
             <p className="text-red-300">{error}</p>
           </div>
         )}
+
+        {/* Ad Banner for Free Users */}
+        <NotesPageAd />
 
         {loading ? (
           <div className="flex items-center justify-center py-12">

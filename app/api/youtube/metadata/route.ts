@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchVideoMetadata } from '@/lib/services/youtube-api';
 import { memoryCache, CacheKeys, CacheTTL } from '@/lib/cache/memory-cache';
 
+// Force this route to be dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   try {
-    const videoUrl = request.nextUrl.searchParams.get('url');
+    // Extract URL parameter from request URL to avoid searchParams during build
+    const url = new URL(request.url);
+    const videoUrl = url.searchParams.get('url');
 
     if (!videoUrl) {
       return NextResponse.json(

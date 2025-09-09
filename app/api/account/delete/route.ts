@@ -1,4 +1,7 @@
 /**
+
+// Force this route to be dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
  * Account Deletion API Route
  * Handles account deletion with subscription cancellation
  */

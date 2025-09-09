@@ -49,6 +49,12 @@ export async function getApiSession(request: NextRequest) {
 
 export async function getApiSessionWithDatabase(request: NextRequest) {
   try {
+    // Prevent execution during build time
+    if (process.env.NODE_ENV === 'development' && !request?.headers) {
+      console.log('AUTH-UTILS: Skipping auth during build time');
+      return null;
+    }
+    
     const session = await getApiSession(request);
     
     if (!session?.user?.oauthId) {

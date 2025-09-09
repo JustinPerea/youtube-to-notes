@@ -3,6 +3,7 @@
 import Script from 'next/script';
 import { ADSENSE_CONFIG } from '../../lib/adsense/config';
 import { useShowAds } from '../../hooks/useSubscription';
+import { useEffect, useState } from 'react';
 
 /**
  * AdSense Script Component with Auto Ads Support
@@ -15,17 +16,24 @@ import { useShowAds } from '../../hooks/useSubscription';
  * - Auto ads integration for optimal ad placement
  * - Manual ad units still work alongside auto ads
  * - Development mode support
+ * - Build-safe rendering (prevents SSR issues)
  */
 export function AdSenseScript() {
   const { shouldShowAds: showAds, loading } = useShowAds();
+  const [isClient, setIsClient] = useState(false);
 
-  // Don't load script if AdSense is not configured or disabled
-  if (!ADSENSE_CONFIG.enabled || !ADSENSE_CONFIG.publisherId) {
+  // Prevent hydration mismatch by only rendering on client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Don't render anything during SSR or while checking subscription status
+  if (!isClient || loading) {
     return null;
   }
 
-  // Don't render anything while checking subscription status
-  if (loading) {
+  // Don't load script if AdSense is not configured or disabled
+  if (!ADSENSE_CONFIG.enabled || !ADSENSE_CONFIG.publisherId) {
     return null;
   }
 

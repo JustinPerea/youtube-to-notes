@@ -7,6 +7,9 @@ import { Header } from '../components/Header'
 import { OnboardingWrapper } from '../components/OnboardingWrapper'
 import { AdSenseScript } from '../components/ads/AdSenseScript'
 
+// Force dynamic rendering to prevent build issues
+export const dynamic = 'force-dynamic'
+
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
@@ -24,6 +27,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4135776739187234" crossOrigin="anonymous"></script>
       </head>
       <body className={inter.className}>
         <AdSenseScript />

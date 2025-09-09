@@ -3,6 +3,9 @@
  * Creates billing management options for Polar subscriptions
  */
 
+// Force this route to be dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db/connection";

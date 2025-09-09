@@ -8,6 +8,9 @@ import { getApiSession } from '@/lib/auth-utils';
 import { geminiClient } from '@/lib/gemini/client';
 import { ChatbotVideoContext } from '@/lib/types/enhanced-video-analysis';
 
+// Force this route to be dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+
 interface ChatRequest {
   message: string;
   videoContext?: ChatbotVideoContext;

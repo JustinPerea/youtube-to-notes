@@ -37,9 +37,23 @@ export function useSubscription() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     async function fetchSubscription() {
+      // Prevent running during build/SSR or before client hydration
+      if (typeof window === 'undefined' || !isClient) {
+        setLoading(false);
+        setSubscription({ tier: 'free', status: 'active' });
+        setUsage(null);
+        return;
+      }
+      
       if (status === 'loading') return;
       
       if (!session?.user?.id) {
@@ -77,7 +91,7 @@ export function useSubscription() {
     }
 
     fetchSubscription();
-  }, [session?.user?.id, status]);
+  }, [session?.user?.id, status, isClient]);
 
   return {
     subscription,
@@ -107,9 +121,14 @@ export function useSubscription() {
  */
 export function useShowAds() {
   const { tier, loading } = useSubscription();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   
   return {
-    shouldShowAds: !loading && (tier === 'free'),
-    loading
+    shouldShowAds: isClient && !loading && (tier === 'free'),
+    loading: !isClient || loading
   };
 }

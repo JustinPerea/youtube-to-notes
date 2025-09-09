@@ -3,6 +3,9 @@
  * Handles subscription events from Polar.sh with minimal complexity
  */
 
+// Force this route to be dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/connection";
 import { users } from "@/lib/db/schema";

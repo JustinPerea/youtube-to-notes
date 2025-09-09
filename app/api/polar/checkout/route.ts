@@ -3,6 +3,9 @@
  * Creates checkout sessions for Polar payment processing
  */
 
+// Force this route to be dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+
 import { Checkout } from "@polar-sh/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";

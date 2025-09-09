@@ -1,4 +1,7 @@
 /**
+
+// Force this route to be dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
  * API route for comprehensive video analysis
  * Processes videos with enhanced analysis for chatbot context
  */

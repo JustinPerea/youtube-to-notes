@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
+  // Allow Google AdSense crawler to access the site for verification
+  const userAgent = request.headers.get('user-agent') || '';
+  const isGoogleAdSenseCrawler = userAgent.includes('google') && 
+    (userAgent.includes('adsense') || userAgent.includes('crawler') || userAgent.includes('bot'));
+  
+  // Skip all middleware checks for Google AdSense crawler
+  if (isGoogleAdSenseCrawler) {
+    return NextResponse.next();
+  }
+
   // Get the response
   const response = NextResponse.next();
 
@@ -67,7 +77,9 @@ export function middleware(request: NextRequest) {
       pattern.test(userAgent) && 
       !userAgent.includes('googlebot') && 
       !userAgent.includes('bingbot') &&
-      !userAgent.includes('slurp') // Yahoo
+      !userAgent.includes('slurp') && // Yahoo
+      !userAgent.includes('google') && // Allow all Google services including AdSense crawler
+      !userAgent.includes('adsense') // Specifically allow AdSense crawler
     );
 
     if (isSuspiciousBot) {

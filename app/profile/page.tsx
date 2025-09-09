@@ -141,7 +141,7 @@ export default function ProfilePage() {
   };
 
   // Handle billing option selection
-  const handleBillingOption = (option: any) => {
+  const handleBillingOption = async (option: any) => {
     if (option.url) {
       if (option.action === 'support') {
         window.location.href = option.url;
@@ -150,9 +150,39 @@ export default function ProfilePage() {
       }
     } else if (option.action === 'cancel') {
       // Handle cancellation logic
-      if (confirm('Are you sure you want to cancel your subscription? ' + (option.warning || ''))) {
-        // You could create a cancellation endpoint here
-        alert('Please contact support@shibabrothers.com to cancel your subscription.');
+      const confirmMessage = 'Are you sure you want to cancel your subscription?\n\n' + 
+        (option.warning || '') + 
+        '\n\nYou will retain access to premium features until the end of your current billing period.';
+      
+      if (confirm(confirmMessage)) {
+        try {
+          setDeleteLoading(true); // Reuse loading state for cancellation
+          
+          const response = await fetch('/api/polar/cancel-subscription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            alert('✅ Subscription cancelled successfully!\n\nYou will retain access to premium features until ' + 
+              new Date(result.subscription.currentPeriodEnd * 1000).toLocaleDateString() + '.');
+            
+            // Refresh the page to update subscription status
+            window.location.reload();
+          } else {
+            alert('❌ Failed to cancel subscription: ' + (result.error || 'Unknown error') + 
+              '\n\nPlease contact support@shibabrothers.com for assistance.');
+          }
+        } catch (error) {
+          console.error('Cancellation error:', error);
+          alert('❌ Failed to cancel subscription. Please try again or contact support@shibabrothers.com.');
+        } finally {
+          setDeleteLoading(false);
+        }
       }
     }
     setShowBillingOptions(false);

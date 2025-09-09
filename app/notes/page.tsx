@@ -824,23 +824,12 @@ export default function NotesPage() {
           </div>
         )}
         
-        {/* Context-Aware Floating Chatbot - Always visible for testing */}
+        {/* Context-Aware Floating Chatbot */}
         <FloatingChatbot
           videoContext={chatbotContext || undefined}
           currentNote={selectedFormatContent?.content}
           currentFormat={selectedFormat}
         />
-        
-        {/* TEST: Always visible chatbot for debugging */}
-        <div className="fixed bottom-6 left-6 z-50">
-          <button
-            onClick={() => console.log('TEST: Chatbot button clicked!')}
-            className="bg-red-500 hover:bg-red-600 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-105"
-            style={{ zIndex: 9999 }}
-          >
-            💬 TEST
-          </button>
-        </div>
       </div>
     </div>
   );

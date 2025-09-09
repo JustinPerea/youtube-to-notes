@@ -46,11 +46,18 @@ export function AdBanner({ adType, className = '', style, customSlot }: AdBanner
 
     const loadAd = () => {
       try {
-        if (typeof window !== 'undefined' && window.adsbygoogle) {
-          window.adsbygoogle = window.adsbygoogle || [];
-          window.adsbygoogle.push({});
-          setAdLoaded(true);
-          console.log(`🟢 AdSense ${adType} ad loaded`);
+        if (typeof window !== 'undefined' && window.adsbygoogle && adRef.current) {
+          // Check if this specific ad element already has an ad
+          const adElement = adRef.current.querySelector('.adsbygoogle');
+          if (adElement && !adElement.hasAttribute('data-adsbygoogle-status')) {
+            window.adsbygoogle = window.adsbygoogle || [];
+            window.adsbygoogle.push({});
+            setAdLoaded(true);
+            console.log(`🟢 AdSense ${adType} ad loaded`);
+          } else if (adElement && adElement.hasAttribute('data-adsbygoogle-status')) {
+            console.log(`ℹ️ AdSense ${adType} ad already loaded`);
+            setAdLoaded(true);
+          }
         }
       } catch (error) {
         console.error(`❌ Error loading ${adType} ad:`, error);

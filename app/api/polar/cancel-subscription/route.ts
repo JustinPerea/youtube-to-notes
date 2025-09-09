@@ -15,10 +15,23 @@ import { eq } from "drizzle-orm";
 // Helper function to cancel Polar subscription at period end
 async function cancelPolarSubscription(subscriptionId: string) {
   try {
+    // Debug: Check if access token is available
+    const accessToken = process.env.POLAR_ACCESS_TOKEN;
+    if (!accessToken) {
+      console.error('❌ POLAR_ACCESS_TOKEN environment variable is not set');
+      return {
+        success: false,
+        error: 'Polar access token not configured'
+      };
+    }
+
+    console.log(`🔑 Using Polar access token: ${accessToken.substring(0, 10)}...`);
+    console.log(`🎯 Cancelling subscription: ${subscriptionId}`);
+
     const response = await fetch(`https://api.polar.sh/v1/subscriptions/${subscriptionId}`, {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${process.env.POLAR_ACCESS_TOKEN}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -26,12 +39,19 @@ async function cancelPolarSubscription(subscriptionId: string) {
       })
     });
 
+    console.log(`📡 Polar API response status: ${response.status}`);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Failed to cancel Polar subscription:', response.status, errorText);
+      console.error('❌ Failed to cancel Polar subscription:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        subscriptionId: subscriptionId
+      });
       return {
         success: false,
-        error: `Failed to cancel subscription: ${response.status}`
+        error: `Failed to cancel subscription: ${response.status} - ${errorText}`
       };
     }
 

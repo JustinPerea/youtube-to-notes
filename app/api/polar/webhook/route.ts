@@ -459,7 +459,17 @@ async function handleSubscriptionUpdated(subscription: any) {
   
   const status = statusMapping[subscription.status] || 'incomplete';
 
-  // Note: Removed subscription service call to avoid build errors
+  // Update the user's subscription status in the database
+  await db
+    .update(users)
+    .set({
+      subscriptionStatus: status,
+      subscriptionCurrentPeriodStart: subscription.current_period_start ? new Date(subscription.current_period_start) : user.subscriptionCurrentPeriodStart,
+      subscriptionCurrentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end) : user.subscriptionCurrentPeriodEnd,
+      subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end || false,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, user.id));
 
   console.log(`✅ Subscription updated successfully - user ${user.id} status: ${status}`);
 }
@@ -490,7 +500,27 @@ async function handleSubscriptionCanceled(subscription: any) {
     console.log(`⚠️ User ${user.id} has active admin override - preserving tier but updating status`);
   }
 
-  // Note: Removed subscription service call to avoid build errors
+  // Update the user's subscription status in the database
+  const updateData: any = {
+    subscriptionStatus: 'canceled',
+    subscriptionCurrentPeriodStart: subscription.current_period_start ? new Date(subscription.current_period_start) : user.subscriptionCurrentPeriodStart,
+    subscriptionCurrentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end) : user.subscriptionCurrentPeriodEnd,
+    subscriptionCancelAtPeriodEnd: true,
+    updatedAt: new Date(),
+  };
+
+  // Only downgrade tier if no active admin override
+  if (!hasActiveAdminOverride) {
+    updateData.subscriptionTier = 'free';
+    console.log(`🎯 Downgrading user ${user.id} to free tier`);
+  } else {
+    console.log(`ℹ️ Preserving admin override tier for user ${user.id}`);
+  }
+
+  await db
+    .update(users)
+    .set(updateData)
+    .where(eq(users.id, user.id));
 
   console.log(`✅ Subscription canceled successfully - user ${user.id} reverted to ${hasActiveAdminOverride ? 'admin override tier' : 'free tier'}`);
 }

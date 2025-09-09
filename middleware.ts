@@ -54,7 +54,6 @@ export function middleware(request: NextRequest) {
   }
 
   // Block suspicious requests - but allow development tools
-  const userAgent = request.headers.get('user-agent') || '';
   const isDevelopment = process.env.NODE_ENV === 'development';
   
   // In development, be more permissive for testing tools

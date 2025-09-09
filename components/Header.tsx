@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import UserProfile from './UserProfile';
+import { ThemeToggle } from './ui/ThemeToggle';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -154,17 +155,88 @@ export function Header() {
                 Blog
               </Link>
               {session ? (
-                <div className="flex items-center gap-3">
-                  <span className="text-[var(--text-primary)] text-sm font-medium">{session.user?.name}</span>
-                  <button 
-                    onClick={() => {
-                      signOut();
-                      closeMobileMenu();
-                    }}
-                    className="bg-[var(--accent-pink)] text-white border-none rounded-xl px-4 py-2 font-semibold transition-all duration-300"
-                  >
-                    Sign Out
-                  </button>
+                <div className="space-y-3">
+                  {/* User Info Section */}
+                  <div className="flex items-center gap-3 p-3 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)]">
+                    {session.user?.image ? (
+                      <img
+                        src={session.user.image}
+                        alt={session.user.name || 'User'}
+                        className="w-10 h-10 rounded-full border-2 border-[var(--accent-pink-soft)]"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-[var(--accent-pink)] rounded-full flex items-center justify-center text-white font-semibold">
+                        {session.user?.name?.charAt(0) || 'U'}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[var(--text-primary)] font-medium text-sm truncate">
+                        {session.user?.name || 'User'}
+                      </p>
+                      <p className="text-[var(--text-secondary)] text-xs truncate">
+                        {session.user?.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Mobile Menu Items */}
+                  <div className="space-y-2">
+                    <Link
+                      href="/profile"
+                      onClick={closeMobileMenu}
+                      className="flex items-center gap-3 p-3 text-[var(--text-secondary)] hover:text-[var(--accent-pink)] hover:bg-[var(--accent-pink-soft)] transition-all duration-200 rounded-lg"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Profile & Settings
+                    </Link>
+
+                    <Link
+                      href="/process"
+                      onClick={closeMobileMenu}
+                      className="flex items-center gap-3 p-3 text-[var(--text-secondary)] hover:text-[var(--accent-pink)] hover:bg-[var(--accent-pink-soft)] transition-all duration-200 rounded-lg"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Process Video
+                    </Link>
+
+                    <Link
+                      href="/notes"
+                      onClick={closeMobileMenu}
+                      className="flex items-center gap-3 p-3 text-[var(--text-secondary)] hover:text-[var(--accent-pink)] hover:bg-[var(--accent-pink-soft)] transition-all duration-200 rounded-lg"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      My Notes
+                    </Link>
+
+                    <div className="border-t border-[var(--card-border)] my-2"></div>
+
+                    {/* Theme Toggle */}
+                    <div className="flex items-center justify-between p-3">
+                      <span className="text-[var(--text-secondary)] text-sm">Theme</span>
+                      <div className="scale-75">
+                        <ThemeToggle />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        signOut();
+                        closeMobileMenu();
+                      }}
+                      className="flex items-center gap-3 p-3 text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 transition-all duration-200 rounded-lg w-full text-left"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button 

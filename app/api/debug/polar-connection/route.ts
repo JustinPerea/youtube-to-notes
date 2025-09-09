@@ -8,13 +8,14 @@ import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    // Allow unauthenticated access for debugging purposes
+    // const session = await auth();
+    // if (!session?.user?.id) {
+    //   return NextResponse.json(
+    //     { error: 'Authentication required' },
+    //     { status: 401 }
+    //   );
+    // }
 
     // Check environment variables
     const envCheck = {

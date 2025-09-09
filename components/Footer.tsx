@@ -63,6 +63,9 @@ export function Footer() {
           <a href="/roadmap" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             Roadmap
           </a>
+          <a href="/contact" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            Contact
+          </a>
         </div>
         
         <div className="footer-column">
@@ -77,6 +80,18 @@ export function Footer() {
           </a>
           <a href="/privacy/cookies" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             Cookie Policy
+          </a>
+          <a href="/privacy/data-processing" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            Data Processing
+          </a>
+          <a href="/legal/dmca" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            DMCA Policy
+          </a>
+          <a href="/legal/security" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            Security Policy
+          </a>
+          <a href="/legal/accessibility" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            Accessibility
           </a>
         </div>
       </div>

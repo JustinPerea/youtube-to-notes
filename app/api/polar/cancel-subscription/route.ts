@@ -116,13 +116,30 @@ export async function POST(req: NextRequest) {
 
     console.log(`✅ Subscription cancelled for user ${user.id}: ${user.polarSubscriptionId}`);
 
+    // Format the current period end date properly
+    const currentPeriodEnd = cancellationResult.subscription.current_period_end;
+    let formattedEndDate;
+    
+    if (typeof currentPeriodEnd === 'string') {
+      // If it's already a string, use it directly
+      formattedEndDate = new Date(currentPeriodEnd).toISOString();
+    } else if (typeof currentPeriodEnd === 'number') {
+      // If it's a timestamp, convert it
+      formattedEndDate = new Date(currentPeriodEnd * 1000).toISOString();
+    } else {
+      // Fallback to current date + 1 month
+      const fallbackDate = new Date();
+      fallbackDate.setMonth(fallbackDate.getMonth() + 1);
+      formattedEndDate = fallbackDate.toISOString();
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Subscription cancelled successfully',
       subscription: {
         id: user.polarSubscriptionId,
         cancelledAt: cancellationResult.cancelledAt,
-        currentPeriodEnd: cancellationResult.subscription.current_period_end,
+        currentPeriodEnd: formattedEndDate,
         cancelAtPeriodEnd: true
       }
     });

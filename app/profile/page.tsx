@@ -160,10 +160,11 @@ export default function ProfilePage() {
           });
 
           const result = await response.json();
+          console.log('Cancellation response:', result);
 
           if (response.ok && result.success) {
-            alert('✅ Subscription cancelled successfully!\n\nYou will retain access to premium features until ' + 
-              new Date(result.subscription.currentPeriodEnd * 1000).toLocaleDateString() + '.');
+            const endDate = new Date(result.subscription.currentPeriodEnd).toLocaleDateString();
+            alert('✅ Subscription cancelled successfully!\n\nYou will retain access to premium features until ' + endDate + '.');
             
             // Refresh the page to update subscription status
             window.location.reload();

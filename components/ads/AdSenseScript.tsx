@@ -2,29 +2,69 @@
 
 import Script from 'next/script';
 import { ADSENSE_CONFIG } from '../../lib/adsense/config';
+import { useShowAds } from '../../hooks/useSubscription';
 
 /**
- * AdSense Script Component
- * Loads the Google AdSense script once per application
+ * AdSense Script Component with Auto Ads Support
+ * 
+ * Loads Google AdSense script and enables Auto ads, but ONLY for free tier users.
+ * Paid users (Basic/Pro) will not have the AdSense script loaded at all.
+ * 
+ * Features:
+ * - Subscription-aware loading (respects user tier)
+ * - Auto ads integration for optimal ad placement
+ * - Manual ad units still work alongside auto ads
+ * - Development mode support
  */
 export function AdSenseScript() {
+  const { shouldShowAds: showAds, loading } = useShowAds();
+
   // Don't load script if AdSense is not configured or disabled
   if (!ADSENSE_CONFIG.enabled || !ADSENSE_CONFIG.publisherId) {
     return null;
   }
 
+  // Don't render anything while checking subscription status
+  if (loading) {
+    return null;
+  }
+
+  // 🔐 CRITICAL: Don't load AdSense script at all for paid users
+  if (!showAds) {
+    return null;
+  }
+
   return (
-    <Script
-      async
-      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-${ADSENSE_CONFIG.publisherId}`}
-      crossOrigin="anonymous"
-      strategy="afterInteractive"
-      onLoad={() => {
-        console.log('🟢 AdSense script loaded successfully');
-      }}
-      onError={(error) => {
-        console.error('❌ AdSense script failed to load:', error);
-      }}
-    />
+    <>
+      {/* Main AdSense Script - Required for both manual and auto ads */}
+      <Script
+        id="adsense-main-script"
+        async
+        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-${ADSENSE_CONFIG.publisherId}`}
+        crossOrigin="anonymous"
+        strategy="afterInteractive"
+        onLoad={() => {
+          console.log('🟢 AdSense script loaded successfully for free user');
+        }}
+        onError={(error) => {
+          console.error('❌ AdSense script failed to load:', error);
+        }}
+      />
+
+      {/* Auto Ads Configuration - Let Google choose optimal placements */}
+      <Script
+        id="adsense-auto-ads-config"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            (adsbygoogle = window.adsbygoogle || []).push({
+              google_ad_client: "ca-pub-${ADSENSE_CONFIG.publisherId}",
+              enable_page_level_ads: true
+            });
+            console.log('🤖 Auto Ads enabled for free user');
+          `,
+        }}
+      />
+    </>
   );
 }

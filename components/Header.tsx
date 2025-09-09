@@ -7,7 +7,20 @@ import UserProfile from './UserProfile';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { data: session, status } = useSession();
+  
+  // Safe session handling to prevent destructuring errors
+  let session: any = null;
+  let status: string = 'loading';
+  
+  try {
+    const sessionData = useSession();
+    session = sessionData?.data || null;
+    status = sessionData?.status || 'loading';
+  } catch (error) {
+    console.warn('Session error in Header:', error);
+    session = null;
+    status = 'unauthenticated';
+  }
 
 
   // Helper function to close mobile menu

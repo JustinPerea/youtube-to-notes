@@ -32,7 +32,19 @@ interface SubscriptionResponse {
  * Returns subscription tier, usage limits, and current usage
  */
 export function useSubscription() {
-  const { data: session, status } = useSession();
+  // Safe session handling to prevent destructuring errors
+  let session: any = null;
+  let status: string = 'loading';
+  
+  try {
+    const sessionData = useSession();
+    session = sessionData?.data || null;
+    status = sessionData?.status || 'loading';
+  } catch (error) {
+    console.warn('Session error in useSubscription:', error);
+    session = null;
+    status = 'unauthenticated';
+  }
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);

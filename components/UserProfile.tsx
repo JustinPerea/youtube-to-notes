@@ -6,7 +6,19 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function UserProfile() {
-  const { data: session, status } = useSession();
+  // Safe session handling to prevent destructuring errors
+  let session: any = null;
+  let status: string = 'loading';
+  
+  try {
+    const sessionData = useSession();
+    session = sessionData?.data || null;
+    status = sessionData?.status || 'loading';
+  } catch (error) {
+    console.warn('Session error in UserProfile:', error);
+    session = null;
+    status = 'unauthenticated';
+  }
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

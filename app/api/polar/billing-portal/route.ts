@@ -9,6 +9,40 @@ import { db } from "@/lib/db/connection";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
+// Helper function to fetch Polar subscription details
+async function fetchPolarSubscriptionDetails(subscriptionId: string) {
+  try {
+    const response = await fetch(`https://api.polar.sh/v1/subscriptions/${subscriptionId}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.POLAR_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error('Failed to fetch Polar subscription:', response.status, response.statusText);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching Polar subscription details:', error);
+    return null;
+  }
+}
+
+// Helper function to format pricing
+function formatPolarPricing(amount: number, currency: string = 'USD', interval: string = 'month') {
+  const formatted = (amount / 100).toLocaleString('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 2,
+  });
+  
+  const intervalText = interval === 'year' ? 'year' : 'month';
+  return `${formatted}/${intervalText}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -34,6 +68,12 @@ export async function POST(req: NextRequest) {
     }
 
     const user = dbUsers[0];
+
+    // Fetch real subscription details from Polar if available
+    let polarSubscription = null;
+    if (user.polarSubscriptionId) {
+      polarSubscription = await fetchPolarSubscriptionDetails(user.polarSubscriptionId);
+    }
 
     // For Polar, we provide different management options based on subscription status
     if (user.subscriptionTier === 'free') {
@@ -81,7 +121,16 @@ export async function POST(req: NextRequest) {
             currentPeriodStart: user.subscriptionCurrentPeriodStart,
             currentPeriodEnd: user.subscriptionCurrentPeriodEnd,
             polarSubscriptionId: user.polarSubscriptionId,
-            polarCustomerId: user.polarCustomerId
+            polarCustomerId: user.polarCustomerId,
+            // Include real pricing from Polar API
+            actualPrice: polarSubscription ? formatPolarPricing(
+              polarSubscription.amount, 
+              polarSubscription.currency, 
+              polarSubscription.recurring_interval
+            ) : null,
+            discountApplied: polarSubscription?.discount_id ? true : false,
+            currency: polarSubscription?.currency || 'USD',
+            billingInterval: polarSubscription?.recurring_interval || 'month'
           }
         });
       } else {

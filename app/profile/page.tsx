@@ -52,6 +52,10 @@ interface BillingManagementResponse {
     currentPeriodEnd?: Date;
     polarSubscriptionId?: string;
     polarCustomerId?: string;
+    actualPrice?: string;
+    discountApplied?: boolean;
+    currency?: string;
+    billingInterval?: string;
   };
 }
 
@@ -215,6 +219,7 @@ export default function ProfilePage() {
               onManageBilling={handleManageBilling}
               billingLoading={billingLoading}
               loading={loading}
+              billingOptions={billingOptions}
             />
 
             {/* Account Settings Card */}
@@ -492,16 +497,24 @@ function BillingManagementCard({
   subscription, 
   onManageBilling, 
   billingLoading, 
-  loading 
+  loading,
+  billingOptions
 }: { 
   subscription?: any; 
   onManageBilling: () => void; 
   billingLoading: boolean;
   loading: boolean;
+  billingOptions?: BillingManagementResponse | null;
 }) {
   const getPlanPrice = (tier?: string) => {
+    // Try to get actual price from billing options first
+    if (billingOptions?.subscriptionDetails?.actualPrice) {
+      return billingOptions.subscriptionDetails.actualPrice;
+    }
+    
+    // Fallback to hardcoded prices
     switch (tier) {
-      case 'pro': return '$19.99/month';
+      case 'pro': return '$9.99/month';
       case 'basic': return '$9.99/month';
       default: return 'Free';
     }
@@ -530,6 +543,11 @@ function BillingManagementCard({
                 </h4>
                 <p className="text-[var(--text-secondary)]">
                   Current Rate: <span className="font-medium">{getPlanPrice(subscription?.tier)}</span>
+                  {billingOptions?.subscriptionDetails?.discountApplied && (
+                    <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                      Discount Applied
+                    </span>
+                  )}
                 </p>
                 {subscription?.status && (
                   <p className="text-[var(--text-secondary)] mt-1">
@@ -756,6 +774,19 @@ function BillingOptionsModal({
                     <span className="text-gray-600">Next billing:</span>
                     <span className="font-medium text-gray-900">
                       {new Date(options.subscriptionDetails.currentPeriodEnd).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                {options.subscriptionDetails.actualPrice && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Current rate:</span>
+                    <span className="font-medium text-gray-900">
+                      {options.subscriptionDetails.actualPrice}
+                      {options.subscriptionDetails.discountApplied && (
+                        <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                          Discounted
+                        </span>
+                      )}
                     </span>
                   </div>
                 )}

@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy - KyotoScribe',
-  description: 'Privacy Policy for KyotoScribe AI video processing service',
+  title: 'Privacy Policy - ShibaBrothers',
+  description: 'Privacy Policy for ShibaBrothers AI video processing service',
 };
 
 export default function PrivacyPolicy() {
@@ -23,7 +23,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">1. Introduction</h2>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                At KyotoScribe, we respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered video processing service. Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the service.
+                At ShibaBrothers, we respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered video processing service. Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the service.
               </p>
             </section>
 
@@ -100,7 +100,7 @@ export default function PrivacyPolicy() {
                   <ul className="list-disc pl-6 mt-2 space-y-1">
                     <li>Google AI/Gemini for video content processing</li>
                     <li>Authentication providers (Google OAuth)</li>
-                    <li>Payment processors (Polar.sh)</li>
+                    <li>Payment processors (Stripe, Polar.sh)</li>
                     <li>Cloud hosting and storage providers (Supabase, Vercel)</li>
                     <li>Analytics and monitoring services</li>
                   </ul>
@@ -211,7 +211,7 @@ export default function PrivacyPolicy() {
 
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mt-8">
               <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
-                This Privacy Policy is effective as of September 2025 and applies to all users of the KyotoScribe service.
+                This Privacy Policy is effective as of September 2025 and applies to all users of the ShibaBrothers service.
               </p>
             </div>
           </div>

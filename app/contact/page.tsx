@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Contact Us - Kyoto Scribe',
-  description: 'Get in touch with Kyoto Scribe for support, feedback, or business inquiries.',
+  title: 'Contact Us - ShibaBrothers',
+  description: 'Get in touch with ShibaBrothers for support, feedback, or business inquiries.',
 }
 
 export default function ContactPage() {

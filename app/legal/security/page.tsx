@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Security Policy - Kyoto Scribe',
-  description: 'Security measures and data protection policies for Kyoto Scribe.',
+  title: 'Security Policy - ShibaBrothers',
+  description: 'Security measures and data protection policies for ShibaBrothers.',
 }
 
 export default function SecurityPolicyPage() {
@@ -32,7 +32,7 @@ export default function SecurityPolicyPage() {
                 Our Commitment to Security
               </h2>
               <p className="text-slate-600 dark:text-slate-300 mb-4">
-                At Kyoto Scribe, we take the security of your data seriously. We implement industry-standard 
+                At ShibaBrothers, we take the security of your data seriously. We implement industry-standard 
                 security measures to protect your personal information, account data, and the content you 
                 process through our service.
               </p>
@@ -78,9 +78,9 @@ export default function SecurityPolicyPage() {
               <ul className="list-disc list-inside text-slate-600 dark:text-slate-300 space-y-2 mb-4">
                 <li><strong>OAuth Integration:</strong> We use secure OAuth providers (Google) for authentication, so we never store your passwords</li>
                 <li><strong>Session Management:</strong> Secure session tokens with automatic expiration</li>
-                <li><strong>Multi-Factor Authentication:</strong> Available for enhanced account security</li>
                 <li><strong>Access Logging:</strong> All account access is logged and monitored</li>
                 <li><strong>Role-Based Access:</strong> Different permission levels for different user types</li>
+                <li><strong>Account Security:</strong> Your Google account security (including 2FA if enabled) protects your access</li>
               </ul>
             </section>
 

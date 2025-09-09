@@ -33,7 +33,7 @@ This project uses a sophisticated multi-agent workflow for development:
 - ✅ Basic summary generation
 - ✅ Simple web interface
 - ✅ User authentication (basic)
-- ✅ Freemium tier system (3 videos/month free)
+- ✅ Freemium tier system (5 videos/month free)
 
 ### Templates Available
 1. **Basic Summary**: Concise video overview

@@ -210,9 +210,9 @@ export default function DataProcessingAgreementPage() {
                 <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
                   <h3 className="font-semibold text-slate-900 dark:text-white mb-2">1. Video Processing</h3>
                   <p className="text-sm text-slate-600 dark:text-slate-300">
-                    When you submit a YouTube URL, we temporarily access the video transcript and send it to 
-                    Google's Gemini API for AI processing. The transcript is not stored permanently and is 
-                    deleted after processing.
+                    When you submit a YouTube URL, we store the video metadata (title, duration, channel) 
+                    and access the video transcript to send to Google's Gemini API for AI processing. 
+                    The generated content is stored in your account for future access.
                   </p>
                 </div>
                 

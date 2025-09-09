@@ -38,10 +38,10 @@ export default function ContactPage() {
                       For general questions, support, and feedback
                     </p>
                     <a 
-                      href="mailto:support@kyotoscribe.com" 
+                      href="mailto:support@shibabrothers.com" 
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      support@kyotoscribe.com
+                      support@shibabrothers.com
                     </a>
                   </div>
                 </div>
@@ -56,10 +56,10 @@ export default function ContactPage() {
                       Report security vulnerabilities or concerns
                     </p>
                     <a 
-                      href="mailto:security@kyotoscribe.com" 
+                      href="mailto:security@shibabrothers.com" 
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      security@kyotoscribe.com
+                      security@shibabrothers.com
                     </a>
                   </div>
                 </div>
@@ -74,10 +74,10 @@ export default function ContactPage() {
                       Copyright claims and legal matters
                     </p>
                     <a 
-                      href="mailto:dmca@kyotoscribe.com" 
+                      href="mailto:dmca@shibabrothers.com" 
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      dmca@kyotoscribe.com
+                      dmca@shibabrothers.com
                     </a>
                   </div>
                 </div>
@@ -92,10 +92,10 @@ export default function ContactPage() {
                       Accessibility feedback and support
                     </p>
                     <a 
-                      href="mailto:accessibility@kyotoscribe.com" 
+                      href="mailto:accessibility@shibabrothers.com" 
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      accessibility@kyotoscribe.com
+                      accessibility@shibabrothers.com
                     </a>
                   </div>
                 </div>
@@ -110,10 +110,10 @@ export default function ContactPage() {
                       Partnerships, enterprise, and business opportunities
                     </p>
                     <a 
-                      href="mailto:business@kyotoscribe.com" 
+                      href="mailto:business@shibabrothers.com" 
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      business@kyotoscribe.com
+                      business@shibabrothers.com
                     </a>
                   </div>
                 </div>

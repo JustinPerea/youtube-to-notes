@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
               title: 'Contact Support',
               description: 'Need help with your subscription?',
               action: 'support',
-              url: 'mailto:support@kyotoscribe.com?subject=Subscription Support'
+              url: 'mailto:support@shibabrothers.com?subject=Subscription Support'
             }
           ],
           subscriptionDetails: {
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
               title: 'Contact Support for Billing Changes',
               description: 'Our support team can help you manage your subscription',
               action: 'support',
-              url: 'mailto:support@kyotoscribe.com?subject=Subscription Management'
+              url: 'mailto:support@shibabrothers.com?subject=Subscription Management'
             },
             {
               title: 'View Pricing Plans',

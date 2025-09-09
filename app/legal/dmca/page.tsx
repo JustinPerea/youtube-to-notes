@@ -112,7 +112,7 @@ export default function DMCAPolicyPage() {
                   Please send your DMCA notice to our designated agent:
                 </p>
                 <div className="text-blue-800 dark:text-blue-200">
-                  <p><strong>Email:</strong> dmca@kyotoscribe.com</p>
+                  <p><strong>Email:</strong> dmca@shibabrothers.com</p>
                   <p><strong>Subject:</strong> DMCA Copyright Infringement Notice</p>
                 </div>
               </div>
@@ -158,7 +158,7 @@ export default function DMCAPolicyPage() {
                 <li>Your physical or electronic signature</li>
               </ul>
               <p className="text-slate-600 dark:text-slate-300">
-                Send counter-notifications to: <strong>dmca@kyotoscribe.com</strong>
+                Send counter-notifications to: <strong>dmca@shibabrothers.com</strong>
               </p>
             </section>
 
@@ -194,7 +194,7 @@ export default function DMCAPolicyPage() {
               </p>
               <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-6">
                 <p className="text-slate-600 dark:text-slate-300">
-                  <strong>Email:</strong> dmca@kyotoscribe.com<br/>
+                  <strong>Email:</strong> dmca@shibabrothers.com<br/>
                   <strong>Subject:</strong> DMCA Copyright Infringement Notice<br/>
                   <strong>Response Time:</strong> 24-72 hours
                 </p>

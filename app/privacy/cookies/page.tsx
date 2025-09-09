@@ -201,10 +201,10 @@ export default function CookiePolicyPage() {
                 If you have any questions about our use of cookies or this Cookie Policy, 
                 please contact us at{' '}
                 <a 
-                  href="mailto:privacy@kyotoscribe.com" 
+                  href="mailto:privacy@shibabrothers.com" 
                   className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
-                  privacy@kyotoscribe.com
+                  privacy@shibabrothers.com
                 </a>
               </p>
             </section>

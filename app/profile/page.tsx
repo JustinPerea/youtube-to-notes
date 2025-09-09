@@ -152,7 +152,7 @@ export default function ProfilePage() {
       // Handle cancellation logic
       if (confirm('Are you sure you want to cancel your subscription? ' + (option.warning || ''))) {
         // You could create a cancellation endpoint here
-        alert('Please contact support@kyotoscribe.com to cancel your subscription.');
+        alert('Please contact support@shibabrothers.com to cancel your subscription.');
       }
     }
     setShowBillingOptions(false);

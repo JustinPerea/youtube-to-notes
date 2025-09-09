@@ -345,8 +345,8 @@ export default function DataProcessingAgreementPage() {
               
               <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-6">
                 <p className="text-slate-600 dark:text-slate-300">
-                  <strong>Data Protection Officer:</strong> privacy@kyotoscribe.com<br/>
-                  <strong>General Support:</strong> support@kyotoscribe.com<br/>
+                  <strong>Data Protection Officer:</strong> privacy@shibabrothers.com<br/>
+                  <strong>General Support:</strong> support@shibabrothers.com<br/>
                   <strong>Response Time:</strong> 30 days for data protection requests
                 </p>
               </div>

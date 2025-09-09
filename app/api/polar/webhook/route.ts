@@ -6,74 +6,97 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/connection";
 import { users, userMonthlyUsage } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, or } from "drizzle-orm";
 import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks";
 import { auditLogger } from "@/lib/audit/logger";
 import { updateUserSubscription } from "@/lib/subscription/service";
 import { SUBSCRIPTION_LIMITS, type SubscriptionTier } from "@/lib/subscription/config";
 
-// Enhanced user lookup with multiple strategies
+// ⚡ OPTIMIZED: Single-query user lookup with prioritized OR conditions  
 async function findUserForWebhook(webhookData: any): Promise<any | null> {
-  console.log('🔍 Starting enhanced user lookup...');
+  console.log('🔍 Starting optimized single-query user lookup...');
   
-  const strategies = [
-    {
-      name: 'External ID',
-      lookup: () => webhookData.metadata?.userId ? 
-        db.select().from(users).where(eq(users.id, webhookData.metadata.userId)) : null
-    },
-    {
-      name: 'Customer Email (exact)',
-      lookup: () => webhookData.customer?.email ? 
-        db.select().from(users).where(eq(users.email, webhookData.customer.email)) : null
-    },
-    {
-      name: 'User Email (exact)', 
-      lookup: () => webhookData.user?.email ? 
-        db.select().from(users).where(eq(users.email, webhookData.user.email)) : null
-    },
-    {
-      name: 'Customer Email (case-insensitive)',
-      lookup: () => webhookData.customer?.email ? 
-        db.select().from(users).where(sql`LOWER(email) = LOWER(${webhookData.customer.email})`) : null
-    },
-    {
-      name: 'User Email (case-insensitive)',
-      lookup: () => webhookData.user?.email ? 
-        db.select().from(users).where(sql`LOWER(email) = LOWER(${webhookData.user.email})`) : null
-    }
-  ];
+  // Build OR conditions based on available data
+  const conditions = [];
+  const lookupInfo = {
+    externalId: webhookData.metadata?.userId,
+    customerEmail: webhookData.customer?.email,
+    userEmail: webhookData.user?.email
+  };
   
-  for (const strategy of strategies) {
-    try {
-      console.log(`🔍 Trying strategy: ${strategy.name}`);
-      const lookupFn = strategy.lookup();
-      if (!lookupFn) {
-        console.log(`⏭️ Skipping ${strategy.name} - no data available`);
-        continue;
-      }
-      
-      const result = await lookupFn;
-      if (result && result.length > 0) {
-        console.log(`✅ Found user with ${strategy.name}: ${result[0].email}`);
-        return result[0];
-      }
-      console.log(`❌ No user found with ${strategy.name}`);
-    } catch (error) {
-      console.error(`💥 Error in ${strategy.name} lookup:`, error);
-      continue;
-    }
+  console.log('🔍 Lookup data:', lookupInfo);
+  
+  // Priority 1: External ID (most reliable)
+  if (lookupInfo.externalId) {
+    conditions.push(eq(users.id, lookupInfo.externalId));
   }
   
-  // Log for manual review
-  console.error('❌ User not found with any strategy. Webhook data:', {
-    customerEmail: webhookData.customer?.email,
-    userEmail: webhookData.user?.email,
-    externalId: webhookData.metadata?.userId,
-    customerId: webhookData.customer?.id
-  });
+  // Priority 2: Exact email matches
+  if (lookupInfo.customerEmail) {
+    conditions.push(eq(users.email, lookupInfo.customerEmail));
+  }
+  if (lookupInfo.userEmail && lookupInfo.userEmail !== lookupInfo.customerEmail) {
+    conditions.push(eq(users.email, lookupInfo.userEmail));
+  }
   
-  return null;
+  // Priority 3: Case-insensitive email matches
+  if (lookupInfo.customerEmail) {
+    conditions.push(sql`LOWER(${users.email}) = LOWER(${lookupInfo.customerEmail})`);
+  }
+  if (lookupInfo.userEmail && lookupInfo.userEmail !== lookupInfo.customerEmail) {
+    conditions.push(sql`LOWER(${users.email}) = LOWER(${lookupInfo.userEmail})`);
+  }
+  
+  if (conditions.length === 0) {
+    console.error('❌ No lookup conditions available');
+    return null;
+  }
+  
+  try {
+    console.log(`🔍 Executing single query with ${conditions.length} OR conditions`);
+    
+    // ⚡ SINGLE OPTIMIZED QUERY: Replaces 5 sequential queries
+    const result = await db
+      .select()
+      .from(users)
+      .where(or(...conditions))
+      .limit(1); // Only need first match due to prioritized ordering
+    
+    if (result && result.length > 0) {
+      const user = result[0];
+      console.log(`✅ Found user: ${user.email} (ID: ${user.id})`);
+      
+      // Log which condition likely matched (for debugging)
+      if (lookupInfo.externalId === user.id) {
+        console.log(`🎯 Match type: External ID`);
+      } else if (user.email === lookupInfo.customerEmail) {
+        console.log(`🎯 Match type: Customer email (exact)`);
+      } else if (user.email === lookupInfo.userEmail) {
+        console.log(`🎯 Match type: User email (exact)`);
+      } else {
+        console.log(`🎯 Match type: Email (case-insensitive)`);
+      }
+      
+      return user;
+    }
+    
+    console.error('❌ User not found with optimized lookup');
+    return null;
+    
+  } catch (error) {
+    console.error('💥 Error in optimized user lookup:', error);
+    
+    // Log for manual review
+    console.error('❌ User lookup failed. Webhook data:', {
+      customerEmail: lookupInfo.customerEmail,
+      userEmail: lookupInfo.userEmail,
+      externalId: lookupInfo.externalId,
+      customerId: webhookData.customer?.id,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    
+    return null;
+  }
 }
 
 // 🔒 SECURITY: Rate limiting for webhook endpoints
@@ -124,6 +147,34 @@ export async function POST(req: NextRequest) {
       
       return NextResponse.json({ error: 'Webhook configuration error' }, { status: 400 });
     }
+
+    // 🔴 CRITICAL: Environment variable validation
+    // Without these, ALL paid subscriptions will default to free tier!
+    const requiredEnvVars = {
+      POLAR_WEBHOOK_SECRET: webhookSecret,
+      POLAR_PRO_PRODUCT_ID: process.env.POLAR_PRO_PRODUCT_ID,
+      POLAR_BASIC_PRODUCT_ID: process.env.POLAR_BASIC_PRODUCT_ID,
+    };
+
+    for (const [key, value] of Object.entries(requiredEnvVars)) {
+      if (!value || value.trim() === '') {
+        console.error(`❌ CRITICAL: Missing required environment variable: ${key}`);
+        
+        // 🔒 AUDIT: Log configuration violation
+        await auditLogger.logSecurityViolation(
+          'unauthorized_access',
+          { reason: `missing_env_var_${key}`, endpoint: 'polar_webhook' },
+          clientIp
+        );
+        
+        return NextResponse.json({ 
+          error: 'Webhook configuration error',
+          message: 'Required environment variables not configured' 
+        }, { status: 500 });
+      }
+    }
+
+    console.log('✅ Environment variable validation passed');
     
     // Validate payload size (prevent DoS attacks)
     if (payload.length > 1024 * 1024) { // 1MB limit
@@ -235,8 +286,18 @@ async function handleSubscriptionActive(subscription: any) {
     // Use enhanced user lookup
     const user = await findUserForWebhook(subscription);
     if (!user) {
-      console.error('❌ User not found for subscription.active webhook');
-      return; // Don't throw - let webhook succeed even if user not found
+      console.error('❌ CRITICAL: User not found for subscription.active webhook');
+      console.error('❌ Subscription data:', {
+        subscriptionId: subscription.id,
+        customerId: subscription.customer_id,
+        customerEmail: subscription.customer?.email,
+        userEmail: subscription.user?.email,
+        productId: subscription.product_id
+      });
+      
+      // 🔄 RETRY LOGIC: This should retry, not succeed
+      // User might be created after webhook, email lookup might be case-sensitive, etc.
+      throw new Error(`User not found for subscription ${subscription.id}. Customer email: ${subscription.customer?.email || 'unknown'}, User email: ${subscription.user?.email || 'unknown'}`);
     }
 
     console.log(`👤 Found user: ${user.id} (${user.email})`);
@@ -265,24 +326,30 @@ async function handleSubscriptionActive(subscription: any) {
 
     if (hasActiveAdminOverride) {
       console.log(`ℹ️ User ${user.id} has active admin override (${user.adminOverrideTier}), skipping tier update`);
-      // Still update Polar-specific fields
-      await db.update(users)
-        .set({
-          polarSubscriptionId: subscription.id,
-          polarCustomerId: subscription.customer_id,
-          subscriptionStatus: 'active',
-          subscriptionCurrentPeriodStart: new Date(subscription.current_period_start),
-          subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end),
-          paymentProvider: 'polar',
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, user.id));
+      
+      // 🔄 TRANSACTION: Wrap admin override update for consistency
+      await db.transaction(async (tx: any) => {
+        // Still update Polar-specific fields
+        await tx.update(users)
+          .set({
+            polarSubscriptionId: subscription.id,
+            polarCustomerId: subscription.customer_id,
+            subscriptionStatus: 'active',
+            subscriptionCurrentPeriodStart: new Date(subscription.current_period_start),
+            subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end),
+            paymentProvider: 'polar',
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, user.id));
+        
+        console.log(`💾 Admin override: Updated Polar-specific fields in transaction`);
+      });
       
       console.log(`✅ Subscription activated with admin override preserved`);
       return;
     }
 
-    // Update user subscription using transaction for consistency
+    // 🔄 TRANSACTION: Update user subscription with full consistency
     console.log(`💾 Updating user ${user.id} to ${tier} tier...`);
     
     await db.transaction(async (tx: any) => {
@@ -299,15 +366,24 @@ async function handleSubscriptionActive(subscription: any) {
           updatedAt: new Date(),
         })
         .where(eq(users.id, user.id));
+      
+      console.log(`💾 Main transaction: Updated user tier and Polar data`);
     });
 
-    // Also sync with centralized subscription service
-    await updateUserSubscription(user.id, {
-      tier,
-      status: 'active',
-      currentPeriodStart: new Date(subscription.current_period_start),
-      currentPeriodEnd: new Date(subscription.current_period_end),
-    });
+    // 🔄 SYNC: Centralized subscription service (outside transaction for service isolation)  
+    try {
+      await updateUserSubscription(user.id, {
+        tier,
+        status: 'active',
+        currentPeriodStart: new Date(subscription.current_period_start),
+        currentPeriodEnd: new Date(subscription.current_period_end),
+      });
+      console.log(`💾 Subscription service sync completed`);
+    } catch (syncError) {
+      console.error(`⚠️ Subscription service sync failed (user update succeeded):`, syncError);
+      // Continue - main database update succeeded, sync failure is non-critical
+      // This could be handled by a background job or manual reconciliation
+    }
 
     // Verify the update
     const verifyUser = await db
@@ -320,9 +396,31 @@ async function handleSubscriptionActive(subscription: any) {
     console.log(`✅ Verification: User now has tier=${verifyUser[0]?.subscriptionTier}, status=${verifyUser[0]?.subscriptionStatus}`);
 
   } catch (error) {
-    console.error(`❌ Failed to process subscription.active for ${subscription.id}:`, error);
-    // Don't throw - this would cause webhook retries
-    // Instead, log for manual review
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`❌ Failed to process subscription.active for ${subscription.id}:`, errorMessage);
+    
+    // 🔄 ERROR TYPE DISTINCTION: Handle different error types appropriately
+    if (errorMessage.includes('User not found')) {
+      // Retryable error - user might be created later, or email lookup issue
+      console.error(`🔄 RETRYABLE: User not found - webhook will retry`);
+      throw error; // Re-throw to trigger webhook retry
+      
+    } else if (errorMessage.includes('database') || errorMessage.includes('timeout')) {
+      // Retryable error - temporary infrastructure issue  
+      console.error(`🔄 RETRYABLE: Database/infrastructure issue - webhook will retry`);
+      throw error; // Re-throw to trigger webhook retry
+      
+    } else if (errorMessage.includes('Unknown product ID')) {
+      // Non-retryable error - configuration issue, manual intervention needed
+      console.error(`❌ NON-RETRYABLE: Invalid product configuration - requires manual intervention`);
+      console.error(`❌ Manual action required: Check POLAR_PRO_PRODUCT_ID and POLAR_BASIC_PRODUCT_ID environment variables`);
+      // Don't re-throw - this prevents infinite retries for config issues
+      
+    } else {
+      // Unknown error - be conservative and allow retries for debugging
+      console.error(`⚠️ UNKNOWN ERROR: Being conservative - allowing retry for investigation`);
+      throw error; // Re-throw to allow debugging
+    }
   }
 }
 

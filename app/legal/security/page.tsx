@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Security Policy - ShibaBrothers',
-  description: 'Security measures and data protection policies for ShibaBrothers.',
+  title: 'Security Policy - Shiba Scribe',
+  description: 'Security measures and data protection policies for Shiba Scribe.',
 }
 
 export default function SecurityPolicyPage() {
@@ -32,7 +32,7 @@ export default function SecurityPolicyPage() {
                 Our Commitment to Security
               </h2>
               <p className="text-slate-600 dark:text-slate-300 mb-4">
-                At ShibaBrothers, we take the security of your data seriously. We implement industry-standard 
+                At Shiba Scribe, we take the security of your data seriously. We implement industry-standard 
                 security measures to protect your personal information, account data, and the content you 
                 process through our service.
               </p>

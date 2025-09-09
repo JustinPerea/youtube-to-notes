@@ -68,7 +68,7 @@ export function WelcomeModal({ isOpen, onComplete, onSkip }: WelcomeModalProps) 
             <span className="text-3xl">🐕</span>
           </div>
           <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-3">
-            Welcome to KyotoScribe!
+            Welcome to Shiba Scribe!
           </h2>
           <p className="text-gray-600 dark:text-gray-300 text-lg">
             Hi {session?.user?.name?.split(' ')[0] || 'there'}! Let's get you set up with a few quick agreements.

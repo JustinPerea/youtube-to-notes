@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Data Processing Agreement - Kyoto Scribe',
+  title: 'Data Processing Agreement - Shiba Scribe',
   description: 'Data processing agreement and information about how we handle your data with third-party services.',
 }
 
@@ -32,7 +32,7 @@ export default function DataProcessingAgreementPage() {
                 Overview
               </h2>
               <p className="text-slate-600 dark:text-slate-300 mb-4">
-                This Data Processing Agreement (DPA) explains how Kyoto Scribe processes your personal data 
+                This Data Processing Agreement (DPA) explains how Shiba Scribe processes your personal data 
                 when using third-party services to provide our AI-powered video processing features. 
                 This is particularly important for users in the European Economic Area (EEA) and other 
                 jurisdictions with strict data protection laws.
@@ -51,7 +51,7 @@ export default function DataProcessingAgreementPage() {
                   Data Controller
                 </h3>
                 <p className="text-blue-800 dark:text-blue-200">
-                  <strong>Kyoto Scribe</strong> acts as the data controller for your personal information. 
+                  <strong>Shiba Scribe</strong> acts as the data controller for your personal information. 
                   We determine the purposes and means of processing your data.
                 </p>
               </div>

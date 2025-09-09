@@ -53,11 +53,13 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Block suspicious requests - but allow development tools
+  // Block suspicious requests - but allow development tools and debug endpoints
   const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDebugEndpoint = request.nextUrl.pathname.startsWith('/api/debug/');
   
   // In development, be more permissive for testing tools
-  if (!isDevelopment) {
+  // Also allow debug endpoints in production for troubleshooting
+  if (!isDevelopment && !isDebugEndpoint) {
     const suspiciousPatterns = [
       /bot/i,
       /crawler/i,

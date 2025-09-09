@@ -56,10 +56,10 @@ export default function ContactPage() {
                       Report security vulnerabilities or concerns
                     </p>
                     <a 
-                      href="mailto:security@shibabrothers.com" 
+                      href="mailto:support@shibabrothers.com" 
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      security@shibabrothers.com
+                      support@shibabrothers.com
                     </a>
                   </div>
                 </div>
@@ -74,10 +74,10 @@ export default function ContactPage() {
                       Copyright claims and legal matters
                     </p>
                     <a 
-                      href="mailto:dmca@shibabrothers.com" 
+                      href="mailto:support@shibabrothers.com" 
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      dmca@shibabrothers.com
+                      support@shibabrothers.com
                     </a>
                   </div>
                 </div>
@@ -92,10 +92,10 @@ export default function ContactPage() {
                       Accessibility feedback and support
                     </p>
                     <a 
-                      href="mailto:accessibility@shibabrothers.com" 
+                      href="mailto:support@shibabrothers.com" 
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      accessibility@shibabrothers.com
+                      support@shibabrothers.com
                     </a>
                   </div>
                 </div>

@@ -155,7 +155,7 @@ export default function SecurityPolicyPage() {
                   <h3 className="font-semibold text-indigo-900 dark:text-indigo-100">Vulnerability Reporting</h3>
                   <p className="text-indigo-800 dark:text-indigo-200 text-sm">
                     We encourage responsible disclosure of security vulnerabilities. 
-                    Report issues to: security@shibabrothers.com
+                    Report issues to: support@shibabrothers.com
                   </p>
                 </div>
               </div>
@@ -232,7 +232,7 @@ export default function SecurityPolicyPage() {
               </p>
               <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-6">
                 <p className="text-slate-600 dark:text-slate-300">
-                  <strong>Security Team:</strong> security@shibabrothers.com<br/>
+                  <strong>Security Team:</strong> support@shibabrothers.com<br/>
                   <strong>General Support:</strong> support@shibabrothers.com<br/>
                   <strong>Response Time:</strong> 24-48 hours for security issues
                 </p>

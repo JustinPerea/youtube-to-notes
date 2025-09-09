@@ -201,10 +201,10 @@ export default function CookiePolicyPage() {
                 If you have any questions about our use of cookies or this Cookie Policy, 
                 please contact us at{' '}
                 <a 
-                  href="mailto:privacy@shibabrothers.com" 
+                  href="mailto:support@shibabrothers.com" 
                   className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
-                  privacy@shibabrothers.com
+                  support@shibabrothers.com
                 </a>
               </p>
             </section>

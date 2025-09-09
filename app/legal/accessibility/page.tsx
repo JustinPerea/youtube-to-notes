@@ -201,7 +201,7 @@ export default function AccessibilityStatementPage() {
                   Accessibility Support
                 </h3>
                 <p className="text-slate-600 dark:text-slate-300">
-                  <strong>Email:</strong> accessibility@shibabrothers.com<br/>
+                  <strong>Email:</strong> support@shibabrothers.com<br/>
                   <strong>Subject:</strong> Accessibility Feedback<br/>
                   <strong>Response Time:</strong> 48-72 hours<br/>
                   <strong>Alternative Contact:</strong> support@shibabrothers.com

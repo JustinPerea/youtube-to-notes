@@ -4,8 +4,7 @@ import { memoryCache, CacheKeys, CacheTTL } from '@/lib/cache/memory-cache';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const videoUrl = searchParams.get('url');
+    const videoUrl = request.nextUrl.searchParams.get('url');
 
     if (!videoUrl) {
       return NextResponse.json(

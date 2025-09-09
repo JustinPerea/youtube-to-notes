@@ -27,21 +27,39 @@ export function AdSenseScript() {
     setIsClient(true);
   }, []);
 
+  // Debug logging
+  useEffect(() => {
+    if (isClient) {
+      console.log('🔍 AdSenseScript Debug:', {
+        enabled: ADSENSE_CONFIG.enabled,
+        publisherId: ADSENSE_CONFIG.publisherId,
+        showAds,
+        loading,
+        isClient
+      });
+    }
+  }, [isClient, showAds, loading]);
+
   // Don't render anything during SSR or while checking subscription status
   if (!isClient || loading) {
+    console.log('⏳ AdSenseScript: Waiting for client hydration or subscription check');
     return null;
   }
 
   // Don't load script if AdSense is not configured or disabled
   if (!ADSENSE_CONFIG.enabled || !ADSENSE_CONFIG.publisherId) {
+    console.log('❌ AdSenseScript: Configuration issue - enabled:', ADSENSE_CONFIG.enabled, 'publisherId:', ADSENSE_CONFIG.publisherId);
     return null;
   }
 
   // 🔐 CRITICAL: Don't load AdSense script at all for paid users
   if (!showAds) {
+    console.log('🔒 AdSenseScript: User is on paid tier, not loading ads');
     return null;
   }
 
+  console.log('✅ AdSenseScript: Loading AdSense script for free user');
+  
   return (
     <>
       {/* Main AdSense Script - Required for both manual and auto ads */}

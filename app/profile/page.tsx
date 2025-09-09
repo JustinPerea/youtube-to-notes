@@ -67,6 +67,8 @@ export default function ProfilePage() {
   const [billingLoading, setBillingLoading] = useState(false);
   const [showBillingOptions, setShowBillingOptions] = useState(false);
   const [billingOptions, setBillingOptions] = useState<BillingManagementResponse | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Fetch user usage data
   useEffect(() => {
@@ -156,6 +158,44 @@ export default function ProfilePage() {
     setShowBillingOptions(false);
   };
 
+  // Handle account deletion
+  const handleDeleteAccount = async (confirmationText: string, reason?: string) => {
+    if (!session?.user) return;
+
+    try {
+      setDeleteLoading(true);
+      const response = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          confirmationText,
+          reason
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete account');
+      }
+
+      // Show success message
+      alert(`Account deletion successful!\n\n${data.message}\n\nYou have until ${new Date(data.details.gracePeriodEnd).toLocaleDateString()} to contact support if you change your mind.`);
+      
+      // Sign out user
+      window.location.href = '/auth/signin?message=account-deleted';
+
+    } catch (err) {
+      console.error('Error deleting account:', err);
+      setError(`Failed to delete account: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   // Redirect to sign-in if not authenticated
   if (status === 'loading') {
     return <LoadingScreen />;
@@ -223,7 +263,10 @@ export default function ProfilePage() {
             />
 
             {/* Account Settings Card */}
-            <AccountSettingsCard />
+            <AccountSettingsCard 
+              onDeleteAccount={() => setShowDeleteModal(true)}
+              deleteLoading={deleteLoading}
+            />
           </div>
         </div>
         
@@ -237,6 +280,16 @@ export default function ProfilePage() {
           options={billingOptions}
           onClose={() => setShowBillingOptions(false)}
           onSelect={handleBillingOption}
+        />
+      )}
+
+      {/* Account Deletion Modal */}
+      {showDeleteModal && (
+        <AccountDeletionModal
+          user={usageData}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteAccount}
+          loading={deleteLoading}
         />
       )}
     </div>
@@ -601,9 +654,14 @@ function BillingManagementCard({
   );
 }
 
-// Account Settings Card Component
-function AccountSettingsCard() {
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
+// Account Settings Card Component  
+function AccountSettingsCard({ 
+  onDeleteAccount, 
+  deleteLoading 
+}: { 
+  onDeleteAccount: () => void; 
+  deleteLoading: boolean; 
+}) {
 
   return (
     <div className="account-settings-card bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-3xl p-8 shadow-[var(--card-shadow)]">
@@ -677,38 +735,13 @@ function AccountSettingsCard() {
                 </p>
               </div>
               
-              {!deleteConfirm ? (
-                <button
-                  onClick={() => setDeleteConfirm(true)}
-                  className="delete-account-btn bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                >
-                  Delete Account
-                </button>
-              ) : (
-                <div className="delete-confirm space-y-3">
-                  <p className="text-sm font-medium text-red-800">
-                    Are you sure you want to delete your account?
-                  </p>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        // Handle account deletion logic here
-                        alert('Account deletion functionality will be implemented soon.');
-                        setDeleteConfirm(false);
-                      }}
-                      className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                    >
-                      Yes, Delete My Account
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(false)}
-                      className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-400 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={onDeleteAccount}
+                disabled={deleteLoading}
+                className="delete-account-btn bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteLoading ? 'Deleting Account...' : 'Delete Account'}
+              </button>
             </div>
           </div>
         </div>
@@ -847,6 +880,178 @@ function BillingOptionsModal({
               Close
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Account Deletion Modal Component
+function AccountDeletionModal({ 
+  user, 
+  onClose, 
+  onConfirm, 
+  loading 
+}: { 
+  user: UsageData | null; 
+  onClose: () => void; 
+  onConfirm: (confirmationText: string, reason?: string) => void;
+  loading: boolean;
+}) {
+  const [confirmationText, setConfirmationText] = useState('');
+  const [reason, setReason] = useState('');
+  const [step, setStep] = useState(1);
+
+  const handleConfirm = () => {
+    if (confirmationText === 'DELETE') {
+      onConfirm(confirmationText, reason || undefined);
+    }
+  };
+
+  const isPaidUser = user?.subscription?.tier && user.subscription.tier !== 'free';
+
+  return (
+    <div className="deletion-modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="deletion-modal-content bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        {/* Modal Header */}
+        <div className="modal-header border-b border-gray-200 p-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-bold text-red-600">
+              ⚠️ Delete Account
+            </h3>
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Body */}
+        <div className="modal-body p-6">
+          {step === 1 && (
+            <div className="warning-step space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <h4 className="font-semibold text-red-800 mb-2">This action cannot be undone!</h4>
+                <p className="text-red-700 text-sm">
+                  Deleting your account will permanently remove all your data, including:
+                </p>
+                <ul className="text-red-700 text-sm mt-2 ml-4 list-disc">
+                  <li>All processed videos and generated content</li>
+                  <li>Your saved notes and templates</li>
+                  <li>Account settings and preferences</li>
+                  <li>Usage history and analytics</li>
+                </ul>
+              </div>
+
+              {isPaidUser && (
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                  <h4 className="font-semibold text-orange-800 mb-2">Subscription Information</h4>
+                  <p className="text-orange-700 text-sm">
+                    You currently have a <strong>{user?.subscription?.tier}</strong> subscription.
+                  </p>
+                  <ul className="text-orange-700 text-sm mt-2 ml-4 list-disc">
+                    <li><strong>No refund</strong> will be issued for the current billing period</li>
+                    <li>Your subscription will be <strong>cancelled at the end of the current period</strong></li>
+                    <li>You can continue using premium features until: <strong>{user?.subscription?.currentPeriodEnd ? new Date(user.subscription.currentPeriodEnd).toLocaleDateString() : 'end of period'}</strong></li>
+                  </ul>
+                </div>
+              )}
+
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <h4 className="font-semibold text-blue-800 mb-2">30-Day Recovery Period</h4>
+                <p className="text-blue-700 text-sm">
+                  After deletion, you'll have <strong>30 days</strong> to contact support if you change your mind. After this period, all data will be permanently removed.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setStep(2)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  I Understand, Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="confirmation-step space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type "DELETE" to confirm:
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmationText}
+                    onChange={(e) => setConfirmationText(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Type DELETE here"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for leaving (optional):
+                  </label>
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+                    placeholder="Help us improve by telling us why you're leaving..."
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between pt-4">
+                <button
+                  onClick={() => setStep(1)}
+                  disabled={loading}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <div className="space-x-3">
+                  <button
+                    onClick={onClose}
+                    disabled={loading}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={loading || confirmationText !== 'DELETE'}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        Deleting Account...
+                      </span>
+                    ) : (
+                      'Delete My Account'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

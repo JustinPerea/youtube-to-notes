@@ -407,6 +407,40 @@ export async function checkUsageLimit(
       };
     }
 
+    // Handle storage usage checks
+    if (action === 'use_storage') {
+      const storageLimitMB = limits.storageGB === -1 ? Number.MAX_SAFE_INTEGER : limits.storageGB * 1024;
+      const currentStorageMB = currentUsage.storageUsedMb || 0;
+      
+      console.log('💾 Storage limit check:', {
+        userId,
+        storageLimitMB,
+        currentStorageMB,
+        requestedAmount: amount,
+        allowed: currentStorageMB + amount <= storageLimitMB,
+        unlimited: limits.storageGB === -1
+      });
+
+      if (limits.storageGB === -1) {
+        return {
+          allowed: true,
+          unlimited: true,
+          current: currentStorageMB,
+          limit: -1
+        };
+      }
+
+      const allowed = currentStorageMB + amount <= storageLimitMB;
+      return {
+        allowed,
+        limit: storageLimitMB,
+        current: currentStorageMB,
+        remaining: Math.max(0, storageLimitMB - currentStorageMB),
+        unlimited: false,
+        reason: allowed ? undefined : 'Storage limit reached'
+      };
+    }
+
     return { allowed: false, reason: 'Unknown action' };
   } catch (error) {
     console.error('Error checking usage limit:', error);

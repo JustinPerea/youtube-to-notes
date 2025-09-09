@@ -108,8 +108,7 @@ export async function POST(req: NextRequest) {
               title: 'Cancel Subscription',
               description: 'Cancel your current subscription',
               action: 'cancel',
-              warning: 'Your subscription will remain active until the end of your current billing period',
-              url: '/api/polar/cancel-subscription'
+              warning: 'Your subscription will remain active until the end of your current billing period'
             },
             {
               title: 'Contact Support',

@@ -142,13 +142,7 @@ export default function ProfilePage() {
 
   // Handle billing option selection
   const handleBillingOption = async (option: any) => {
-    if (option.url) {
-      if (option.action === 'support') {
-        window.location.href = option.url;
-      } else {
-        window.open(option.url, '_blank');
-      }
-    } else if (option.action === 'cancel') {
+    if (option.action === 'cancel') {
       // Handle cancellation logic
       const confirmMessage = 'Are you sure you want to cancel your subscription?\n\n' + 
         (option.warning || '') + 
@@ -183,6 +177,12 @@ export default function ProfilePage() {
         } finally {
           setDeleteLoading(false);
         }
+      }
+    } else if (option.url) {
+      if (option.action === 'support') {
+        window.location.href = option.url;
+      } else {
+        window.open(option.url, '_blank');
       }
     }
     setShowBillingOptions(false);

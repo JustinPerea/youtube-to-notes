@@ -28,6 +28,8 @@ export default function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <meta name="google-adsense-account" content="ca-pub-4135776739187234" />
+        {/* AdSense verification script - always loaded for Google crawler */}
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4135776739187234" crossOrigin="anonymous"></script>
       </head>
       <body className={inter.className}>
         <AdSenseScript />

@@ -53,29 +53,18 @@ export function AdSenseScript() {
   }
 
   // 🔐 CRITICAL: Don't load AdSense script at all for paid users
-  if (!showAds) {
+  // TEMPORARY: Allow script loading for verification purposes
+  if (!showAds && process.env.NODE_ENV === 'production') {
     console.log('🔒 AdSenseScript: User is on paid tier, not loading ads');
     return null;
   }
 
-  console.log('✅ AdSenseScript: Loading AdSense script for free user');
+  console.log('✅ AdSenseScript: Configuring Auto Ads for free user');
   
   return (
     <>
-      {/* Main AdSense Script - Required for both manual and auto ads */}
-      <Script
-        id="adsense-main-script"
-        async
-        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-${ADSENSE_CONFIG.publisherId}`}
-        crossOrigin="anonymous"
-        strategy="beforeInteractive"
-        onLoad={() => {
-          console.log('🟢 AdSense script loaded successfully for free user');
-        }}
-        onError={(error) => {
-          console.error('❌ AdSense script failed to load:', error);
-        }}
-      />
+      {/* Note: Main AdSense script is loaded in layout.tsx for verification */}
+      {/* This component only handles Auto Ads configuration */}
 
       {/* Auto Ads Configuration - Let Google choose optimal placements */}
       <Script

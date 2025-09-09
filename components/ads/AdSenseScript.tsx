@@ -66,20 +66,8 @@ export function AdSenseScript() {
       {/* Note: Main AdSense script is loaded in layout.tsx for verification */}
       {/* This component only handles Auto Ads configuration */}
 
-      {/* Auto Ads Configuration - Let Google choose optimal placements */}
-      <Script
-        id="adsense-auto-ads-config"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `
-            (adsbygoogle = window.adsbygoogle || []).push({
-              google_ad_client: "ca-pub-${ADSENSE_CONFIG.publisherId}",
-              enable_page_level_ads: true
-            });
-            console.log('🤖 Auto Ads enabled for free user');
-          `,
-        }}
-      />
+      {/* Note: Auto Ads disabled to prevent conflicts with manual ad units */}
+      {/* Manual ad units are used throughout the site via AdBanner components */}
     </>
   );
 }

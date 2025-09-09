@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Accessibility Statement - Shiba Scribe',
-  description: 'Accessibility commitment and compliance information for Shiba Scribe.',
+  title: 'Accessibility Statement - Kyoto Scribe',
+  description: 'Accessibility commitment and compliance information for Kyoto Scribe.',
 }
 
 export default function AccessibilityStatementPage() {

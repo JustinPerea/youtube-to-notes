@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'DMCA Policy - Shiba Scribe',
-  description: 'Digital Millennium Copyright Act (DMCA) policy and procedures for Shiba Scribe.',
+  title: 'DMCA Policy - Kyoto Scribe',
+  description: 'Digital Millennium Copyright Act (DMCA) policy and procedures for Kyoto Scribe.',
 }
 
 export default function DMCAPolicyPage() {

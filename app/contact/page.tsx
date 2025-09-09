@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Contact Us - Shiba Scribe',
-  description: 'Get in touch with Shiba Scribe for support, feedback, or business inquiries.',
+  title: 'Contact Us - Kyoto Scribe',
+  description: 'Get in touch with Kyoto Scribe for support, feedback, or business inquiries.',
 }
 
 export default function ContactPage() {
@@ -129,7 +129,7 @@ export default function ContactPage() {
               <div className="space-y-4">
                 <div>
                   <h3 className="font-semibold text-slate-900 dark:text-white mb-1">Service Name</h3>
-                  <p className="text-slate-600 dark:text-slate-300">Shiba Scribe</p>
+                  <p className="text-slate-600 dark:text-slate-300">Kyoto Scribe</p>
                 </div>
                 
                 <div>

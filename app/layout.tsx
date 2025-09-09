@@ -6,6 +6,7 @@ import { ThemeProvider } from '../components/ui/ThemeProvider'
 import { Header } from '../components/Header'
 import { OnboardingWrapper } from '../components/OnboardingWrapper'
 import { AdSenseScript } from '../components/ads/AdSenseScript'
+import { CookieBanner } from '../components/CookieBanner'
 
 // Force dynamic rendering to prevent build issues
 export const dynamic = 'force-dynamic'
@@ -43,6 +44,7 @@ export default function RootLayout({
             </OnboardingWrapper>
           </AuthProvider>
         </ThemeProvider>
+        <CookieBanner />
       </body>
     </html>
   )

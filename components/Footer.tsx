@@ -75,12 +75,9 @@ export function Footer() {
           <a href="/terms" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             Terms of Service
           </a>
-          <span className="footer-link block text-[var(--text-muted)] text-sm mb-3 cursor-default">
+          <a href="/privacy/cookies" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
             Cookie Policy
-          </span>
-          <span className="text-xs text-[var(--text-muted)] italic">
-            Cookie Policy Coming Soon
-          </span>
+          </a>
         </div>
       </div>
     </footer>

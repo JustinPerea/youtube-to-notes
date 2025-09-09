@@ -62,6 +62,12 @@ export default function PrivacyPolicy() {
                     <li>Analyze usage patterns and improve our Service</li>
                     <li>Provide personalized content and recommendations</li>
                   </ul>
+                  <p className="mt-3">
+                    For detailed information about our use of cookies, please see our{' '}
+                    <a href="/privacy/cookies" className="text-blue-600 dark:text-blue-400 hover:underline">
+                      Cookie Policy
+                    </a>.
+                  </p>
                 </div>
               </div>
             </section>

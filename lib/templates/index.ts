@@ -2,7 +2,7 @@
  * Template System for YouTube-to-Notes
  * 
  * Defines different content formats that users can choose from
- * Each template contains a curated prompt for Gemini 2.5
+ * Each template contains a curated prompt for Gemini AI models
  */
 
 /**

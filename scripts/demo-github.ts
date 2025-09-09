@@ -157,7 +157,7 @@ Ready for production deployment! 🚀`
 - TypeScript for type safety
 - Tailwind CSS for styling
 - Supabase for backend
-- Gemini 2.5 Flash API integration
+- Gemini AI models integration
 
 ## 🧪 Testing & Quality
 - Comprehensive agent workflow tests

@@ -146,7 +146,7 @@ class ProjectMemoryManager implements MemoryContext {
           'TypeScript',
           'Tailwind CSS',
           'Supabase',
-          'Gemini 2.5 Flash API',
+          'Gemini AI models',
           'NextAuth.js',
           'Zustand'
         ],

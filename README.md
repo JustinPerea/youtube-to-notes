@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-YouTube-to-Notes is an AI-powered web application that converts YouTube videos into various content formats using Gemini 2.5 Flash API. The application processes video content and generates summaries, study guides, presentations, and tutorials based on curated templates.
+YouTube-to-Notes is an AI-powered web application that converts YouTube videos into various content formats using Google's Gemini AI models (2.0 Flash and 1.5 Flash). The application processes video content and generates summaries, study guides, presentations, and tutorials based on curated templates.
 
 ## Agent Workflow System
 
@@ -28,7 +28,7 @@ This project uses a sophisticated multi-agent workflow for development:
 ## Phase 1 MVP Features
 
 ### Core Functionality
-- ✅ YouTube URL processing with Gemini 2.5 Flash
+- ✅ YouTube URL processing with Gemini AI models
 - ✅ Template-based content generation (no AI chat)
 - ✅ Basic summary generation
 - ✅ Simple web interface
@@ -55,7 +55,7 @@ This project uses a sophisticated multi-agent workflow for development:
 - **Runtime**: Node.js 18+
 - **Framework**: Next.js API routes
 - **Database**: Supabase (PostgreSQL)
-- **AI Integration**: Google Gemini 2.5 Flash API
+- **AI Integration**: Google Gemini AI models (2.0 Flash, 1.5 Flash)
 - **Queue System**: Bull/BullMQ (Redis)
 - **File Storage**: Supabase Storage
 

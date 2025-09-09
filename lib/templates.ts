@@ -2,7 +2,7 @@
  * Content Generation Templates for YouTube-to-Notes
  * 
  * These templates define how video content is processed and transformed
- * using the Gemini 2.5 Flash API. Each template includes specialized prompts
+ * using Google's Gemini AI models. Each template includes specialized prompts
  * optimized for different output formats.
  */
 

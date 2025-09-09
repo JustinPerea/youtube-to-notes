@@ -89,7 +89,7 @@ async function startDevelopment() {
     const apiTask = await coordinatorAgent.processTask({
       id: 'video-processing-api',
       type: 'backend',
-      description: 'Create API endpoints for video processing using Gemini 2.5 Flash API',
+      description: 'Create API endpoints for video processing using Gemini AI models',
       requirements: [
         'Video URL validation',
         'Gemini API integration',

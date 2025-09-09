@@ -150,7 +150,7 @@ export default function About() {
                     Powered by Advanced AI
                   </h2>
                   <p className="text-lg text-[var(--text-secondary)] leading-relaxed mb-6">
-                    Kyoto Scribe leverages Google's Gemini 2.5 Flash, one of the most advanced AI models available, 
+                    Kyoto Scribe leverages Google's Gemini AI models, including the latest 2.0 Flash and reliable 1.5 Flash, 
                     to understand and process video content with remarkable accuracy and insight.
                   </p>
                   

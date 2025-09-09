@@ -43,7 +43,7 @@ This project uses a sophisticated agent-based development workflow with speciali
 ### Core Technology Stack
 - **Frontend**: Next.js 14 App Router, React 18, Tailwind CSS, Shadcn/ui
 - **Backend**: Next.js API routes, Drizzle ORM, PostgreSQL (Supabase)
-- **AI Integration**: Google Gemini 2.5 Flash API (`lib/gemini/client.ts`)
+- **AI Integration**: Google Gemini AI models (`lib/gemini/client.ts`)
 - **Authentication**: NextAuth.js v5 with OAuth
 - **Database**: Supabase PostgreSQL with comprehensive schema (`lib/db/schema.ts`)
 - **Queue System**: BullMQ with Redis for video processing
@@ -68,7 +68,7 @@ The application uses a comprehensive PostgreSQL schema with tables for:
 ### Video Processing Workflow
 1. User submits YouTube URL with selected template
 2. Request queued via `GeminiClient` (`lib/gemini/client.ts`)
-3. Video processed using Gemini 2.5 Flash API
+3. Video processed using Gemini AI models
 4. Results stored in database with cost tracking
 5. Content available for export in multiple formats
 

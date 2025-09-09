@@ -1,7 +1,7 @@
 /**
  * Gemini API Client for YouTube-to-Notes
  * 
- * Handles video processing and content generation using Google's Gemini 2.5 Flash API
+ * Handles video processing and content generation using Google's Gemini AI models
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';

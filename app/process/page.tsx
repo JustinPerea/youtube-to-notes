@@ -151,7 +151,7 @@ export default function ProcessPage() {
                   </span>
                 </button>
                 <p className="text-sm text-[var(--text-muted)] mt-3">
-                  Get started for free with 5 videos per month
+                  Get started for free with 5 notes per month
                 </p>
               </div>
             )}

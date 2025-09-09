@@ -783,7 +783,7 @@ export async function POST(request: NextRequest) {
           status: 429,
           headers: {
             'Retry-After': rateLimitResult.retryAfter?.toString() || '3600',
-            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Limit': '50',
             'X-RateLimit-Remaining': '0',
             'X-RateLimit-Reset': new Date(Date.now() + (rateLimitResult.retryAfter || 3600) * 1000).toISOString()
           }

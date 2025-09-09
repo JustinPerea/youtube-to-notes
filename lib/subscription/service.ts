@@ -154,12 +154,12 @@ export async function getUserUsage(userId: string): Promise<UsageData | null> {
         storageUsedMb: 0,
         
         // Limits
-        videoLimit: limits.videosPerMonth,
+        videoLimit: limits.notesPerMonth,
         aiQuestionLimit: limits.aiQuestionsPerMonth,
         storageLimitMb: limits.storageGB * 1024,
         
         // Status checks
-        canProcessVideo: limits.videosPerMonth === -1 || 0 < limits.videosPerMonth,
+        canProcessVideo: limits.notesPerMonth === -1 || 0 < limits.notesPerMonth,
         canUseAI: limits.aiQuestionsPerMonth !== 0 && 
                   (limits.aiQuestionsPerMonth === -1 || 0 < limits.aiQuestionsPerMonth),
         canUseStorage: 0 < (limits.storageGB * 1024),
@@ -197,12 +197,12 @@ export async function getUserUsage(userId: string): Promise<UsageData | null> {
       storageUsedMb: usage?.storageUsedMb || 0,
       
       // Limits
-      videoLimit: limits.videosPerMonth,
+      videoLimit: limits.notesPerMonth,
       aiQuestionLimit: limits.aiQuestionsPerMonth,
       storageLimitMb: limits.storageGB * 1024,
       
       // Status checks
-      canProcessVideo: limits.videosPerMonth === -1 || (usage?.videosProcessed || 0) < limits.videosPerMonth,
+      canProcessVideo: limits.notesPerMonth === -1 || (usage?.videosProcessed || 0) < limits.notesPerMonth,
       canUseAI: limits.aiQuestionsPerMonth !== 0 && 
                 (limits.aiQuestionsPerMonth === -1 || (usage?.aiQuestionsAsked || 0) < limits.aiQuestionsPerMonth),
       canUseStorage: (usage?.storageUsedMb || 0) < (limits.storageGB * 1024),
@@ -268,7 +268,7 @@ export async function checkUsageLimit(
       console.log('📝 Creating new usage record:', {
         userId,
         monthYear: currentMonth,
-        videosLimit: limits.videosPerMonth,
+        videosLimit: limits.notesPerMonth,
         aiQuestionsLimit: limits.aiQuestionsPerMonth,
         storageLimitMB,
         subscriptionTier: subscription.tier
@@ -279,7 +279,7 @@ export async function checkUsageLimit(
         .values({
           userId,
           monthYear: currentMonth,
-          videosLimit: limits.videosPerMonth,
+          videosLimit: limits.notesPerMonth,
           aiQuestionsLimit: limits.aiQuestionsPerMonth,
           storageLimitMb: storageLimitMB,
           subscriptionTier: subscription.tier,
@@ -305,20 +305,20 @@ export async function checkUsageLimit(
       // Update limits if subscription changed
       console.log('💾 Current usage record:', {
         currentVideosLimit: currentUsage.videosLimit,
-        newVideosLimit: limits.videosPerMonth,
+        newVideosLimit: limits.notesPerMonth,
         currentAiLimit: currentUsage.aiQuestionsLimit,
         newAiLimit: limits.aiQuestionsPerMonth,
-        needsUpdate: currentUsage.videosLimit !== limits.videosPerMonth || 
+        needsUpdate: currentUsage.videosLimit !== limits.notesPerMonth || 
                     currentUsage.aiQuestionsLimit !== limits.aiQuestionsPerMonth
       });
 
-      if (currentUsage.videosLimit !== limits.videosPerMonth || 
+      if (currentUsage.videosLimit !== limits.notesPerMonth || 
           currentUsage.aiQuestionsLimit !== limits.aiQuestionsPerMonth) {
         
         console.log('🔄 Updating usage limits from', 
           { videos: currentUsage.videosLimit, ai: currentUsage.aiQuestionsLimit }, 
           'to', 
-          { videos: limits.videosPerMonth, ai: limits.aiQuestionsPerMonth }
+          { videos: limits.notesPerMonth, ai: limits.aiQuestionsPerMonth }
         );
 
         const storageLimitMB = Math.round(limits.storageGB * 1024);
@@ -326,7 +326,7 @@ export async function checkUsageLimit(
         await db
           .update(userMonthlyUsage)
           .set({
-            videosLimit: limits.videosPerMonth,
+            videosLimit: limits.notesPerMonth,
             aiQuestionsLimit: limits.aiQuestionsPerMonth,
             storageLimitMb: storageLimitMB,
             subscriptionTier: subscription.tier,
@@ -334,7 +334,7 @@ export async function checkUsageLimit(
           })
           .where(eq(userMonthlyUsage.id, currentUsage.id));
 
-        currentUsage.videosLimit = limits.videosPerMonth;
+        currentUsage.videosLimit = limits.notesPerMonth;
         currentUsage.aiQuestionsLimit = limits.aiQuestionsPerMonth;
         
         console.log('✅ Updated usage limits successfully');
@@ -485,7 +485,7 @@ export async function incrementUsage(
         .values({
           userId,
           monthYear: currentMonth,
-          videosLimit: limits.videosPerMonth,
+          videosLimit: limits.notesPerMonth,
           aiQuestionsLimit: limits.aiQuestionsPerMonth,
           storageLimitMb: storageLimitMB,
           subscriptionTier: subscription.tier,
@@ -502,14 +502,14 @@ export async function incrementUsage(
     const subscription = await getUserSubscription(userId);
     if (subscription) {
       const limits = SUBSCRIPTION_LIMITS[subscription.tier];
-      if (currentUsage.videosLimit !== limits.videosPerMonth || 
+      if (currentUsage.videosLimit !== limits.notesPerMonth || 
           currentUsage.aiQuestionsLimit !== limits.aiQuestionsPerMonth) {
         const storageLimitMB = Math.round(limits.storageGB * 1024);
         
         await db
           .update(userMonthlyUsage)
           .set({
-            videosLimit: limits.videosPerMonth,
+            videosLimit: limits.notesPerMonth,
             aiQuestionsLimit: limits.aiQuestionsPerMonth,
             storageLimitMb: storageLimitMB,
             subscriptionTier: subscription.tier,
@@ -773,7 +773,7 @@ export async function reserveUsage(
         await tx.insert(userMonthlyUsage).values({
           userId,
           monthYear: currentMonth,
-          videosLimit: limits.videosPerMonth,
+          videosLimit: limits.notesPerMonth,
           aiQuestionsLimit: limits.aiQuestionsPerMonth,
           storageLimitMb: storageLimitMB,
           subscriptionTier: subscription.tier,
@@ -800,7 +800,7 @@ export async function reserveUsage(
       // Check limits and atomically increment
       switch (action) {
         case 'generate_note':
-          const videoLimit = limits.videosPerMonth;
+          const videoLimit = limits.notesPerMonth;
           const currentVideos = currentUsage.videosProcessed || 0;
           
           if (videoLimit !== -1 && currentVideos + amount > videoLimit) {

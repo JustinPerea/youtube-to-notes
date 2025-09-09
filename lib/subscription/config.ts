@@ -6,8 +6,8 @@
 export type SubscriptionTier = 'free' | 'basic' | 'pro';
 
 export interface TierLimits {
-  // Video Processing
-  videosPerMonth: number; // -1 = unlimited
+  // Note Generation
+  notesPerMonth: number; // -1 = unlimited
   
   // AI Chat
   aiQuestionsPerMonth: number; // -1 = unlimited, 0 = disabled
@@ -32,7 +32,7 @@ export interface TierLimits {
 
 export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, TierLimits> = {
   free: {
-    videosPerMonth: 5,
+    notesPerMonth: 5,
     aiQuestionsPerMonth: 0, // No AI chat
     storageGB: 0.1, // 100MB
     availableFormats: ['basic_summary'],
@@ -44,7 +44,7 @@ export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, TierLimits> = {
   },
   
   basic: {
-    videosPerMonth: 100, // 100 notes per month
+    notesPerMonth: 100, // 100 notes per month
     aiQuestionsPerMonth: 10,
     storageGB: 5,
     availableFormats: ['basic_summary', 'study_notes', 'presentation_slides'],
@@ -56,7 +56,7 @@ export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, TierLimits> = {
   },
   
   pro: {
-    videosPerMonth: -1, // Unlimited
+    notesPerMonth: -1, // Unlimited
     aiQuestionsPerMonth: -1, // Unlimited
     storageGB: 50,
     availableFormats: ['basic_summary', 'study_notes', 'presentation_slides', 'tutorial_guide', 'quick_reference'],
@@ -78,7 +78,7 @@ export function hasFeatureAccess(tier: SubscriptionTier, feature: string): boole
     case 'unlimited_ai_chat':
       return limits.aiQuestionsPerMonth === -1;
     case 'unlimited_notes':
-      return limits.videosPerMonth === -1;
+      return limits.notesPerMonth === -1;
     case 'priority_processing':
       return limits.processingSpeed === 'priority';
     case 'advanced_exports':
@@ -103,7 +103,7 @@ export function checkLimit(tier: SubscriptionTier, usage: number, limitType: 'vi
   
   switch (limitType) {
     case 'videos':
-      limit = limits.videosPerMonth;
+      limit = limits.notesPerMonth;
       break;
     case 'ai_questions':
       limit = limits.aiQuestionsPerMonth;
@@ -147,10 +147,10 @@ function generateFeatureList(tier: SubscriptionTier): string[] {
   const features: string[] = [];
   
   // Videos
-  if (limits.videosPerMonth === -1) {
+  if (limits.notesPerMonth === -1) {
     features.push('Unlimited notes');
   } else {
-    features.push(`${limits.videosPerMonth} notes per month`);
+    features.push(`${limits.notesPerMonth} notes per month`);
   }
   
   // AI Chat

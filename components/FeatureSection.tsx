@@ -77,8 +77,8 @@ export function FeatureSection() {
               Ready to Transform Your Videos?
             </h3>
             <p className="text-gray-100 mb-6">
-              Start converting YouTube videos into smart content today. Free tier includes 5 videos per month. 
-              <span className="text-kyoto-pink font-semibold"> Upgrade for UNLIMITED videos!</span>
+              Start converting YouTube videos into smart content today. Free tier includes 5 notes per month. 
+              <span className="text-kyoto-pink font-semibold"> Upgrade for UNLIMITED notes!</span>
             </p>
                           <button 
               onClick={() => document.getElementById('video-upload')?.scrollIntoView({ behavior: 'smooth' })}

@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
       message: `Subscription override set to ${tier}${expiresInHours ? ` for ${expiresInHours} hours` : ''}`,
       subscription,
       limits: {
-        videosPerMonth: limits.videosPerMonth === -1 ? 'unlimited' : limits.videosPerMonth,
+        notesPerMonth: limits.notesPerMonth === -1 ? 'unlimited' : limits.notesPerMonth,
         aiQuestionsPerMonth: limits.aiQuestionsPerMonth === -1 ? 'unlimited' : limits.aiQuestionsPerMonth,
         storageGB: limits.storageGB,
         availableFormats: limits.availableFormats,
@@ -270,7 +270,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       subscription,
       limits: {
-        videosPerMonth: limits.videosPerMonth === -1 ? 'unlimited' : limits.videosPerMonth,
+        notesPerMonth: limits.notesPerMonth === -1 ? 'unlimited' : limits.notesPerMonth,
         aiQuestionsPerMonth: limits.aiQuestionsPerMonth === -1 ? 'unlimited' : limits.aiQuestionsPerMonth,
         storageGB: limits.storageGB,
         availableFormats: limits.availableFormats,

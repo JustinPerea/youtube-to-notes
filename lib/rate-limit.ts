@@ -76,7 +76,7 @@ export const authRateLimiter = new RateLimiter({
 
 export const videoProcessingRateLimiter = new RateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 10 // 10 video processing requests per hour
+  maxRequests: 50 // 50 video processing requests per hour
 });
 
 // Helper function to get client identifier

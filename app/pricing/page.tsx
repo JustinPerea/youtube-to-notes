@@ -53,7 +53,7 @@ export default function Pricing() {
               <div className="faq-item bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">What's included in the Free plan?</h3>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  The Free plan includes 5 videos per month with Basic Summary format, PDF export with watermark, 
+                  The Free plan includes 5 notes per month with Basic Summary format, PDF export with watermark, 
                   100MB storage, and community support. Perfect for trying out our service.
                 </p>
               </div>
@@ -69,7 +69,7 @@ export default function Pricing() {
               <div className="faq-item bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">What does "unlimited videos" mean?</h3>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  With Student and Pro plans, you can process as many YouTube videos as you want each month. 
+                  With Student and Pro plans, you can generate as many notes as you want each month. 
                   No caps, no restrictions - perfect for heavy learners and professionals.
                 </p>
               </div>

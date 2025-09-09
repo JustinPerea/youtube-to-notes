@@ -62,19 +62,19 @@ export const EDUCATIONAL_DISCOUNT = {
 // Usage limits for each tier
 export const USAGE_LIMITS = {
   free: {
-    videosPerMonth: 5, // Actually means "notes per month" for free tier
+    notesPerMonth: 5, // 5 notes per month for free tier
     storageGB: 0.1, // 100MB
     formats: ['basic_summary', 'study_notes', 'presentation_slides', 'pdf_export'],
     watermark: true
   },
   basic: {
-    videosPerMonth: 100, // 100 notes per month
+    notesPerMonth: 100, // 100 notes per month
     storageGB: 5,
     formats: ['basic_summary', 'study_notes', 'presentation_slides', 'pdf_export', 'markdown', 'html'],
     watermark: false
   },
   pro: {
-    videosPerMonth: -1, // unlimited
+    notesPerMonth: -1, // unlimited
     storageGB: 50,
     formats: ['all'],
     watermark: false

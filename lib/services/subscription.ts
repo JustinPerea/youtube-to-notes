@@ -295,7 +295,7 @@ export async function reserveUsage(
       // Check limits
       switch (action) {
         case 'generate_note':
-          if (limits.videosPerMonth !== -1 && currentUsage + amount > limits.videosPerMonth) {
+          if (limits.notesPerMonth !== -1 && currentUsage + amount > limits.notesPerMonth) {
             throw new Error('Monthly note generation limit would be exceeded');
           }
           
@@ -386,14 +386,14 @@ export async function checkUsageLimit(
     
     switch (action) {
       case 'generate_note':
-        if (limits.videosPerMonth === -1) {
+        if (limits.notesPerMonth === -1) {
           return { allowed: true }; // Unlimited
         }
-        const noteAllowed = usage.notesGenerated < limits.videosPerMonth;
+        const noteAllowed = usage.notesGenerated < limits.notesPerMonth;
         return {
           allowed: noteAllowed,
           reason: noteAllowed ? undefined : 'Monthly note generation limit reached',
-          limit: limits.videosPerMonth,
+          limit: limits.notesPerMonth,
           current: usage.notesGenerated,
         };
 

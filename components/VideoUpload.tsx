@@ -279,8 +279,8 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
       {!videoInfo && (
         <div className="mt-6 text-center text-sm text-gray-400">
           <p>Paste any YouTube video URL to get started</p>
-          <p className="mt-1">Free tier: 5 videos per month</p>
-          <p className="mt-1 text-xs text-[var(--accent-pink)]">Upgrade for UNLIMITED videos</p>
+          <p className="mt-1">Free tier: 5 notes per month</p>
+          <p className="mt-1 text-xs text-[var(--accent-pink)]">Upgrade for UNLIMITED notes</p>
         </div>
       )}
 

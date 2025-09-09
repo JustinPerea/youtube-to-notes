@@ -33,8 +33,26 @@ interface UsageData {
   resetDate: Date;
 }
 
-interface BillingPortalResponse {
-  url: string;
+interface BillingManagementResponse {
+  type: 'upgrade' | 'manage' | 'limited';
+  url?: string;
+  message?: string;
+  options?: Array<{
+    title: string;
+    description: string;
+    action: string;
+    url?: string;
+    warning?: string;
+  }>;
+  subscriptionDetails?: {
+    tier: string;
+    status: string;
+    provider: string;
+    currentPeriodStart?: Date;
+    currentPeriodEnd?: Date;
+    polarSubscriptionId?: string;
+    polarCustomerId?: string;
+  };
 }
 
 export default function ProfilePage() {
@@ -43,6 +61,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [showBillingOptions, setShowBillingOptions] = useState(false);
+  const [billingOptions, setBillingOptions] = useState<BillingManagementResponse | null>(null);
 
   // Fetch user usage data
   useEffect(() => {
@@ -79,13 +99,13 @@ export default function ProfilePage() {
     }
   }, [session, status]);
 
-  // Handle billing portal redirect
+  // Handle billing management options
   const handleManageBilling = async () => {
     if (!session?.user) return;
 
     try {
       setBillingLoading(true);
-      const response = await fetch('/api/create-portal-session', {
+      const response = await fetch('/api/polar/billing-portal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,18 +113,43 @@ export default function ProfilePage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create billing portal session');
+        throw new Error('Failed to get billing management options');
       }
 
-      const data: BillingPortalResponse = await response.json();
+      const data: BillingManagementResponse = await response.json();
       
-      // Redirect to Stripe billing portal
-      window.location.href = data.url;
+      if (data.type === 'upgrade' && data.url) {
+        // Direct redirect for free users
+        window.location.href = data.url;
+      } else {
+        // Show billing options modal for paid users
+        setBillingOptions(data);
+        setShowBillingOptions(true);
+      }
     } catch (err) {
-      console.error('Error creating billing portal session:', err);
-      setError('Failed to open billing portal');
+      console.error('Error getting billing management options:', err);
+      setError('Failed to open billing management');
+    } finally {
       setBillingLoading(false);
     }
+  };
+
+  // Handle billing option selection
+  const handleBillingOption = (option: any) => {
+    if (option.url) {
+      if (option.action === 'support') {
+        window.location.href = option.url;
+      } else {
+        window.open(option.url, '_blank');
+      }
+    } else if (option.action === 'cancel') {
+      // Handle cancellation logic
+      if (confirm('Are you sure you want to cancel your subscription? ' + (option.warning || ''))) {
+        // You could create a cancellation endpoint here
+        alert('Please contact support@kyotoscribe.com to cancel your subscription.');
+      }
+    }
+    setShowBillingOptions(false);
   };
 
   // Redirect to sign-in if not authenticated
@@ -180,6 +225,15 @@ export default function ProfilePage() {
         {/* Footer */}
         <Footer />
       </div>
+
+      {/* Billing Options Modal */}
+      {showBillingOptions && billingOptions && (
+        <BillingOptionsModal
+          options={billingOptions}
+          onClose={() => setShowBillingOptions(false)}
+          onSelect={handleBillingOption}
+        />
+      )}
     </div>
   );
 }
@@ -638,6 +692,129 @@ function AccountSettingsCard() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Billing Options Modal Component
+function BillingOptionsModal({ 
+  options, 
+  onClose, 
+  onSelect 
+}: { 
+  options: BillingManagementResponse; 
+  onClose: () => void; 
+  onSelect: (option: any) => void;
+}) {
+  return (
+    <div className="billing-modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="billing-modal-content bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+        {/* Modal Header */}
+        <div className="modal-header border-b border-gray-200 p-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-bold text-gray-900">
+              {options.type === 'manage' ? 'Manage Subscription' : 'Billing Management'}
+            </h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          {options.message && (
+            <p className="text-gray-600 mt-2">{options.message}</p>
+          )}
+        </div>
+
+        {/* Modal Body */}
+        <div className="modal-body p-6">
+          {/* Subscription Details */}
+          {options.subscriptionDetails && (
+            <div className="subscription-details mb-6 p-4 bg-gray-50 rounded-xl">
+              <h4 className="font-semibold text-gray-900 mb-3">Current Subscription</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Plan:</span>
+                  <span className="font-medium text-gray-900 capitalize">
+                    {options.subscriptionDetails.tier}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Status:</span>
+                  <span className="font-medium text-gray-900 capitalize">
+                    {options.subscriptionDetails.status}
+                  </span>
+                </div>
+                {options.subscriptionDetails.currentPeriodEnd && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Next billing:</span>
+                    <span className="font-medium text-gray-900">
+                      {new Date(options.subscriptionDetails.currentPeriodEnd).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Provider:</span>
+                  <span className="font-medium text-gray-900 capitalize">
+                    {options.subscriptionDetails.provider}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Billing Options */}
+          {options.options && options.options.length > 0 && (
+            <div className="billing-options space-y-3">
+              <h4 className="font-semibold text-gray-900 mb-3">Available Actions</h4>
+              {options.options.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => onSelect(option)}
+                  className={`billing-option-btn w-full text-left p-4 rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] ${
+                    option.action === 'cancel' 
+                      ? 'border-red-200 bg-red-50 hover:border-red-300 hover:bg-red-100'
+                      : 'border-gray-200 bg-gray-50 hover:border-[var(--accent-pink)] hover:bg-[var(--accent-pink-soft)]'
+                  }`}
+                >
+                  <div className="option-content">
+                    <h5 className={`font-semibold mb-1 ${
+                      option.action === 'cancel' ? 'text-red-800' : 'text-gray-900'
+                    }`}>
+                      {option.title}
+                    </h5>
+                    <p className={`text-sm ${
+                      option.action === 'cancel' ? 'text-red-600' : 'text-gray-600'
+                    }`}>
+                      {option.description}
+                    </p>
+                    {option.warning && (
+                      <p className="text-xs text-orange-600 mt-2 font-medium">
+                        ⚠️ {option.warning}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="modal-footer border-t border-gray-200 p-6">
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>

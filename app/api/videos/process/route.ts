@@ -190,6 +190,16 @@ REQUIRED BASIC SUMMARY STRUCTURE (Dynamic scaling based on video length):
 ${dynamicPrompt}`;
 
       case 'tutorial-guide':
+        // Use the enhanced template for tutorial guides with clickable timestamps
+        const tutorialPrompt = getTemplatePrompt(template, durationSeconds, verbosityLevel as VerbosityLevel, detectedDomain, videoUrl);
+        return `
+REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY CLICKABLE TIMESTAMPS:
+
+🚨🚨🚨 CRITICAL: ALL timestamps MUST be clickable YouTube links using format [MM:SS](url&t=XXXs) 🚨🚨🚨
+
+${tutorialPrompt}`;
+
+      case 'tutorial-guide-fallback': // Keep old version as fallback
         return `
 REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY TIMESTAMPS:
 

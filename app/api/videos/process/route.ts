@@ -191,7 +191,8 @@ ${dynamicPrompt}`;
 
       case 'tutorial-guide':
         // Use the enhanced template for tutorial guides with clickable timestamps
-        const tutorialPrompt = getTemplatePrompt(template, durationSeconds, verbosityLevel as VerbosityLevel, detectedDomain, videoUrl);
+        // Use default values since we don't have verbosityLevel and detectedDomain in this scope
+        const tutorialPrompt = getTemplatePrompt(template, durationSeconds, 'standard', 'general', videoUrl);
         return `
 REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY CLICKABLE TIMESTAMPS:
 

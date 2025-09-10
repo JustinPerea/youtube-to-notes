@@ -740,16 +740,16 @@ export function getTemplatePrompt(
   videoUrl?: string
 ): string {
   if (typeof template.prompt === 'function') {
-    // Check if the function supports domain detection (has 4 parameters including videoUrl)
-    if (template.supportsDomainDetection && template.prompt.length >= 4) {
+    // For tutorial-guide template, always use the full 4-parameter signature with videoUrl
+    if (template.id === 'tutorial-guide' && template.supportsDomainDetection) {
       return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
     }
-    // Check if the function supports domain detection (has 3 parameters)
-    else if (template.supportsDomainDetection && template.prompt.length >= 3) {
+    // Check if the function supports domain detection (fallback without videoUrl)
+    else if (template.supportsDomainDetection) {
       return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string)(durationSeconds, verbosity, domain);
     }
-    // Check if the function supports verbosity (has 2 parameters)
-    else if (template.supportsVerbosity && template.prompt.length >= 2) {
+    // Check if the function supports verbosity
+    else if (template.supportsVerbosity) {
       return (template.prompt as (duration?: number, verbosity?: VerbosityLevel) => string)(durationSeconds, verbosity);
     }
     // Otherwise call with just duration

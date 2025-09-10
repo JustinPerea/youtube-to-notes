@@ -48,7 +48,12 @@ function getTemplatePrompt(template: Template, durationSeconds?: number, verbosi
     // Check if the function supports domain detection and try to call with all parameters
     if ((template as any).supportsDomainDetection) {
       try {
-        return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
+        // For tutorial-guide template, always try with videoUrl first
+        if (template.id === 'tutorial-guide') {
+          return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
+        }
+        // For other templates, use 3-parameter version
+        return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string)(durationSeconds, verbosity, domain);
       } catch (error) {
         console.warn('Domain detection call failed, falling back to verbosity only:', error);
       }

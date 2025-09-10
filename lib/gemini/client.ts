@@ -77,7 +77,7 @@ export class GeminiClient {
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 16384, // Increased for comprehensive tutorials with timestamps
         },
       });
     });

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TEMPLATES } from '../../lib/templates/index';
+import { useSubscription } from '../../hooks/useSubscription';
 
 interface FormatCardsProps {
   selectedTemplates: string[];
@@ -9,8 +10,15 @@ interface FormatCardsProps {
 }
 
 export function FormatCards({ selectedTemplates, onTemplateToggle }: FormatCardsProps) {
-  // Use the same templates that are available in the free tier
-  const availableFormats = TEMPLATES.filter(template => !template.isPremium).slice(0, 4);
+  const { tier, isPro } = useSubscription();
+  
+  // Show templates based on user's subscription tier
+  const availableFormats = TEMPLATES.filter(template => {
+    // Show free templates to everyone
+    if (!template.isPremium) return true;
+    // Show premium templates only to Pro users
+    return isPro;
+  }).slice(0, 5); // Allow up to 5 templates now (including premium)
   
   // Map templates to the format expected by the design
   const formatCards = availableFormats.map(template => ({
@@ -21,7 +29,7 @@ export function FormatCards({ selectedTemplates, onTemplateToggle }: FormatCards
   }));
 
   return (
-    <div className="format-grid grid grid-cols-2 md:grid-cols-4 gap-4 max-w-[700px] mx-auto mb-10">
+    <div className="format-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-[900px] mx-auto mb-10">
       {formatCards.map((format) => (
         <div
           key={format.id}

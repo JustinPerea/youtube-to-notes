@@ -114,13 +114,14 @@ export function detectTutorialDomain(metadata: VideoMetadata): TutorialDomain {
 }
 
 /**
- * Generate tutorial guide with verbosity and domain-specific adaptations
- * Implements research-backed 3-level system for enhanced engagement
+ * Generate tutorial guide with verbosity, domain-specific adaptations, and timestamp support
+ * Implements research-backed 3-level system for enhanced engagement with clickable timestamps
  */
 function generateTutorialGuidePrompt(
   durationSeconds: number = 600, 
   verbosity: VerbosityLevel = 'standard',
-  domain: TutorialDomain = 'general'
+  domain: TutorialDomain = 'general',
+  videoUrl?: string
 ): string {
   // Verbosity configurations based on research
   const verbosityConfigs = {
@@ -196,7 +197,24 @@ function generateTutorialGuidePrompt(
 
   const adaptation = domainAdaptations[domain];
 
-  return `Transform this YouTube video into a ${verbosity}-level ${domain} tutorial guide (${config.contentReduction}). Structure it as a practical, step-by-step instruction manual optimized for ${domain} content:
+  // Timestamp instructions for Gemini
+  const timestampInstructions = videoUrl ? `
+
+TIMESTAMP INTEGRATION INSTRUCTIONS:
+- When referencing specific parts of the video, include clickable timestamps in format: [MM:SS](${videoUrl}&t=XXXs)
+- Identify key moments and section boundaries from the transcript
+- Add timestamps for:
+  * Each major step or section
+  * Important demonstrations or examples  
+  * Key concepts or insights
+  * Problem-solving moments
+- Use format: **[MM:SS] Section Title** for major headings
+- For inline references: "As shown at [MM:SS](timestamp_url), the technique involves..."
+- Maximum 15-20 timestamps per tutorial to avoid overwhelm
+
+` : '';
+
+  return `Transform this YouTube video into a ${verbosity}-level ${domain} tutorial guide (${config.contentReduction}). Structure it as a practical, step-by-step instruction manual optimized for ${domain} content:${timestampInstructions}
 
 # Tutorial Guide: [Topic from Video]
 
@@ -234,7 +252,7 @@ ${verbosity === 'concise'
 
 ## 📝 Step-by-Step Instructions
 
-### Step 1: [First Step Title]
+### **[MM:SS]** Step 1: [First Step Title]
 **Objective**: ${verbosity === 'comprehensive' ? 'Detailed explanation of what this step accomplishes and why it\'s important in the overall process' : 'Brief explanation of what this step accomplishes'}
 
 **Instructions**:
@@ -245,7 +263,7 @@ ${verbosity !== 'concise' ? '3. [Specific action 3]' : ''}
 
 ${verbosity === 'comprehensive' ? '**Why This Matters**: [Detailed explanation of the reasoning behind this step]\n\n**Common Variations**: [Alternative approaches and when to use them]\n\n' : ''}**Tips**: [${verbosity === 'comprehensive' ? 'Comprehensive' : 'Helpful'} hints or warnings]
 
-${verbosity === 'comprehensive' ? '**Expected Result**: [Detailed description of what you should see/achieve]\n\n' : ''}### Step 2: [Second Step Title]
+${verbosity === 'comprehensive' ? '**Expected Result**: [Detailed description of what you should see/achieve]\n\n' : ''}### **[MM:SS]** Step 2: [Second Step Title]
 **Objective**: ${verbosity === 'comprehensive' ? 'Comprehensive explanation of step purpose, dependencies, and impact' : 'Brief explanation of what this step accomplishes'}
 
 **Instructions**:
@@ -297,7 +315,16 @@ ${verbosity === 'comprehensive' ? 'Comprehensive skill development:' : 'Build yo
 ${verbosity !== 'concise' ? `- **Intermediate**: [More challenging ${adaptation.practiceType}]` : ''}
 ${verbosity === 'comprehensive' ? `- **Advanced**: [Complex ${adaptation.practiceType} with multiple components]` : ''}
 
-Generate content with ${config.contentReduction}, using ${config.sectionDepth} throughout. Focus on ${domain}-specific ${adaptation.terminology}. Ensure ${adaptation.stepFormat.toLowerCase()} and provide ${config.exampleCount} where relevant.`;
+## 🎯 Quick Navigation${videoUrl ? ' (Clickable Timestamps)' : ''}
+${videoUrl ? 'Click any timestamp below to jump directly to that part of the video:' : 'Key sections identified in the tutorial:'}
+
+- **[MM:SS]** [Section 1 Title] - [Brief description]
+- **[MM:SS]** [Section 2 Title] - [Brief description] 
+- **[MM:SS]** [Section 3 Title] - [Brief description]
+${verbosity !== 'concise' ? '- **[MM:SS]** [Section 4 Title] - [Brief description]' : ''}
+${verbosity === 'comprehensive' ? '- **[MM:SS]** [Section 5 Title] - [Brief description]\n- **[MM:SS]** [Section 6 Title] - [Brief description]' : ''}
+
+Generate content with ${config.contentReduction}, using ${config.sectionDepth} throughout. Focus on ${domain}-specific ${adaptation.terminology}. Ensure ${adaptation.stepFormat.toLowerCase()} and provide ${config.exampleCount} where relevant. Include clickable timestamps throughout the content using the format specified above.`;
 }
 
 /**
@@ -367,7 +394,7 @@ export interface Template {
   category: 'summary' | 'educational' | 'professional' | 'creative';
   icon: string;
   color: string;
-  prompt: string | ((durationSeconds?: number) => string) | ((durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string);
+  prompt: string | ((durationSeconds?: number) => string) | ((durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string);
   outputFormat: 'markdown' | 'html' | 'json' | 'text';
   features: string[];
   limitations: string[];
@@ -709,11 +736,16 @@ export function getTemplatePrompt(
   template: Template, 
   durationSeconds?: number, 
   verbosity?: VerbosityLevel,
-  domain?: TutorialDomain
+  domain?: TutorialDomain,
+  videoUrl?: string
 ): string {
   if (typeof template.prompt === 'function') {
+    // Check if the function supports domain detection (has 4 parameters including videoUrl)
+    if (template.supportsDomainDetection && template.prompt.length >= 4) {
+      return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
+    }
     // Check if the function supports domain detection (has 3 parameters)
-    if (template.supportsDomainDetection && template.prompt.length >= 3) {
+    else if (template.supportsDomainDetection && template.prompt.length >= 3) {
       return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string)(durationSeconds, verbosity, domain);
     }
     // Check if the function supports verbosity (has 2 parameters)

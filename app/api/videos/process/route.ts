@@ -43,12 +43,12 @@ function detectDomainFromMetadata(title: string = '', description: string = ''):
 }
 
 // Enhanced local implementation with verbosity and domain support
-function getTemplatePrompt(template: Template, durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain): string {
+function getTemplatePrompt(template: Template, durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string): string {
   if (typeof template.prompt === 'function') {
     // Check if the function supports domain detection and try to call with all parameters
     if ((template as any).supportsDomainDetection) {
       try {
-        return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string)(durationSeconds, verbosity, domain);
+        return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
       } catch (error) {
         console.warn('Domain detection call failed, falling back to verbosity only:', error);
       }
@@ -179,7 +179,7 @@ How can this knowledge be applied in real-world scenarios?`;
 
       case 'basic-summary':
         // Use the dynamic template prompt that scales with video duration
-        const dynamicPrompt = getTemplatePrompt(template, durationSeconds);
+        const dynamicPrompt = getTemplatePrompt(template, durationSeconds, undefined, undefined, videoUrl);
         return `
 REQUIRED BASIC SUMMARY STRUCTURE (Dynamic scaling based on video length):
 ${dynamicPrompt}`;
@@ -528,7 +528,7 @@ Return ONLY the JSON object. No markdown formatting, no explanations, no code bl
 
 
 // Enhanced prompt generation with cognitive load optimization and domain detection
-function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLevel: string, durationSeconds?: number, videoMetadata?: any) {
+function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLevel: string, durationSeconds?: number, videoMetadata?: any, videoUrl?: string) {
   const verbosityInstructions = {
     brief: 'Generate concise notes with 50-75 words per concept. Use bullet points and limit to 1-2 supporting details maximum.',
     standard: 'Generate balanced notes with 100-150 words per concept. Use mixed paragraph and bullet formats with 3-4 supporting details.',
@@ -561,7 +561,7 @@ function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLe
     }
 
     // Get the template prompt with verbosity and domain support (dynamic if supported, static otherwise)
-    const templatePrompt = getTemplatePrompt(template, durationSeconds, verbosityLevel as VerbosityLevel, detectedDomain);
+    const templatePrompt = getTemplatePrompt(template, durationSeconds, verbosityLevel as VerbosityLevel, detectedDomain, videoUrl);
 
     return `${templatePrompt}
 

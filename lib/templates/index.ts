@@ -200,27 +200,27 @@ function generateTutorialGuidePrompt(
   // ULTRA-CRITICAL timestamp instructions - must be impossible to ignore
   const timestampInstructions = videoUrl ? `
 
-🚨🚨🚨 ABSOLUTE REQUIREMENT - TIMESTAMPS ARE MANDATORY 🚨🚨🚨
+🚨🚨🚨 ABSOLUTE REQUIREMENT - CLICKABLE YOUTUBE TIMESTAMPS ARE MANDATORY 🚨🚨🚨
+
+THE YOUTUBE VIDEO URL YOU MUST USE FOR ALL TIMESTAMPS: ${videoUrl}
 
 BEFORE YOU WRITE ANYTHING ELSE:
 1. You MUST analyze the video transcript to extract actual timestamps
-2. Every single section header MUST include a CLICKABLE timestamp in [MM:SS](url&t=XXXs) format
-3. ALL timestamps throughout the tutorial MUST be clickable YouTube links
-4. You WILL include a Quick Navigation section with clickable links
-5. This is NOT optional - CLICKABLE timestamps are REQUIRED for this tutorial format
+2. Every single section header MUST include a CLICKABLE timestamp linking to the YouTube video
+3. ALL timestamps throughout the tutorial MUST be clickable YouTube links using the exact URL above
+4. You WILL include a Quick Navigation section with clickable links to the YouTube video
+5. This is NOT optional - CLICKABLE YouTube timestamps are REQUIRED for this tutorial format
 
 EXACT FORMAT REQUIREMENTS (DO NOT DEVIATE):
 
-SECTION HEADERS - Use CLICKABLE timestamps for EVERY step header:
+SECTION HEADERS - Use CLICKABLE YouTube timestamps for EVERY step header:
 ### **[0:30](${videoUrl}&t=30s)** Step 1: Building Consistent Worlds
 ### **[2:15](${videoUrl}&t=135s)** Step 2: Creating Watermark-Free Images
 
-ALL TIMESTAMPS MUST BE CLICKABLE LINKS - Use this EXACT format:
-[MM:SS](ACTUAL_VIDEO_URL&t=XXXs)
-Where:
-- ACTUAL_VIDEO_URL is the exact YouTube URL provided: ${videoUrl}
-- XXX is the total seconds (convert MM:SS to seconds)
-- Example: [2:15](${videoUrl}&t=135s)
+ALL TIMESTAMPS MUST BE CLICKABLE YOUTUBE LINKS - Use this EXACT format:
+[MM:SS](${videoUrl}&t=XXXs)
+Where XXX is the total seconds (convert MM:SS to seconds)
+Example: [2:15](${videoUrl}&t=135s) - This will link to second 135 of the YouTube video
 
 QUICK NAVIGATION SECTION - Include at the end:
 ## 🎯 Quick Navigation (Click to jump to video)
@@ -228,10 +228,11 @@ QUICK NAVIGATION SECTION - Include at the end:
 - **[2:15](${videoUrl}&t=135s)** Step 2: Creating Watermark-Free Images
 - **[4:20](${videoUrl}&t=260s)** Step 3: Changing Backgrounds
 
-⚠️ FAILURE TO INCLUDE TIMESTAMPS WILL MAKE THIS TUTORIAL UNUSABLE ⚠️
-The user specifically requested timestamps and they are ESSENTIAL for video navigation.
+⚠️ FAILURE TO INCLUDE CLICKABLE YOUTUBE TIMESTAMPS WILL MAKE THIS TUTORIAL UNUSABLE ⚠️
+The user specifically requested clickable YouTube timestamps and they are ESSENTIAL for video navigation.
+DO NOT use generic "url" placeholders - use the exact YouTube URL: ${videoUrl}
 
-NOW PROCEED WITH THE TUTORIAL AND INCLUDE TIMESTAMPS AS SPECIFIED:
+NOW PROCEED WITH THE TUTORIAL AND INCLUDE CLICKABLE YOUTUBE TIMESTAMPS AS SPECIFIED:
 
 ` : '';
 

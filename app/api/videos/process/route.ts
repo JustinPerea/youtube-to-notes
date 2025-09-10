@@ -196,7 +196,15 @@ ${dynamicPrompt}`;
         // Use the enhanced template for tutorial guides with clickable timestamps
         // Use default values since we don't have verbosityLevel and detectedDomain in this scope
         console.log(`🔗 DEBUG: generateAllVerbosityLevels videoUrl: "${videoUrl}" (length: ${videoUrl ? videoUrl.length : 0})`);
-        const tutorialPrompt = getTemplatePrompt(template, durationSeconds, 'standard', 'general', videoUrl);
+        
+        // Ensure template has required properties for domain detection
+        const enhancedTemplate = {
+          ...template,
+          supportsDomainDetection: true,
+          supportsVerbosity: true
+        };
+        
+        const tutorialPrompt = getTemplatePrompt(enhancedTemplate, durationSeconds, 'standard', 'general', videoUrl);
         console.log(`🎯 DEBUG: Generated tutorial prompt includes videoUrl: ${tutorialPrompt.includes(videoUrl || 'NONE')}`);
         return `
 REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY CLICKABLE TIMESTAMPS:

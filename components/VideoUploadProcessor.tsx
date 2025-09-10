@@ -95,6 +95,8 @@ export function VideoUploadProcessor({
   const [currentVerbosity, setCurrentVerbosity] = useState<'brief' | 'standard' | 'comprehensive'>('standard');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [saveNoteMessage, setSaveNoteMessage] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [canRetry, setCanRetry] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('Initializing...');
   const [processingStepsList, setProcessingStepsList] = useState<string[]>([]);
@@ -153,6 +155,7 @@ export function VideoUploadProcessor({
     setProgress(0);
     setStartTime(Date.now());
     setEstimatedTimeRemaining(null);
+    setCanRetry(false);
 
     // Initialize processing steps
     updateProcessingStep('notes', { 
@@ -284,10 +287,49 @@ export function VideoUploadProcessor({
     } catch (err: any) {
       const errorMessage = err.message || 'Something went wrong while converting your video';
       addProcessingStep('❌ Conversion failed: ' + errorMessage);
-      setError(errorMessage);
+      
+      // Enhanced error handling with specific suggestions
+      let userFriendlyError = errorMessage;
+      let suggestion = '';
+      
+      if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+        userFriendlyError = 'API quota exceeded. Please try again in a few minutes.';
+        suggestion = 'This is usually temporary. Please wait a few minutes and try again.';
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('deadline')) {
+        userFriendlyError = 'Video processing timeout - this video may be too long.';
+        suggestion = 'For videos longer than 1 hour, try using the async processing option.';
+      } else if (errorMessage.includes('invalid') || errorMessage.includes('400')) {
+        userFriendlyError = 'Invalid video URL or content not supported.';
+        suggestion = 'Please ensure the YouTube URL is valid and the video is publicly accessible.';
+      } else if (errorMessage.includes('size') || errorMessage.includes('too large')) {
+        userFriendlyError = 'Video file is too large for processing.';
+        suggestion = 'Try using the async processing option for long videos.';
+      } else if (errorMessage.includes('pattern') || errorMessage.includes('parsing')) {
+        userFriendlyError = 'Video content could not be analyzed.';
+        suggestion = 'This may be due to video length, format, or content restrictions.';
+      }
+      
+      setError(userFriendlyError + (suggestion ? `\n\n💡 ${suggestion}` : ''));
+      
+      // Enable retry for certain error types
+      const retryableErrors = ['quota', '429', 'timeout', 'deadline', 'network', 'connection'];
+      const isRetryable = retryableErrors.some(errorType => errorMessage.toLowerCase().includes(errorType));
+      
+      if (isRetryable && retryCount < 2) {
+        setCanRetry(true);
+      } else {
+        setCanRetry(false);
+      }
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const retryProcessing = () => {
+    setRetryCount(prev => prev + 1);
+    setCanRetry(false);
+    setError(null);
+    handleProcess();
   };
 
   const copyToClipboard = (text: string) => {
@@ -440,13 +482,23 @@ export function VideoUploadProcessor({
           <div className="text-center">
             <div className="text-4xl mb-4">❌</div>
             <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Conversion Failed</h3>
-            <p className="text-[var(--text-secondary)] mb-4">{error}</p>
-            <button
-              onClick={onClose}
-              className="px-6 py-2 bg-[var(--accent-pink)] text-white rounded-xl font-semibold hover:bg-[var(--accent-pink)]/90 transition-colors"
-            >
-              Close
-            </button>
+            <p className="text-[var(--text-secondary)] mb-4 whitespace-pre-line">{error}</p>
+            <div className="flex gap-3 justify-center">
+              {canRetry && (
+                <button
+                  onClick={retryProcessing}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  🔄 Retry ({2 - retryCount} left)
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-[var(--accent-pink)] text-white rounded-xl font-semibold hover:bg-[var(--accent-pink)]/90 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -203,6 +203,7 @@ function generateTutorialGuidePrompt(
 🚨🚨🚨 ABSOLUTE REQUIREMENT - CLICKABLE YOUTUBE TIMESTAMPS ARE MANDATORY 🚨🚨🚨
 
 THE YOUTUBE VIDEO URL YOU MUST USE FOR ALL TIMESTAMPS: ${videoUrl}
+🔗 FULL URL DEBUG: "${videoUrl}" (Length: ${videoUrl ? videoUrl.length : 0} characters)
 
 BEFORE YOU WRITE ANYTHING ELSE:
 1. You MUST analyze the video transcript to extract actual timestamps

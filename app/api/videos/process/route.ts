@@ -44,12 +44,15 @@ function detectDomainFromMetadata(title: string = '', description: string = ''):
 
 // Enhanced local implementation with verbosity and domain support
 function getTemplatePrompt(template: Template, durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string): string {
+  console.log(`🔍 DEBUG getTemplatePrompt: template.id=${template.id}, videoUrl="${videoUrl}", supportsDomainDetection=${(template as any).supportsDomainDetection}`);
+  
   if (typeof template.prompt === 'function') {
     // Check if the function supports domain detection and try to call with all parameters
     if ((template as any).supportsDomainDetection) {
       try {
         // For tutorial-guide template, always try with videoUrl first
         if (template.id === 'tutorial-guide') {
+          console.log(`✅ DEBUG: Calling tutorial-guide template with videoUrl: "${videoUrl}"`);
           return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
         }
         // For other templates, use 3-parameter version

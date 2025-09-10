@@ -197,24 +197,42 @@ function generateTutorialGuidePrompt(
 
   const adaptation = domainAdaptations[domain];
 
-  // Timestamp instructions for Gemini
+  // ULTRA-CRITICAL timestamp instructions - must be impossible to ignore
   const timestampInstructions = videoUrl ? `
 
-TIMESTAMP INTEGRATION INSTRUCTIONS:
-- When referencing specific parts of the video, include clickable timestamps in format: [MM:SS](${videoUrl}&t=XXXs)
-- Identify key moments and section boundaries from the transcript
-- Add timestamps for:
-  * Each major step or section
-  * Important demonstrations or examples  
-  * Key concepts or insights
-  * Problem-solving moments
-- Use format: **[MM:SS] Section Title** for major headings
-- For inline references: "As shown at [MM:SS](timestamp_url), the technique involves..."
-- Maximum 15-20 timestamps per tutorial to avoid overwhelm
+🚨🚨🚨 ABSOLUTE REQUIREMENT - TIMESTAMPS ARE MANDATORY 🚨🚨🚨
+
+BEFORE YOU WRITE ANYTHING ELSE:
+1. You MUST analyze the video transcript to extract actual timestamps
+2. Every single section header MUST include a timestamp in [MM:SS] format
+3. You WILL include a Quick Navigation section with clickable links
+4. This is NOT optional - timestamps are REQUIRED for this tutorial format
+
+EXACT FORMAT REQUIREMENTS (DO NOT DEVIATE):
+
+SECTION HEADERS - Use this EXACT format for EVERY step:
+### **[MM:SS]** Step 1: Building Consistent Worlds
+### **[MM:SS]** Step 2: Creating Watermark-Free Images
+
+CLICKABLE TIMESTAMP LINKS - Use this EXACT format:
+[2:15](${videoUrl.includes('?') ? videoUrl + '&t=' : videoUrl + '?t='}135s)
+
+QUICK NAVIGATION SECTION - Include at the end:
+## 🎯 Quick Navigation (Click to jump to video)
+- **[0:30]** Step 1: Building Consistent Worlds  
+- **[2:15]** Step 2: Creating Watermark-Free Images
+- **[4:20]** Step 3: Changing Backgrounds
+
+⚠️ FAILURE TO INCLUDE TIMESTAMPS WILL MAKE THIS TUTORIAL UNUSABLE ⚠️
+The user specifically requested timestamps and they are ESSENTIAL for video navigation.
+
+NOW PROCEED WITH THE TUTORIAL AND INCLUDE TIMESTAMPS AS SPECIFIED:
 
 ` : '';
 
-  return `Transform this YouTube video into a ${verbosity}-level ${domain} tutorial guide (${config.contentReduction}). Structure it as a practical, step-by-step instruction manual optimized for ${domain} content:${timestampInstructions}
+  return `${timestampInstructions}
+
+Transform this YouTube video into a ${verbosity}-level ${domain} tutorial guide (${config.contentReduction}). Structure it as a practical, step-by-step instruction manual optimized for ${domain} content:
 
 # Tutorial Guide: [Topic from Video]
 
@@ -251,6 +269,8 @@ ${verbosity === 'concise'
 }
 
 ## 📝 Step-by-Step Instructions
+
+${videoUrl ? '**IMPORTANT: Each step header below MUST include an actual timestamp from the video in [MM:SS] format**' : ''}
 
 ### **[MM:SS]** Step 1: [First Step Title]
 **Objective**: ${verbosity === 'comprehensive' ? 'Detailed explanation of what this step accomplishes and why it\'s important in the overall process' : 'Brief explanation of what this step accomplishes'}

@@ -189,6 +189,44 @@ How can this knowledge be applied in real-world scenarios?`;
 REQUIRED BASIC SUMMARY STRUCTURE (Dynamic scaling based on video length):
 ${dynamicPrompt}`;
 
+      case 'tutorial-guide':
+        return `
+REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY TIMESTAMPS:
+
+🚨🚨🚨 CRITICAL: ALL section headers MUST include timestamps in [MM:SS] format 🚨🚨🚨
+
+# Tutorial Guide: [Topic from Video]
+
+## 📖 What You'll Learn
+[Learning outcomes with timestamps where appropriate]
+
+## 📋 Prerequisites
+[Prerequisites section]
+
+## Step-by-Step Instructions
+
+### **[MM:SS]** Step 1: [Title]
+**Objective:** [Clear objective]
+
+**Instructions:**
+1. [Detailed instruction with timestamp reference if needed]
+2. [Next instruction]
+
+**Tips:**
+- [Helpful tip with [MM:SS] reference where relevant]
+
+**Expected Result:** [What should be achieved]
+
+### **[MM:SS]** Step 2: [Title]
+[Continue same format for all steps...]
+
+## 🎯 Quick Navigation (Click to jump to video)
+- **[0:30]** Step 1: [Title] 
+- **[2:15]** Step 2: [Title]
+- **[4:20]** Step 3: [Title]
+
+ABSOLUTE REQUIREMENT: Include actual timestamps from the original content in the [MM:SS] format for EVERY step header and in the Quick Navigation section.`;
+
       default:
         return `Maintain the exact structure and format of the ${template.name} template`;
     }
@@ -210,6 +248,14 @@ CRITICAL REQUIREMENTS FOR ALL VERBOSITY LEVELS:
 - MUST include ALL sections and headers (including emoji icons for Study Notes)
 - MUST maintain consistent formatting across all verbosity levels
 - Only adjust the detail level within each section, never remove sections
+
+🚨🚨🚨 SPECIAL REQUIREMENT FOR TUTORIAL GUIDE TEMPLATE 🚨🚨🚨
+If template is "tutorial-guide":
+- PRESERVE ALL TIMESTAMPS from the original content in [MM:SS] format
+- EXTRACT timestamps from original content and place them in section headers
+- MAINTAIN Quick Navigation section with clickable timestamp links
+- DO NOT remove or alter any timestamp information
+- If original content has timestamps, COPY them exactly to all verbosity levels
 
 VERBOSITY LEVEL DEFINITIONS:
 - COMPREHENSIVE: 200-300 words per concept with detailed examples and context

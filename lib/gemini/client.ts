@@ -322,9 +322,22 @@ export class GeminiClient {
   }
 
   private buildPrompt(request: VideoProcessingRequest, metadata: any): string {
-    const { template, customPrompt } = request;
+    const { template, customPrompt, youtubeUrl } = request;
     
-    let prompt = template.prompt;
+    // Detect domain from video metadata
+    const detectedDomain = this.detectDomainFromMetadata(metadata.videoTitle || '', metadata.youtubeMetadata?.description || '');
+    
+    // Use enhanced template processing with timestamp support
+    let prompt = this.getTemplatePrompt(template, metadata.videoDuration, 'standard', detectedDomain, youtubeUrl);
+    
+    // DEBUG: Log timestamp instructions for tutorial-guide template
+    if (template.id === 'tutorial-guide') {
+      console.log('🧪 DEBUG: Tutorial Guide Template Processing');
+      console.log(`🎯 Detected Domain: ${detectedDomain}`);
+      console.log(`🔗 Video URL: ${youtubeUrl}`);
+      console.log(`📋 Prompt starts with timestamps: ${prompt.trim().startsWith('🚨🚨🚨')}`);
+      console.log(`✅ Has timestamp requirements: ${prompt.includes('ABSOLUTE REQUIREMENT - TIMESTAMPS ARE MANDATORY')}`);
+    }
     
     // Add custom prompt if provided
     if (customPrompt) {
@@ -350,6 +363,58 @@ export class GeminiClient {
     }
 
     return prompt;
+  }
+
+  // Enhanced template processing with timestamp support (copied from API route)
+  private getTemplatePrompt(template: Template, durationSeconds?: number, verbosity?: 'concise' | 'standard' | 'comprehensive', domain?: 'programming' | 'diy' | 'academic' | 'fitness' | 'general', videoUrl?: string): string {
+    if (typeof template.prompt === 'function') {
+      // Check if the function supports domain detection and try to call with all parameters
+      if ((template as any).supportsDomainDetection) {
+        try {
+          // For tutorial-guide template, always try with videoUrl first
+          if (template.id === 'tutorial-guide') {
+            return (template.prompt as (duration?: number, verbosity?: any, domain?: any, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
+          }
+          // For other templates, use 3-parameter version
+          return (template.prompt as (duration?: number, verbosity?: any, domain?: any) => string)(durationSeconds, verbosity, domain);
+        } catch (error) {
+          console.warn('Domain detection call failed, falling back to verbosity only:', error);
+        }
+      }
+      // Check if the function supports verbosity and try to call with verbosity
+      if ((template as any).supportsVerbosity) {
+        try {
+          return (template.prompt as (duration?: number, verbosity?: any) => string)(durationSeconds, verbosity);
+        } catch (error) {
+          // Fall back to duration-only if verbosity call fails
+          return (template.prompt as (duration?: number) => string)(durationSeconds);
+        }
+      }
+      // Otherwise call with just duration
+      return (template.prompt as (duration?: number) => string)(durationSeconds);
+    }
+    return template.prompt as string;
+  }
+
+  // Domain detection from metadata (copied from API route)
+  private detectDomainFromMetadata(title: string = '', description: string = ''): 'programming' | 'diy' | 'academic' | 'fitness' | 'general' {
+    const text = (title + ' ' + description).toLowerCase();
+    
+    // Quick domain detection patterns
+    if (text.match(/(javascript|python|code|programming|react|html|css|api|software|developer?|github|web development)/)) {
+      return 'programming';
+    }
+    if (text.match(/(workout|exercise|fitness|gym|training|yoga|diet|muscle|cardio|strength)/)) {
+      return 'fitness';
+    }
+    if (text.match(/(diy|craft|build|make|repair|fix|tool|material|homemade|handmade|woodwork)/)) {
+      return 'diy';
+    }
+    if (text.match(/(education|lesson|study|learn|course|math|science|physics|chemistry|academic|research)/)) {
+      return 'academic';
+    }
+    
+    return 'general';
   }
 
   private generateBasicAnalysis(metadata: any): string {

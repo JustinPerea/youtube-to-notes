@@ -204,24 +204,26 @@ function generateTutorialGuidePrompt(
 
 BEFORE YOU WRITE ANYTHING ELSE:
 1. You MUST analyze the video transcript to extract actual timestamps
-2. Every single section header MUST include a timestamp in [MM:SS] format
-3. You WILL include a Quick Navigation section with clickable links
-4. This is NOT optional - timestamps are REQUIRED for this tutorial format
+2. Every single section header MUST include a CLICKABLE timestamp in [MM:SS](url&t=XXXs) format
+3. ALL timestamps throughout the tutorial MUST be clickable YouTube links
+4. You WILL include a Quick Navigation section with clickable links
+5. This is NOT optional - CLICKABLE timestamps are REQUIRED for this tutorial format
 
 EXACT FORMAT REQUIREMENTS (DO NOT DEVIATE):
 
-SECTION HEADERS - Use this EXACT format for EVERY step:
-### **[MM:SS]** Step 1: Building Consistent Worlds
-### **[MM:SS]** Step 2: Creating Watermark-Free Images
+SECTION HEADERS - Use CLICKABLE timestamps for EVERY step header:
+### **[0:30](${videoUrl.includes('?') ? videoUrl + '&t=' : videoUrl + '?t='}30s)** Step 1: Building Consistent Worlds
+### **[2:15](${videoUrl.includes('?') ? videoUrl + '&t=' : videoUrl + '?t='}135s)** Step 2: Creating Watermark-Free Images
 
-CLICKABLE TIMESTAMP LINKS - Use this EXACT format:
-[2:15](${videoUrl.includes('?') ? videoUrl + '&t=' : videoUrl + '?t='}135s)
+ALL TIMESTAMPS MUST BE CLICKABLE LINKS - Use this EXACT format:
+[MM:SS](${videoUrl.includes('?') ? videoUrl + '&t=' : videoUrl + '?t='}XXXs)
+Where XXX is the total seconds (convert MM:SS to seconds)
 
 QUICK NAVIGATION SECTION - Include at the end:
 ## 🎯 Quick Navigation (Click to jump to video)
-- **[0:30]** Step 1: Building Consistent Worlds  
-- **[2:15]** Step 2: Creating Watermark-Free Images
-- **[4:20]** Step 3: Changing Backgrounds
+- **[0:30](${videoUrl.includes('?') ? videoUrl + '&t=' : videoUrl + '?t='}30s)** Step 1: Building Consistent Worlds  
+- **[2:15](${videoUrl.includes('?') ? videoUrl + '&t=' : videoUrl + '?t='}135s)** Step 2: Creating Watermark-Free Images
+- **[4:20](${videoUrl.includes('?') ? videoUrl + '&t=' : videoUrl + '?t='}260s)** Step 3: Changing Backgrounds
 
 ⚠️ FAILURE TO INCLUDE TIMESTAMPS WILL MAKE THIS TUTORIAL UNUSABLE ⚠️
 The user specifically requested timestamps and they are ESSENTIAL for video navigation.
@@ -270,9 +272,9 @@ ${verbosity === 'concise'
 
 ## 📝 Step-by-Step Instructions
 
-${videoUrl ? '**IMPORTANT: Each step header below MUST include an actual timestamp from the video in [MM:SS] format**' : ''}
+${videoUrl ? '**CRITICAL: Each step header below MUST include an actual CLICKABLE timestamp from the video in [MM:SS](url&t=XXXs) format where XXX is total seconds**' : ''}
 
-### **[MM:SS]** Step 1: [First Step Title]
+### **[MM:SS](${videoUrl ? videoUrl.includes('?') ? videoUrl + '&t=' : videoUrl + '?t=' : '#'}XXXs)** Step 1: [First Step Title]
 **Objective**: ${verbosity === 'comprehensive' ? 'Detailed explanation of what this step accomplishes and why it\'s important in the overall process' : 'Brief explanation of what this step accomplishes'}
 
 **Instructions**:

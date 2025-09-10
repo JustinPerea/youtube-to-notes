@@ -5,6 +5,301 @@
  * Each template contains a curated prompt for Gemini AI models
  */
 
+// Verbosity system types
+export type VerbosityLevel = 'concise' | 'standard' | 'comprehensive';
+
+// Domain detection types
+export type TutorialDomain = 'programming' | 'diy' | 'academic' | 'fitness' | 'general';
+
+// YouTube video metadata interface for domain detection
+export interface VideoMetadata {
+  title?: string;
+  description?: string;
+  tags?: string[];
+  category?: string;
+  channelName?: string;
+}
+
+/**
+ * Detect tutorial domain from YouTube metadata
+ * Uses hybrid approach: keyword matching + contextual analysis
+ */
+export function detectTutorialDomain(metadata: VideoMetadata): TutorialDomain {
+  const text = [
+    metadata.title || '',
+    metadata.description || '',
+    ...(metadata.tags || []),
+    metadata.channelName || ''
+  ].join(' ').toLowerCase();
+
+  // Domain keyword patterns (order matters - most specific first)
+  const domainPatterns = {
+    programming: [
+      // Programming languages
+      'javascript', 'python', 'java', 'react', 'nodejs', 'typescript', 'html', 'css', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'c++', 'c#',
+      // Development concepts
+      'code', 'coding', 'programming', 'development', 'developer', 'software', 'api', 'database', 'framework', 'library',
+      'algorithm', 'data structure', 'git', 'github', 'deployment', 'backend', 'frontend', 'fullstack',
+      // Tools and technologies
+      'vs code', 'npm', 'webpack', 'docker', 'kubernetes', 'aws', 'firebase', 'mongodb', 'postgresql', 'mysql',
+      'tutorial programming', 'learn to code', 'web development', 'mobile app', 'game development'
+    ],
+    
+    fitness: [
+      // Exercise types
+      'workout', 'exercise', 'fitness', 'training', 'gym', 'cardio', 'strength', 'yoga', 'pilates', 'crossfit', 'hiit',
+      'running', 'cycling', 'swimming', 'weightlifting', 'bodybuilding', 'calisthenics',
+      // Body parts and goals
+      'abs', 'core', 'legs', 'arms', 'chest', 'back', 'shoulders', 'glutes', 'weight loss', 'muscle building',
+      'flexibility', 'stretching', 'recovery', 'nutrition', 'protein', 'diet', 'meal prep',
+      // Fitness contexts
+      'home workout', 'gym tutorial', 'beginner fitness', 'advanced training'
+    ],
+    
+    diy: [
+      // Crafting and making
+      'diy', 'craft', 'handmade', 'homemade', 'tutorial', 'how to make', 'build', 'create', 'project',
+      'woodworking', 'carpentry', 'painting', 'sewing', 'knitting', 'crochet', 'embroidery',
+      // Home improvement
+      'home improvement', 'renovation', 'repair', 'fix', 'install', 'maintenance', 'plumbing', 'electrical',
+      'garden', 'gardening', 'landscaping', 'plants', 'cooking', 'baking', 'recipe',
+      // Tools and materials
+      'tools', 'materials', 'supplies', 'hardware', 'wood', 'fabric', 'paint', 'glue'
+    ],
+    
+    academic: [
+      // Educational contexts
+      'education', 'learning', 'study', 'lesson', 'lecture', 'course', 'class', 'school', 'university', 'college',
+      'teacher', 'professor', 'student', 'academic', 'research', 'analysis', 'theory', 'concept',
+      // Subjects
+      'math', 'mathematics', 'science', 'physics', 'chemistry', 'biology', 'history', 'literature', 'philosophy',
+      'psychology', 'sociology', 'economics', 'political science', 'geography', 'language',
+      // Academic activities
+      'exam prep', 'test preparation', 'homework help', 'study guide', 'explained', 'understanding'
+    ]
+  };
+
+  // Score each domain based on keyword matches
+  const scores: Record<TutorialDomain, number> = {
+    programming: 0,
+    fitness: 0,
+    diy: 0,
+    academic: 0,
+    general: 0
+  };
+
+  // Calculate scores for each domain
+  Object.entries(domainPatterns).forEach(([domain, keywords]) => {
+    keywords.forEach(keyword => {
+      if (text.includes(keyword)) {
+        scores[domain as TutorialDomain] += 1;
+        // Boost score for title matches (more important)
+        if (metadata.title?.toLowerCase().includes(keyword)) {
+          scores[domain as TutorialDomain] += 2;
+        }
+      }
+    });
+  });
+
+  // Find domain with highest score
+  const detectedDomain = Object.entries(scores)
+    .filter(([domain]) => domain !== 'general')
+    .reduce((max, [domain, score]) => 
+      score > max.score ? { domain: domain as TutorialDomain, score } : max,
+      { domain: 'general' as TutorialDomain, score: 0 }
+    );
+
+  // Return detected domain if confidence is high enough, otherwise 'general'
+  return detectedDomain.score >= 2 ? detectedDomain.domain : 'general';
+}
+
+/**
+ * Generate tutorial guide with verbosity and domain-specific adaptations
+ * Implements research-backed 3-level system for enhanced engagement
+ */
+function generateTutorialGuidePrompt(
+  durationSeconds: number = 600, 
+  verbosity: VerbosityLevel = 'standard',
+  domain: TutorialDomain = 'general'
+): string {
+  // Verbosity configurations based on research
+  const verbosityConfigs = {
+    concise: {
+      sectionDepth: '2-3 key points per section',
+      stepDetail: 'Essential actions only',
+      exampleCount: '1 example per concept',
+      troubleshootingItems: '3-4 common issues',
+      contentReduction: '30-40% less content than standard'
+    },
+    standard: {
+      sectionDepth: '4-5 well-developed points per section', 
+      stepDetail: 'Clear instructions with context',
+      exampleCount: '2-3 examples per concept',
+      troubleshootingItems: '5-6 common issues with solutions',
+      contentReduction: 'Balanced detail level'
+    },
+    comprehensive: {
+      sectionDepth: '6-8 detailed points with extensive explanations',
+      stepDetail: 'Thorough instructions with context, warnings, and alternatives',
+      exampleCount: '3-4 detailed examples with variations',
+      troubleshootingItems: '8-10 comprehensive troubleshooting scenarios',
+      contentReduction: '40-50% more content with in-depth explanations'
+    }
+  };
+
+  const config = verbosityConfigs[verbosity];
+  const durationText = Math.floor(durationSeconds / 60);
+
+  // Domain-specific adaptations based on research
+  const domainAdaptations = {
+    programming: {
+      prerequisites: 'Required knowledge, tools, and software setup',
+      stepFormat: 'Code examples with explanations and common pitfalls',
+      troubleshooting: 'Debug techniques, error handling, and solution variations',
+      verification: 'Test cases, code validation, and expected outputs',
+      terminology: 'functions, variables, APIs, debugging, deployment',
+      practiceType: 'coding exercises and project challenges'
+    },
+    diy: {
+      prerequisites: 'Required tools, materials, and safety considerations',
+      stepFormat: 'Visual instructions with measurements and safety warnings',
+      troubleshooting: 'Common mistakes, material issues, and alternative approaches',
+      verification: 'Quality checks, measurements, and final inspections',
+      terminology: 'tools, materials, measurements, safety, craftsmanship',
+      practiceType: 'hands-on projects and skill-building exercises'
+    },
+    academic: {
+      prerequisites: 'Background knowledge, reading materials, and conceptual foundations',
+      stepFormat: 'Logical progression with definitions, examples, and theory connections',
+      troubleshooting: 'Common misconceptions, study challenges, and clarification methods',
+      verification: 'Comprehension checks, self-assessment, and knowledge application',
+      terminology: 'concepts, theories, analysis, research, methodology',
+      practiceType: 'study questions and application exercises'
+    },
+    fitness: {
+      prerequisites: 'Fitness level assessment, equipment needs, and safety precautions',
+      stepFormat: 'Exercise demonstrations with form cues and modifications',
+      troubleshooting: 'Form corrections, injury prevention, and progression adjustments',
+      verification: 'Performance metrics, form checks, and progress indicators',
+      terminology: 'exercises, sets, reps, form, progression, recovery',
+      practiceType: 'workout routines and fitness challenges'
+    },
+    general: {
+      prerequisites: 'Required knowledge, tools, and preparation steps',
+      stepFormat: 'Clear instructions with context and helpful tips',
+      troubleshooting: 'Common issues, solutions, and alternative methods',
+      verification: 'Success criteria, quality checks, and completion indicators',
+      terminology: 'steps, process, methods, results, improvement',
+      practiceType: 'practice exercises and skill development'
+    }
+  };
+
+  const adaptation = domainAdaptations[domain];
+
+  return `Transform this YouTube video into a ${verbosity}-level ${domain} tutorial guide (${config.contentReduction}). Structure it as a practical, step-by-step instruction manual optimized for ${domain} content:
+
+# Tutorial Guide: [Topic from Video]
+
+## 📖 What You'll Learn
+${verbosity === 'concise' 
+  ? '**Quick Overview**: [Essential outcome in 1-2 sentences]'
+  : verbosity === 'comprehensive'
+  ? '**Comprehensive Learning Path**: [Detailed explanation of complete learning journey, including context, applications, and skill development progression]'
+  : '**Learning Outcome**: [Clear description of what you\'ll accomplish and why it matters]'
+}
+
+**Time Investment**: ${verbosity === 'comprehensive' ? `[Detailed breakdown: X minutes setup + Y minutes tutorial + Z minutes practice] (Based on ${durationText}-minute video)` : `[Estimated total time] (${durationText}-minute video)`}
+**Difficulty**: [${verbosity === 'comprehensive' ? 'Detailed difficulty assessment with prerequisites explanation' : 'Beginner/Intermediate/Advanced'}]
+
+## 📋 Prerequisites
+${verbosity === 'concise' 
+  ? `Essential ${adaptation.terminology} only:`
+  : verbosity === 'comprehensive'
+  ? `Comprehensive preparation checklist with detailed explanations (${adaptation.prerequisites}):`
+  : `${adaptation.prerequisites}:`
+}
+${config.sectionDepth.includes('2-3') ? '- [Essential requirement 1]\n- [Essential requirement 2]' : 
+  config.sectionDepth.includes('6-8') ? '- [Detailed requirement 1] - [Why needed, how to verify, alternatives]\n- [Detailed requirement 2] - [Comprehensive explanation]\n- [Detailed requirement 3] - [Setup instructions and troubleshooting]' :
+  '- [Requirement 1] - [Why this matters]\n- [Requirement 2] - [How to check if you have this]\n- [Requirement 3] - [Where to get if needed]'
+}
+
+## 🎯 Learning Goals
+By the end of this tutorial, you will be able to:
+${verbosity === 'concise'
+  ? '- [Essential goal 1]\n- [Essential goal 2]'
+  : verbosity === 'comprehensive' 
+  ? '- [Detailed goal 1] - [Specific skills and knowledge gained, real-world applications]\n- [Detailed goal 2] - [Comprehensive outcome with measurable criteria]\n- [Detailed goal 3] - [Advanced applications and next-level skills]'
+  : '- [Goal 1] - [Specific outcome]\n- [Goal 2] - [Practical application]\n- [Goal 3] - [Skills developed]'
+}
+
+## 📝 Step-by-Step Instructions
+
+### Step 1: [First Step Title]
+**Objective**: ${verbosity === 'comprehensive' ? 'Detailed explanation of what this step accomplishes and why it\'s important in the overall process' : 'Brief explanation of what this step accomplishes'}
+
+**Instructions**:
+${adaptation.stepFormat}:
+1. [Specific action 1]
+2. [Specific action 2]
+${verbosity !== 'concise' ? '3. [Specific action 3]' : ''}
+
+${verbosity === 'comprehensive' ? '**Why This Matters**: [Detailed explanation of the reasoning behind this step]\n\n**Common Variations**: [Alternative approaches and when to use them]\n\n' : ''}**Tips**: [${verbosity === 'comprehensive' ? 'Comprehensive' : 'Helpful'} hints or warnings]
+
+${verbosity === 'comprehensive' ? '**Expected Result**: [Detailed description of what you should see/achieve]\n\n' : ''}### Step 2: [Second Step Title]
+**Objective**: ${verbosity === 'comprehensive' ? 'Comprehensive explanation of step purpose, dependencies, and impact' : 'Brief explanation of what this step accomplishes'}
+
+**Instructions**:
+Follow ${config.stepDetail.toLowerCase()}:
+1. [Specific action 1]
+2. [Specific action 2] 
+${verbosity !== 'concise' ? '3. [Specific action 3]' : ''}
+${verbosity === 'comprehensive' ? '4. [Additional detailed action]\n5. [Advanced consideration]' : ''}
+
+**Tips**: [${config.stepDetail.includes('Thorough') ? 'Comprehensive guidance with troubleshooting' : 'Helpful hints'}]
+
+[Continue for all steps with ${config.sectionDepth}...]
+
+## ✅ Verification & Testing
+${verbosity === 'comprehensive' ? `Comprehensive success validation (${adaptation.verification}):` : `${adaptation.verification}:`}
+${verbosity === 'concise'
+  ? '- [Essential check 1]\n- [Essential check 2]'
+  : verbosity === 'comprehensive'
+  ? '- [Detailed verification 1] - [Specific criteria and troubleshooting if failed]\n- [Detailed verification 2] - [Multiple validation methods]\n- [Detailed verification 3] - [Advanced testing scenarios]'
+  : '- [Check 1] - [What to look for]\n- [Check 2] - [Success criteria]\n- [Check 3] - [Common indicators]'
+}
+
+## 🔧 Troubleshooting
+${adaptation.troubleshooting} (${config.troubleshootingItems}):
+${verbosity === 'concise'
+  ? '- **Issue**: [Common problem] → **Fix**: [Quick solution]'
+  : verbosity === 'comprehensive' 
+  ? '- **Problem**: [Detailed issue description]\n  **Root Cause**: [Why this happens]\n  **Solution**: [Step-by-step fix with alternatives]\n  **Prevention**: [How to avoid this in future]'
+  : '- **Problem**: [Common issue]\n  **Solution**: [How to fix it]\n  **Why It Happens**: [Brief explanation]'
+}
+
+## 📚 Resources & Next Steps
+${verbosity === 'comprehensive' ? '### Additional Resources' : '**Additional Resources**:'}
+${config.exampleCount}:
+- [Resource 1]: [${verbosity === 'comprehensive' ? 'Detailed description with specific use cases' : 'Description'}]
+${verbosity !== 'concise' ? '- [Resource 2]: [Description with context]\n- [Resource 3]: [Advanced resource for deeper learning]' : ''}
+
+${verbosity === 'comprehensive' ? '### Advanced Applications\n[Detailed next steps for taking this knowledge further]\n\n### Community & Support\n[Where to get help and connect with others]\n\n' : ''}## 🎉 Summary
+${verbosity === 'comprehensive' 
+  ? 'Comprehensive recap of learning journey, key achievements, practical applications, and strategic next steps for continued growth.'
+  : verbosity === 'concise'
+  ? 'Quick recap of what was accomplished.'
+  : 'Brief recap of what was accomplished and practical next steps for continued learning.'
+}
+
+## 🎯 Practice Exercises
+${verbosity === 'comprehensive' ? 'Comprehensive skill development:' : 'Build your skills:'}
+- **Beginner**: [Basic ${adaptation.practiceType.split(' ')[0]} exercise]
+${verbosity !== 'concise' ? `- **Intermediate**: [More challenging ${adaptation.practiceType}]` : ''}
+${verbosity === 'comprehensive' ? `- **Advanced**: [Complex ${adaptation.practiceType} with multiple components]` : ''}
+
+Generate content with ${config.contentReduction}, using ${config.sectionDepth} throughout. Focus on ${domain}-specific ${adaptation.terminology}. Ensure ${adaptation.stepFormat.toLowerCase()} and provide ${config.exampleCount} where relevant.`;
+}
+
 /**
  * Generate natural Basic Summary prompt based on video duration
  * Uses content-aware guidance instead of artificial point constraints
@@ -72,13 +367,15 @@ export interface Template {
   category: 'summary' | 'educational' | 'professional' | 'creative';
   icon: string;
   color: string;
-  prompt: string | ((durationSeconds?: number) => string);
+  prompt: string | ((durationSeconds?: number) => string) | ((durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string);
   outputFormat: 'markdown' | 'html' | 'json' | 'text';
   features: string[];
   limitations: string[];
   estimatedTokens: number;
   processingTime: number; // in minutes
   isPremium: boolean;
+  supportsVerbosity?: boolean; // New: indicates if template supports verbosity controls
+  supportsDomainDetection?: boolean; // New: indicates if template supports domain-specific adaptations
 }
 
 export const TEMPLATES: Template[] = [
@@ -302,72 +599,13 @@ For each slide, provide:
   {
     id: 'tutorial-guide',
     name: 'Tutorial Guide',
-    description: 'Step-by-step instructions for learning or implementing concepts',
+    description: 'Step-by-step instructions with verbosity controls (Concise/Standard/Comprehensive)',
     category: 'educational',
     icon: '🔧',
     color: 'orange',
-    prompt: `Transform this YouTube video into a comprehensive tutorial guide. Structure it as a practical, step-by-step instruction manual:
-
-# Tutorial Guide: [Topic from Video]
-
-## 📋 Prerequisites
-List any knowledge, tools, or materials needed before starting this tutorial:
-- [Prerequisite 1]
-- [Prerequisite 2]
-- [Prerequisite 3]
-
-## 🎯 Learning Goals
-By the end of this tutorial, you will be able to:
-- [Goal 1]
-- [Goal 2]
-- [Goal 3]
-
-## 📝 Step-by-Step Instructions
-
-### Step 1: [First Step Title]
-**Description**: Brief explanation of what this step accomplishes
-
-**Instructions**:
-1. [Specific action 1]
-2. [Specific action 2]
-3. [Specific action 3]
-
-**Tips**: [Helpful hints or warnings]
-
-### Step 2: [Second Step Title]
-**Description**: Brief explanation of what this step accomplishes
-
-**Instructions**:
-1. [Specific action 1]
-2. [Specific action 2]
-3. [Specific action 3]
-
-**Tips**: [Helpful hints or warnings]
-
-[Continue for all steps...]
-
-## ✅ Verification
-How to verify that you've completed the tutorial successfully:
-- [Check 1]
-- [Check 2]
-- [Check 3]
-
-## 🔧 Troubleshooting
-Common issues and solutions:
-- **Problem**: [Common issue]
-  **Solution**: [How to fix it]
-- **Problem**: [Common issue]
-  **Solution**: [How to fix it]
-
-## 📚 Additional Resources
-- [Resource 1]: [Description]
-- [Resource 2]: [Description]
-- [Resource 3]: [Description]
-
-## 🎉 Summary
-Brief recap of what was accomplished and next steps for improvement or expansion.
-
-Format with clear headings, numbered steps, and practical information that someone could follow to achieve the same results.`,
+    prompt: generateTutorialGuidePrompt,
+    supportsVerbosity: true,
+    supportsDomainDetection: true,
     outputFormat: 'markdown',
     features: [
       'Step-by-step instructions',
@@ -465,10 +703,25 @@ Format with academic writing style, proper headings, and detailed analysis. Incl
 
 /**
  * Resolve dynamic prompt for templates that support it
+ * Enhanced to support verbosity levels and domain detection
  */
-export function getTemplatePrompt(template: Template, durationSeconds?: number): string {
+export function getTemplatePrompt(
+  template: Template, 
+  durationSeconds?: number, 
+  verbosity?: VerbosityLevel,
+  domain?: TutorialDomain
+): string {
   if (typeof template.prompt === 'function') {
-    return template.prompt(durationSeconds);
+    // Check if the function supports domain detection (has 3 parameters)
+    if (template.supportsDomainDetection && template.prompt.length >= 3) {
+      return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string)(durationSeconds, verbosity, domain);
+    }
+    // Check if the function supports verbosity (has 2 parameters)
+    else if (template.supportsVerbosity && template.prompt.length >= 2) {
+      return (template.prompt as (duration?: number, verbosity?: VerbosityLevel) => string)(durationSeconds, verbosity);
+    }
+    // Otherwise call with just duration
+    return (template.prompt as (duration?: number) => string)(durationSeconds);
   }
   return template.prompt;
 }
@@ -487,6 +740,10 @@ export function getFreeTemplates(): Template[] {
 
 export function getPremiumTemplates(): Template[] {
   return TEMPLATES.filter(template => template.isPremium);
+}
+
+export function getTemplatesWithVerbosity(): Template[] {
+  return TEMPLATES.filter(template => template.supportsVerbosity);
 }
 
 export function estimateProcessingCost(template: Template, videoDuration: number): number {

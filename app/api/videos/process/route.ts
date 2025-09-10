@@ -17,10 +17,53 @@ import { auditLogger } from '@/lib/audit/logger';
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
 
-// Local implementation of getTemplatePrompt function (temporary workaround for import issue)
-function getTemplatePrompt(template: Template, durationSeconds?: number): string {
+// Local type definitions for verbosity and domain
+type VerbosityLevel = 'concise' | 'standard' | 'comprehensive';
+type TutorialDomain = 'programming' | 'diy' | 'academic' | 'fitness' | 'general';
+
+// Local domain detection function - simplified version for API route
+function detectDomainFromMetadata(title: string = '', description: string = ''): TutorialDomain {
+  const text = (title + ' ' + description).toLowerCase();
+  
+  // Quick domain detection patterns
+  if (text.match(/(javascript|python|code|programming|react|html|css|api|software|developer?|github|web development)/)) {
+    return 'programming';
+  }
+  if (text.match(/(workout|exercise|fitness|gym|training|yoga|diet|muscle|cardio|strength)/)) {
+    return 'fitness';
+  }
+  if (text.match(/(diy|craft|build|make|repair|fix|tool|material|homemade|handmade|woodwork)/)) {
+    return 'diy';
+  }
+  if (text.match(/(education|lesson|study|learn|course|math|science|physics|chemistry|academic|research)/)) {
+    return 'academic';
+  }
+  
+  return 'general';
+}
+
+// Enhanced local implementation with verbosity and domain support
+function getTemplatePrompt(template: Template, durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain): string {
   if (typeof template.prompt === 'function') {
-    return (template.prompt as (durationSeconds?: number) => string)(durationSeconds);
+    // Check if the function supports domain detection and try to call with all parameters
+    if ((template as any).supportsDomainDetection) {
+      try {
+        return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string)(durationSeconds, verbosity, domain);
+      } catch (error) {
+        console.warn('Domain detection call failed, falling back to verbosity only:', error);
+      }
+    }
+    // Check if the function supports verbosity and try to call with verbosity
+    if ((template as any).supportsVerbosity) {
+      try {
+        return (template.prompt as (duration?: number, verbosity?: VerbosityLevel) => string)(durationSeconds, verbosity);
+      } catch (error) {
+        // Fall back to duration-only if verbosity call fails
+        return (template.prompt as (duration?: number) => string)(durationSeconds);
+      }
+    }
+    // Otherwise call with just duration
+    return (template.prompt as (duration?: number) => string)(durationSeconds);
   }
   return template.prompt as string;
 }
@@ -484,8 +527,8 @@ Return ONLY the JSON object. No markdown formatting, no explanations, no code bl
 
 
 
-// Enhanced prompt generation with cognitive load optimization
-function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLevel: string, durationSeconds?: number) {
+// Enhanced prompt generation with cognitive load optimization and domain detection
+function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLevel: string, durationSeconds?: number, videoMetadata?: any) {
   const verbosityInstructions = {
     brief: 'Generate concise notes with 50-75 words per concept. Use bullet points and limit to 1-2 supporting details maximum.',
     standard: 'Generate balanced notes with 100-150 words per concept. Use mixed paragraph and bullet formats with 3-4 supporting details.',
@@ -502,6 +545,13 @@ function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLe
 
   const adaptation = contentAdaptations[contentAnalysis.type] || contentAdaptations.lecture;
 
+  // Detect domain for tutorial-specific templates
+  let detectedDomain: TutorialDomain = 'general';
+  if (template.id === 'tutorial-guide' && videoMetadata) {
+    detectedDomain = detectDomainFromMetadata(videoMetadata.title, videoMetadata.description);
+    console.log(`🎯 Detected tutorial domain: ${detectedDomain} for "${videoMetadata.title}"`);
+  }
+
       // Handle Basic Summary template specifically
     let startInstruction = '';
     if (template.id === 'basic-summary') {
@@ -510,8 +560,8 @@ function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLe
       startInstruction = `Ensure the first characters of your response must be "**${template.name}**" with no text before it.`;
     }
 
-    // Get the template prompt (dynamic if supported, static otherwise)
-    const templatePrompt = getTemplatePrompt(template, durationSeconds);
+    // Get the template prompt with verbosity and domain support (dynamic if supported, static otherwise)
+    const templatePrompt = getTemplatePrompt(template, durationSeconds, verbosityLevel as VerbosityLevel, detectedDomain);
 
     return `${templatePrompt}
 
@@ -795,6 +845,7 @@ export async function POST(request: NextRequest) {
     videoUrl = requestData.videoUrl;
     const selectedTemplate = requestData.selectedTemplate || 'basic-summary';
     const processingMode = requestData.processingMode || 'hybrid'; // Default to hybrid for best results
+    const verbosity = requestData.verbosity || 'standard'; // Default verbosity level
 
     // Validate video URL
     const urlValidation = validateVideoUrl(videoUrl);
@@ -813,6 +864,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Processing video with template:', selectedTemplate);
     console.log('Processing mode:', processingMode);
+    console.log('Verbosity level:', verbosity);
 
     // Create or find existing video record in database
     await ensureVideoRecord(request, videoUrl);
@@ -877,6 +929,7 @@ export async function POST(request: NextRequest) {
         videoUrl,
         template: selectedTemplate,
         processingMode,
+        verbosity,
         reservationId: usageReservation.reservationId
       },
       severity: 'low',
@@ -910,7 +963,7 @@ export async function POST(request: NextRequest) {
     console.log(`💰 Processing cost: $${processingResult.cost?.toFixed(4) || '0.0000'}`);
     console.log(`📈 Token usage: ${processingResult.tokenUsage || 0}`);
     
-    // Generate all verbosity levels from the result
+    // Generate all verbosity levels from the result with user's preferred default
     console.log('Generating all verbosity levels for instant switching...');
     const durationSeconds = processingResult.metadata?.videoDuration;
     const verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result, userId, durationSeconds);
@@ -923,7 +976,7 @@ export async function POST(request: NextRequest) {
         userId: userId,
         youtubeUrl: videoUrl,
         title: `Notes from ${videoUrl}`,
-        content: verbosityVersions.standard, // Default content
+        content: verbosityVersions[verbosity as keyof typeof verbosityVersions] || verbosityVersions.standard, // Use selected verbosity
         templateId: selectedTemplate,
         verbosityVersions: verbosityVersions
       });
@@ -946,11 +999,12 @@ export async function POST(request: NextRequest) {
     // Prepare response data in existing format for frontend compatibility
     const responseData: any = {
       title: `Notes from ${videoUrl}`,
-      content: verbosityVersions.standard, // Default to standard verbosity
+      content: verbosityVersions[verbosity as keyof typeof verbosityVersions] || verbosityVersions.standard, // Use user's selected verbosity
       template: selectedTemplate,
       processingMethod: processingMethod, // NEW: Include processing method
       dataSourcesUsed: dataSourcesUsed, // NEW: Include data sources
       allVerbosityLevels: verbosityVersions,
+      selectedVerbosity: verbosity, // NEW: Include selected verbosity
       videoUrl,
       processingTimestamp: new Date().toISOString()
     };

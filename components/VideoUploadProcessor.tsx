@@ -673,9 +673,13 @@ export function VideoUploadProcessor({
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setShowMarkdown(!showMarkdown)}
-                  className="text-[var(--accent-pink)] hover:text-[var(--accent-pink)]/80 transition-colors"
+                  className={`px-3 py-1 rounded-md transition-all duration-200 text-sm font-medium ${
+                    showMarkdown 
+                      ? 'text-[var(--accent-pink)] hover:text-[var(--accent-pink)]/80 hover:bg-[var(--accent-pink)]/10' 
+                      : 'bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30'
+                  }`}
                 >
-                  {showMarkdown ? 'Show Raw' : 'Show Preview'}
+                  {showMarkdown ? '📄 Show Raw' : '🔍 Show Preview'}
                 </button>
                 <button
                   onClick={() => copyToClipboard(results[currentProcessingIndex].content)}

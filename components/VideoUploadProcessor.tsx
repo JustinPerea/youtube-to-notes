@@ -572,7 +572,7 @@ export function VideoUploadProcessor({
                           );
                         }
                         // Regular link styling
-                        return <a href={href} className="text-blue-400 hover:text-blue-300 underline">{children}</a>;
+                        return <a href={href} className="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">{children}</a>;
                       },
                       p: ({children}) => <p className="mb-3 text-[var(--text-primary)]">{children}</p>,
                       ul: ({children}) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,

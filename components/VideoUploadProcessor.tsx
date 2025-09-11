@@ -67,6 +67,17 @@ interface ProcessingResult {
   tokensUsed?: number;
 }
 
+// NEW: Individual template status management (Phase 1 - Step 1.3)
+interface TemplateStatus {
+  template: string;
+  status: 'pending' | 'processing' | 'complete' | 'error';
+  progress: number;
+  result?: ProcessingResult;
+  error?: string;
+  startedAt?: number;
+  completedAt?: number;
+}
+
 interface VideoUploadProcessorProps {
   videoUrl: string;
   selectedTemplates: string[];
@@ -115,6 +126,13 @@ export function VideoUploadProcessor({
   }>({
     notes: { status: 'pending' }
   });
+  
+  // NEW: Per-template status tracking (Phase 1 - Step 1.3)
+  const [templateStatuses, setTemplateStatuses] = useState<Record<string, TemplateStatus>>({});
+  
+  // NEW: Progress aggregation from concurrent requests (Phase 1 - Step 1.2)
+  const [progressStates, setProgressStates] = useState<Record<string, number>>({});
+  
   // Simplified UI - removed unused state variables
 
   // Helper function to update specific processing step
@@ -124,6 +142,45 @@ export function VideoUploadProcessor({
       [step]: { ...prev[step], ...updates }
     }));
   };
+
+  // NEW: Helper function to update template status (Phase 1 - Step 1.3)
+  const updateTemplateStatus = (template: string, updates: Partial<TemplateStatus>) => {
+    setTemplateStatuses(prev => ({
+      ...prev,
+      [template]: { ...prev[template], template, ...updates }
+    }));
+  };
+
+  // NEW: Progress aggregation helper functions (Phase 1 - Step 1.2)
+  const updateTemplateProgress = (template: string, progress: number) => {
+    setProgressStates(prev => ({ ...prev, [template]: progress }));
+  };
+
+  const calculateOverallProgress = () => {
+    const progressValues = Object.values(progressStates);
+    return progressValues.length > 0 
+      ? progressValues.reduce((sum, p) => sum + p, 0) / progressValues.length 
+      : 0;
+  };
+
+  // NEW: Progressive result display (Phase 2 - Step 2.2)
+  React.useEffect(() => {
+    const completed = Object.values(templateStatuses).filter(s => s.status === 'complete');
+    if (completed.length > 0) {
+      setResults(completed.map(s => s.result!).filter(Boolean));
+    }
+  }, [templateStatuses]);
+
+  // NEW: Update overall progress from aggregated template progress (Phase 1 - Step 1.2)
+  React.useEffect(() => {
+    const useParallelProcessing = process.env.NEXT_PUBLIC_PARALLEL_PROCESSING === 'true';
+    if (useParallelProcessing && isProcessing) {
+      const overallProgress = calculateOverallProgress();
+      if (overallProgress > 0) {
+        setProgress(Math.min(30 + overallProgress * 0.6, 95)); // Map 0-100 to 30-95 range
+      }
+    }
+  }, [progressStates, isProcessing]);
 
   React.useEffect(() => {
     if (videoUrl && selectedTemplates.length > 0) {
@@ -156,6 +213,21 @@ export function VideoUploadProcessor({
     setStartTime(Date.now());
     setEstimatedTimeRemaining(null);
     setCanRetry(false);
+    
+    // NEW: Initialize template statuses (Phase 1 - Step 1.3)
+    const initialStatuses: Record<string, TemplateStatus> = {};
+    const initialProgress: Record<string, number> = {};
+    selectedTemplates.forEach(template => {
+      initialStatuses[template] = {
+        template,
+        status: 'pending',
+        progress: 0,
+        startedAt: Date.now()
+      };
+      initialProgress[template] = 0;
+    });
+    setTemplateStatuses(initialStatuses);
+    setProgressStates(initialProgress);
 
     // Initialize processing steps
     updateProcessingStep('notes', { 
@@ -220,34 +292,43 @@ export function VideoUploadProcessor({
       // 🚀 STEP 1: Process all selected templates
       addProcessingStep(`📝 Processing ${selectedTemplates.length} note format${selectedTemplates.length > 1 ? 's' : ''}...`, 30);
       
-      const allResults: ProcessingResult[] = [];
+      let allResults: ProcessingResult[] = [];
       
-      for (let i = 0; i < selectedTemplates.length; i++) {
-        const template = selectedTemplates[i];
-        setCurrentProcessingIndex(i);
-        
-        addProcessingStep(`📋 Processing format ${i + 1}/${selectedTemplates.length}: ${template}...`, 30 + (i * 50 / selectedTemplates.length));
-        
-        const response = await fetch('/api/videos/process', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            videoUrl: videoUrl.trim(),
-            selectedTemplate: template,
-            processingMode
-          }),
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.error || `Failed to process ${template} format`);
+      // Feature flag for parallel vs sequential processing
+      const useParallelProcessing = process.env.NEXT_PUBLIC_PARALLEL_PROCESSING === 'true';
+      
+      if (useParallelProcessing) {
+        // NEW: Parallel processing implementation
+        allResults = await handleParallelProcessing(videoUrl, selectedTemplates, processingMode, addProcessingStep);
+      } else {
+        // ORIGINAL: Sequential processing (preserved for safe rollback)
+        for (let i = 0; i < selectedTemplates.length; i++) {
+          const template = selectedTemplates[i];
+          setCurrentProcessingIndex(i);
+          
+          addProcessingStep(`📋 Processing format ${i + 1}/${selectedTemplates.length}: ${template}...`, 30 + (i * 50 / selectedTemplates.length));
+          
+          const response = await fetch('/api/videos/process', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              videoUrl: videoUrl.trim(),
+              selectedTemplate: template,
+              processingMode
+            }),
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.error || `Failed to process ${template} format`);
+          }
+          
+          allResults.push(data);
+          addProcessingStep(`✅ ${template} completed`, 30 + ((i + 1) * 50 / selectedTemplates.length));
         }
-        
-        allResults.push(data);
-        addProcessingStep(`✅ ${template} completed`, 30 + ((i + 1) * 50 / selectedTemplates.length));
       }
 
 
@@ -336,6 +417,114 @@ export function VideoUploadProcessor({
     navigator.clipboard.writeText(text);
   };
 
+  // NEW: Parallel processing implementation
+  const handleParallelProcessing = async (
+    videoUrl: string,
+    selectedTemplates: string[],
+    processingMode: string,
+    addProcessingStep: (step: string, progress?: number) => void
+  ): Promise<ProcessingResult[]> => {
+    // Create promises for all templates with staggered starts
+    const processingPromises = selectedTemplates.map(async (template, index) => {
+      try {
+        // Update template status to processing
+        updateTemplateStatus(template, { 
+          status: 'processing', 
+          progress: 0, 
+          startedAt: Date.now() 
+        });
+        updateTemplateProgress(template, 0);
+
+        // Stagger request starts by 150ms to reduce peak resource usage
+        await new Promise(resolve => setTimeout(resolve, index * 150));
+        
+        addProcessingStep(`🔄 Starting ${template} processing...`, 35 + (index * 5));
+        updateTemplateStatus(template, { progress: 25 });
+        updateTemplateProgress(template, 25);
+
+        const response = await fetch('/api/videos/process', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            videoUrl: videoUrl.trim(),
+            selectedTemplate: template,
+            processingMode
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || `Failed to process ${template} format`);
+        }
+
+        addProcessingStep(`✅ ${template} completed successfully`, 50 + (index * 10));
+        
+        // Update template status to complete with result
+        updateTemplateStatus(template, { 
+          status: 'complete', 
+          progress: 100, 
+          result: data,
+          completedAt: Date.now() 
+        });
+        updateTemplateProgress(template, 100);
+        
+        return {
+          template,
+          index,
+          data,
+          status: 'success' as const,
+          completedAt: Date.now()
+        };
+      } catch (error: any) {
+        addProcessingStep(`❌ ${template} failed: ${error.message}`, 50 + (index * 10));
+        
+        // Update template status to error
+        updateTemplateStatus(template, { 
+          status: 'error', 
+          error: error.message, 
+          completedAt: Date.now() 
+        });
+        
+        return {
+          template,
+          index,
+          data: null,
+          status: 'error' as const,
+          error: error.message,
+          completedAt: Date.now()
+        };
+      }
+    });
+
+    // Wait for all processing to complete
+    const results = await Promise.allSettled(processingPromises);
+    
+    // Process results and handle partial success/failure
+    const successfulResults: ProcessingResult[] = [];
+    const failedTemplates: string[] = [];
+    
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value.status === 'success') {
+        successfulResults.push(result.value.data);
+      } else {
+        const template = selectedTemplates[index];
+        failedTemplates.push(template);
+      }
+    });
+
+    // Handle partial success scenarios
+    if (failedTemplates.length > 0 && successfulResults.length > 0) {
+      addProcessingStep(`⚠️ ${successfulResults.length}/${selectedTemplates.length} formats completed (${failedTemplates.join(', ')} failed)`, 85);
+    } else if (failedTemplates.length === selectedTemplates.length) {
+      throw new Error(`All formats failed to process: ${failedTemplates.join(', ')}`);
+    }
+
+    return successfulResults;
+  };
+
   const saveNote = async () => {
     if (!session?.user?.id || results.length === 0) return;
 
@@ -408,12 +597,38 @@ export function VideoUploadProcessor({
               Processing your video into {selectedTemplates.length} format{selectedTemplates.length > 1 ? 's' : ''}...
             </p>
             
-            {/* Show current processing template */}
+            {/* Show current processing template - Updated for parallel processing */}
             {selectedTemplates.length > 1 && (
               <div className="mb-4 p-3 bg-[var(--accent-pink)]/10 border border-[var(--accent-pink)]/20 rounded-lg">
-                <p className="text-sm text-[var(--accent-pink)]">
-                  Processing {currentProcessingIndex + 1} of {selectedTemplates.length}: {selectedTemplates[currentProcessingIndex]}
-                </p>
+                {process.env.NEXT_PUBLIC_PARALLEL_PROCESSING === 'true' ? (
+                  // NEW: Per-template status display for parallel processing
+                  <div className="space-y-2">
+                    <p className="text-xs text-[var(--accent-pink)] font-medium mb-2">
+                      Processing {selectedTemplates.length} formats concurrently:
+                    </p>
+                    {selectedTemplates.map(template => {
+                      const status = templateStatuses[template];
+                      const statusIcon = status?.status === 'complete' ? '✅' : 
+                                        status?.status === 'error' ? '❌' : 
+                                        status?.status === 'processing' ? '🔄' : '⏳';
+                      return (
+                        <div key={template} className="flex items-center justify-between text-xs">
+                          <span className="text-[var(--text-primary)]">
+                            {statusIcon} {template}
+                          </span>
+                          <span className="text-[var(--text-secondary)]">
+                            {status?.progress || 0}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  // ORIGINAL: Sequential processing display
+                  <p className="text-sm text-[var(--accent-pink)]">
+                    Processing {currentProcessingIndex + 1} of {selectedTemplates.length}: {selectedTemplates[currentProcessingIndex]}
+                  </p>
+                )}
               </div>
             )}
             
@@ -522,20 +737,32 @@ export function VideoUploadProcessor({
         
         {/* Format tabs when multiple results */}
         {results.length > 1 && (
-          <div className="mb-6 flex flex-wrap gap-2">
-            {results.map((result, index) => (
-              <button
-                key={result.template}
-                onClick={() => setCurrentProcessingIndex(index)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  currentProcessingIndex === index
-                    ? 'bg-[var(--accent-pink)] text-white'
-                    : 'bg-[var(--card-border)] text-[var(--text-secondary)] hover:bg-[var(--accent-pink)]/20'
-                }`}
-              >
-                {result.template}
-              </button>
-            ))}
+          <div className="mb-6">
+            {/* NEW: Partial success notification for parallel processing */}
+            {process.env.NEXT_PUBLIC_PARALLEL_PROCESSING === 'true' && selectedTemplates.length > results.length && (
+              <div className="mb-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-sm text-yellow-600">
+                  ⚠️ {results.length} of {selectedTemplates.length} formats completed successfully. 
+                  {selectedTemplates.length - results.length} format{selectedTemplates.length - results.length > 1 ? 's' : ''} failed to process.
+                </p>
+              </div>
+            )}
+            
+            <div className="flex flex-wrap gap-2">
+              {results.map((result, index) => (
+                <button
+                  key={result.template}
+                  onClick={() => setCurrentProcessingIndex(index)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentProcessingIndex === index
+                      ? 'bg-[var(--accent-pink)] text-white'
+                      : 'bg-[var(--card-border)] text-[var(--text-secondary)] hover:bg-[var(--accent-pink)]/20'
+                  }`}
+                >
+                  ✅ {result.template}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         

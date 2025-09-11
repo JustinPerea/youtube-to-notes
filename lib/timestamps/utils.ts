@@ -40,17 +40,25 @@ export function formatTimestamp(seconds: number): string {
  * Create clickable YouTube timestamp URL
  */
 export function createTimestampUrl(videoUrl: string, timestamp: number): string {
+  console.log(`🔍 createTimestampUrl: videoUrl="${videoUrl}", timestamp=${timestamp}`);
+  
   const baseUrl = videoUrl.includes('?') ? videoUrl.split('?')[0] : videoUrl;
   const videoId = extractVideoIdFromUrl(videoUrl);
   
+  console.log(`🎯 Extracted videoId: "${videoId}" from URL: "${videoUrl}"`);
+  
   if (videoId) {
     // Use standard YouTube URL with timestamp
-    return `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(timestamp)}s`;
+    const finalUrl = `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(timestamp)}s`;
+    console.log(`✅ Generated YouTube URL: ${finalUrl}`);
+    return finalUrl;
   }
   
   // Fallback to original URL with timestamp parameter
   const separator = videoUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}t=${Math.floor(timestamp)}s`;
+  const fallbackUrl = `${baseUrl}${separator}t=${Math.floor(timestamp)}s`;
+  console.log(`⚠️ Fallback URL (no video ID found): ${fallbackUrl}`);
+  return fallbackUrl;
 }
 
 /**
@@ -172,4 +180,93 @@ export function parseTimestampData(aiResponse: string, transcriptSegments: any[]
       ? segment.text.split('.')[0] 
       : undefined
   }));
+}
+
+/**
+ * Convert timestamp strings in seconds to MM:SS format
+ */
+function parseTimestampToSeconds(timestamp: string): number {
+  const parts = timestamp.split(':').map(Number);
+  if (parts.length === 3) {
+    // HH:MM:SS format
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  } else if (parts.length === 2) {
+    // MM:SS format
+    return parts[0] * 60 + parts[1];
+  } else if (parts.length === 1) {
+    // SS format (just seconds)
+    return parts[0];
+  }
+  return 0;
+}
+
+/**
+ * Post-process generated content to convert plain timestamps to clickable YouTube links
+ * 
+ * This function finds timestamp patterns like [MM:SS], [H:MM:SS], or **[MM:SS]** 
+ * and converts them to clickable YouTube links
+ * 
+ * @param content - The generated markdown content from Gemini
+ * @param videoUrl - The YouTube video URL to link timestamps to
+ * @returns The content with clickable timestamp links
+ */
+export function convertTimestampsToLinks(content: string, videoUrl: string): string {
+  console.log(`🔗 convertTimestampsToLinks: Processing content with videoUrl: ${videoUrl}`);
+  
+  if (!videoUrl || !content) {
+    console.warn('⚠️ Missing videoUrl or content for timestamp conversion');
+    return content;
+  }
+
+  // Regex patterns to match different timestamp formats
+  const timestampPatterns = [
+    // Match timestamps in brackets like [MM:SS] or [H:MM:SS]
+    /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
+    // Match timestamps with bold formatting like **[MM:SS]**
+    /\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\*\*/g,
+    // Match timestamps in section headers like ### **[MM:SS]** Title
+    /###\s*\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\*\*/g,
+    // Match plain timestamps at start of lines like "0:30 - Topic"
+    /^(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–—]/gm,
+    // Match plain timestamps at end of sentences like "Learn techniques. 00:00"
+    /\b(\d{1,2}:\d{2}(?::\d{2})?)(?=\s*[.!?]?\s*$|\s*[.!?]\s)/gm
+  ];
+
+  let processedContent = content;
+  let replacementCount = 0;
+
+  // Process each pattern type
+  timestampPatterns.forEach((pattern, index) => {
+    processedContent = processedContent.replace(pattern, (match, timestampStr) => {
+      const seconds = parseTimestampToSeconds(timestampStr);
+      const clickableUrl = createTimestampUrl(videoUrl, seconds);
+      replacementCount++;
+      
+      const markdownLink = `[${timestampStr}](${clickableUrl})`;
+      console.log(`✅ Converted timestamp ${timestampStr} -> ${markdownLink}`);
+      
+      // Handle different match types
+      if (index === 0) {
+        // Simple [MM:SS] -> [MM:SS](url)
+        return markdownLink;
+      } else if (index === 1) {
+        // **[MM:SS]** -> **[MM:SS](url)**
+        return `**${markdownLink}**`;
+      } else if (index === 2) {
+        // ### **[MM:SS]** -> ### **[MM:SS](url)**
+        return match.replace(`[${timestampStr}]`, markdownLink);
+      } else if (index === 3) {
+        // "0:30 - Topic" -> "[0:30](url) - Topic"
+        return `${markdownLink} -`;
+      } else if (index === 4) {
+        // "Learn techniques. 00:00" -> "Learn techniques. [00:00](url)"
+        return markdownLink;
+      }
+      
+      return match;
+    });
+  });
+
+  console.log(`🎯 convertTimestampsToLinks: Converted ${replacementCount} timestamps`);
+  return processedContent;
 }

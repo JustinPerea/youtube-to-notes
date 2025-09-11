@@ -555,6 +555,25 @@ export function VideoUploadProcessor({
                       h1: ({children}) => <h1 className="text-xl font-bold text-[var(--text-primary)] mb-4">{children}</h1>,
                       h2: ({children}) => <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">{children}</h2>,
                       h3: ({children}) => <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{children}</h3>,
+                      a: ({href, children}) => {
+                        // Check if this is a timestamp link (YouTube URL with timestamp)
+                        const isTimestampLink = href && href.includes('youtube.com/watch') && href.includes('&t=');
+                        if (isTimestampLink) {
+                          return (
+                            <a 
+                              href={href} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors duration-200 no-underline mx-1"
+                              title="Click to jump to this timestamp in the YouTube video"
+                            >
+                              🔗 {children}
+                            </a>
+                          );
+                        }
+                        // Regular link styling
+                        return <a href={href} className="text-blue-400 hover:text-blue-300 underline">{children}</a>;
+                      },
                       p: ({children}) => <p className="mb-3 text-[var(--text-primary)]">{children}</p>,
                       ul: ({children}) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
                       ol: ({children}) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,

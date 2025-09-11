@@ -8,6 +8,7 @@ import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { geminiClient } from '@/lib/gemini/client';
 import { db } from '@/lib/db/drizzle';
 import { videos, users } from '@/lib/db/schema';
+import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
 import { eq, and } from 'drizzle-orm';
 import { extractVideoId } from '@/lib/utils/youtube';
 import { getUserSubscription, reserveUsage } from '@/lib/subscription/service';
@@ -1044,6 +1045,15 @@ export async function POST(request: NextRequest) {
     const verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result, userId, durationSeconds);
     console.log('✅ All verbosity levels generated successfully');
     
+    // 🔗 POST-PROCESS: Convert plain text timestamps to clickable YouTube links
+    console.log('🔗 POST-PROCESS: Converting timestamps to clickable YouTube links...', { videoUrl });
+    const processedVerbosityVersions = {
+      brief: convertTimestampsToLinks(verbosityVersions.brief, videoUrl),
+      standard: convertTimestampsToLinks(verbosityVersions.standard, videoUrl),
+      comprehensive: convertTimestampsToLinks(verbosityVersions.comprehensive, videoUrl)
+    };
+    console.log('✅ Timestamp conversion completed for all verbosity levels');
+    
     // Auto-save notes to database with all verbosity levels
     console.log('💾 Auto-saving notes to database with verbosity levels...');
     try {
@@ -1051,9 +1061,9 @@ export async function POST(request: NextRequest) {
         userId: userId,
         youtubeUrl: videoUrl,
         title: `Notes from ${videoUrl}`,
-        content: verbosityVersions[verbosity as keyof typeof verbosityVersions] || verbosityVersions.standard, // Use selected verbosity
+        content: processedVerbosityVersions[verbosity as keyof typeof processedVerbosityVersions] || processedVerbosityVersions.standard, // Use selected verbosity
         templateId: selectedTemplate,
-        verbosityVersions: verbosityVersions
+        verbosityVersions: processedVerbosityVersions
       });
       
       if (saveResult.success) {
@@ -1074,11 +1084,11 @@ export async function POST(request: NextRequest) {
     // Prepare response data in existing format for frontend compatibility
     const responseData: any = {
       title: `Notes from ${videoUrl}`,
-      content: verbosityVersions[verbosity as keyof typeof verbosityVersions] || verbosityVersions.standard, // Use user's selected verbosity
+      content: processedVerbosityVersions[verbosity as keyof typeof processedVerbosityVersions] || processedVerbosityVersions.standard, // Use user's selected verbosity
       template: selectedTemplate,
       processingMethod: processingMethod, // NEW: Include processing method
       dataSourcesUsed: dataSourcesUsed, // NEW: Include data sources
-      allVerbosityLevels: verbosityVersions,
+      allVerbosityLevels: processedVerbosityVersions,
       selectedVerbosity: verbosity, // NEW: Include selected verbosity
       videoUrl,
       processingTimestamp: new Date().toISOString()

@@ -75,3 +75,10 @@ Files touched:
 Files touched:
 - `env.example`
 - `README.md`
+
+### CSP Tightening (Preview)
+- Adjusted Content-Security-Policy generation to remove `'unsafe-eval'` on Vercel preview deployments while keeping inline scripts allowed.
+- This provides a safer baseline to test against before enforcing further tightening in production.
+
+Files touched:
+- `next.config.js`

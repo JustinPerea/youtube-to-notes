@@ -82,3 +82,16 @@ Files touched:
 
 Files touched:
 - `next.config.js`
+
+### Logging Controls
+- Added a minimal logger (`lib/logging.ts`) with levels (error, warn, info, debug) gated by `LOG_LEVEL` env.
+- Replaced noisy `console.*` calls in hot paths with level-aware logger:
+  - `lib/gemini/client.ts`
+  - `app/api/videos/process/route.ts`
+- Default `LOG_LEVEL=info` (set in docs). Use `debug` locally for detailed traces.
+
+Files touched:
+- `lib/logging.ts` (new)
+- `lib/gemini/client.ts`
+- `app/api/videos/process/route.ts`
+- `env.example`, `README.md` (document LOG_LEVEL)

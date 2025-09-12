@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { logger } from '@/lib/logging';
 import { TEMPLATES, Template, detectTutorialDomain } from '@/lib/templates';
 import { videoProcessingRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateVideoUrl } from '@/lib/validation';
@@ -24,7 +25,7 @@ type TutorialDomain = 'programming' | 'diy' | 'academic' | 'fitness' | 'general'
 
 // Enhanced local implementation with verbosity and domain support
 function getTemplatePrompt(template: Template, durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string): string {
-  console.log(`🔍 DEBUG getTemplatePrompt: template.id=${template.id}, videoUrl="${videoUrl}", supportsDomainDetection=${(template as any).supportsDomainDetection}`);
+  logger.debug(`🔍 DEBUG getTemplatePrompt: template.id=${template.id}, videoUrl="${videoUrl}", supportsDomainDetection=${(template as any).supportsDomainDetection}`);
   
   if (typeof template.prompt === 'function') {
     // Check if the function supports domain detection and try to call with all parameters
@@ -32,13 +33,13 @@ function getTemplatePrompt(template: Template, durationSeconds?: number, verbosi
       try {
         // For tutorial-guide template, always try with videoUrl first
         if (template.id === 'tutorial-guide') {
-          console.log(`✅ DEBUG: Calling tutorial-guide template with videoUrl: "${videoUrl}"`);
+          logger.debug(`✅ DEBUG: Calling tutorial-guide template with videoUrl: "${videoUrl}"`);
           return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
         }
         // For other templates, use 3-parameter version
         return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string)(durationSeconds, verbosity, domain);
       } catch (error) {
-        console.warn('Domain detection call failed, falling back to verbosity only:', error);
+        logger.warn('Domain detection call failed, falling back to verbosity only', { error: error instanceof Error ? error.message : String(error) });
       }
     }
     // Check if the function supports verbosity and try to call with verbosity
@@ -69,7 +70,7 @@ async function getModelForUser(userId: string): Promise<{
     const subscription = await getUserSubscription(userId);
     const tier = subscription?.tier || 'free';
 
-    console.log(`🎯 Model selection for user tier: ${tier}`);
+    logger.info(`🎯 Model selection for user tier: ${tier}`);
 
     switch (tier) {
       case 'free':
@@ -102,7 +103,7 @@ async function getModelForUser(userId: string): Promise<{
         };
     }
   } catch (error) {
-    console.error('Error determining user model preference:', error);
+    logger.warn('Error determining user model preference', { error: error instanceof Error ? error.message : String(error) });
     // Safe fallback to free tier
     return {
       primaryModel: 'gemini-1.5-flash',
@@ -116,7 +117,7 @@ async function getModelForUser(userId: string): Promise<{
 async function generateAllVerbosityLevels(videoUrl: string, template: any, originalContent: string, userId: string, durationSeconds?: number) {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
   
-  console.log('🔄 Optimized verbosity generation: Creating all levels in single API call...');
+  logger.debug('🔄 Optimized verbosity generation: Creating all levels in single API call...');
   
   // Get template-specific structure requirements
   const getTemplateStructure = (templateId: string) => {
@@ -175,7 +176,7 @@ ${dynamicPrompt}`;
       case 'tutorial-guide':
         // Use the enhanced template for tutorial guides with clickable timestamps
         // Use default values since we don't have verbosityLevel and detectedDomain in this scope
-        console.log(`🔗 DEBUG: generateAllVerbosityLevels videoUrl: "${videoUrl}" (length: ${videoUrl ? videoUrl.length : 0})`);
+        logger.debug(`🔗 DEBUG: generateAllVerbosityLevels videoUrl: "${videoUrl}" (length: ${videoUrl ? videoUrl.length : 0})`);
         
         // Ensure template has required properties for domain detection
         const enhancedTemplate = {
@@ -185,7 +186,7 @@ ${dynamicPrompt}`;
         };
         
         const tutorialPrompt = getTemplatePrompt(enhancedTemplate, durationSeconds, 'standard', 'general', videoUrl);
-        console.log(`🎯 DEBUG: Generated tutorial prompt includes videoUrl: ${tutorialPrompt.includes(videoUrl || 'NONE')}`);
+        logger.debug(`🎯 DEBUG: Generated tutorial prompt includes videoUrl: ${tutorialPrompt.includes(videoUrl || 'NONE')}`);
         return `
 REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY CLICKABLE TIMESTAMPS:
 
@@ -283,7 +284,7 @@ Remember: ALL three versions MUST have identical structure, only varying in cont
   const generateWithFallback = async () => {
     // Get user's tier-appropriate models
     const modelSelection = await getModelForUser(userId);
-    console.log(`💡 ${modelSelection.tierMessage}`);
+    logger.info(`💡 ${modelSelection.tierMessage}`);
     
     // Try primary model first (tier-based)
     let model = genAI.getGenerativeModel({ 
@@ -296,11 +297,11 @@ Remember: ALL three versions MUST have identical structure, only varying in cont
 
     try {
       const result = await model.generateContent(comprehensivePrompt);
-      console.log(`✅ Verbosity generation successful with ${modelSelection.primaryModel}`);
+      logger.info(`✅ Verbosity generation successful with ${modelSelection.primaryModel}`);
       return await result.response.text();
     } catch (error: any) {
       if (error.status === 429 || error.message?.includes('quota')) {
-        console.log(`⚠️ ${modelSelection.primaryModel} quota exceeded, trying fallback: ${modelSelection.fallbackModel}...`);
+        logger.warn(`⚠️ ${modelSelection.primaryModel} quota exceeded, trying fallback: ${modelSelection.fallbackModel}...`);
         
         // Use tier-appropriate fallback model
         model = genAI.getGenerativeModel({ 
@@ -313,10 +314,10 @@ Remember: ALL three versions MUST have identical structure, only varying in cont
         
         try {
           const result = await model.generateContent(comprehensivePrompt);
-          console.log(`✅ Verbosity generation successful with fallback: ${modelSelection.fallbackModel}`);
+          logger.info(`✅ Verbosity generation successful with fallback: ${modelSelection.fallbackModel}`);
           return await result.response.text();
         } catch (fallbackError) {
-          console.error(`❌ Both ${modelSelection.primaryModel} and ${modelSelection.fallbackModel} failed for verbosity generation:`, fallbackError);
+          logger.error(`❌ Both ${modelSelection.primaryModel} and ${modelSelection.fallbackModel} failed for verbosity generation`, { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) });
           throw fallbackError;
         }
       } else {
@@ -327,7 +328,7 @@ Remember: ALL three versions MUST have identical structure, only varying in cont
 
   try {
     // SINGLE API CALL instead of 3 separate calls
-    console.log('💡 Making single API call for all verbosity levels...');
+  logger.debug('💡 Making single API call for all verbosity levels...');
     const fullResponse = await generateWithFallback();
     
     // Parse the response to extract all three levels
@@ -337,12 +338,12 @@ Remember: ALL three versions MUST have identical structure, only varying in cont
 
     // Validate that we got all sections
     if (!comprehensive || !standard || !brief) {
-      console.log('⚠️ Could not parse all sections from response, falling back to simple parsing...');
+      logger.debug('⚠️ Could not parse all sections from response, falling back to simple parsing...');
       return parseResponseAsFallback(fullResponse, originalContent);
     }
 
-    console.log('✅ Successfully generated all verbosity levels in single API call');
-    console.log(`📊 Generated: ${comprehensive.length} chars (comprehensive), ${standard.length} chars (standard), ${brief.length} chars (brief)`);
+    logger.info('✅ Successfully generated all verbosity levels in single API call');
+    logger.debug(`📊 Generated: ${comprehensive.length} chars (comprehensive), ${standard.length} chars (standard), ${brief.length} chars (brief)`);
     
     return {
       brief: brief.trim(),
@@ -351,10 +352,10 @@ Remember: ALL three versions MUST have identical structure, only varying in cont
     };
 
   } catch (error) {
-    console.error('❌ Error in optimized verbosity generation:', error);
+    logger.error('❌ Error in optimized verbosity generation', { error: error instanceof Error ? error.message : String(error) });
     
     // Create simple text-based variations as ultimate fallback
-    console.log('🔄 Using text-based fallback for verbosity levels...');
+    logger.debug('🔄 Using text-based fallback for verbosity levels...');
     const lines = originalContent.split('\n').filter(line => line.trim());
     
     return {
@@ -433,7 +434,7 @@ OUTPUT: Return only the adjusted content, no explanations.`;
 
     return { brief, standard, comprehensive };
   } catch (error) {
-    console.error('Error generating text-based verbosity levels:', error);
+    logger.error('Error generating text-based verbosity levels', { error: error instanceof Error ? error.message : String(error) });
     // Fallback to simple text manipulation
     const lines = originalContent.split('\n').filter(line => line.trim());
     return {
@@ -481,7 +482,7 @@ Generate comprehensive content based on this transcript.`;
     return text;
   } catch (error: any) {
     if (error.status === 429) {
-      console.log('Primary model quota exceeded, trying fallback...');
+      logger.warn('Primary model quota exceeded, trying fallback...');
       const fallbackModel = genAI.getGenerativeModel({ 
         model: 'gemini-1.5-flash',
         generationConfig: { temperature: 0.1, maxOutputTokens: 3000 }
@@ -542,7 +543,7 @@ Return ONLY the JSON object. No markdown formatting, no explanations, no code bl
     ]);
 
     const analysisText = await result.response.text();
-    console.log('Content analysis result:', analysisText);
+    logger.debug('Content analysis result:', analysisText);
     
     // Clean the response to extract pure JSON - handle various formats
     let cleanedText = analysisText.trim();
@@ -562,7 +563,7 @@ Return ONLY the JSON object. No markdown formatting, no explanations, no code bl
     const analysis = JSON.parse(cleanedText);
     return analysis;
   } catch (error) {
-    console.error('Content analysis failed:', error);
+    logger.warn('Content analysis failed', { error: error instanceof Error ? error.message : String(error) });
     // Fallback to basic analysis
     return {
       type: 'educational',
@@ -609,7 +610,7 @@ function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLe
       tags: videoMetadata.tags || [],
       channelName: videoMetadata.channelName || ''
     });
-    console.log(`🎯 Detected tutorial domain: ${detectedDomain} for "${videoMetadata.title}"`);
+    logger.info(`🎯 Detected tutorial domain: ${detectedDomain} for "${videoMetadata.title}"`);
   }
 
       // Handle Basic Summary template specifically
@@ -695,7 +696,7 @@ async function processVideoInChunks(videoUrl: string, prompt: string, template: 
     return text;
   } catch (error: any) {
     // Fallback to simple processing if chunked processing fails
-    console.log('Chunked processing failed, falling back to simple processing:', error.message);
+    logger.warn('Chunked processing failed, falling back to simple processing', { error: error instanceof Error ? error.message : String(error) });
     
     const fallbackModel = genAI.getGenerativeModel({ 
       model: 'gemini-1.5-flash',
@@ -761,7 +762,7 @@ async function fetchYouTubeMetadata(videoId: string): Promise<{
       thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
     };
   } catch (error) {
-    console.error('Error fetching YouTube metadata:', error);
+    logger.warn('Error fetching YouTube metadata', { error: error instanceof Error ? error.message : String(error) });
     return {
       title: `YouTube Video ${videoId}`,
       thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
@@ -775,7 +776,7 @@ async function ensureVideoRecord(request: NextRequest, videoUrl: string): Promis
     // Check if user is authenticated
     const session = await getApiSessionWithDatabase(request);
     if (!session?.user?.id) {
-      console.log('No authenticated user for video record creation');
+      logger.debug('No authenticated user for video record creation');
       return; // Don't create video record if no user
     }
 
@@ -785,7 +786,7 @@ async function ensureVideoRecord(request: NextRequest, videoUrl: string): Promis
     // Extract video ID from URL
     const youtubeVideoId = extractVideoId(videoUrl);
     if (!youtubeVideoId) {
-      console.error('Failed to extract video ID from URL:', videoUrl);
+      logger.error('Failed to extract video ID from URL', { videoUrl });
       return;
     }
 
@@ -802,7 +803,7 @@ async function ensureVideoRecord(request: NextRequest, videoUrl: string): Promis
       .limit(1);
 
     if (existingVideo.length > 0) {
-      console.log('Video record already exists:', youtubeVideoId);
+      logger.debug('Video record already exists:', youtubeVideoId);
       return;
     }
 
@@ -822,9 +823,9 @@ async function ensureVideoRecord(request: NextRequest, videoUrl: string): Promis
         status: 'processing' // Mark as processing since we're currently processing it
       });
 
-    console.log('✅ Created video record for:', youtubeVideoId);
+    logger.info('✅ Created video record for:', youtubeVideoId);
   } catch (error) {
-    console.error('Error ensuring video record:', error);
+    logger.warn('Error ensuring video record', { error: error instanceof Error ? error.message : String(error) });
     // Don't throw error to avoid breaking video processing
   }
 }
@@ -839,7 +840,7 @@ async function updateVideoRecordStatus(
     // Check if user is authenticated
     const session = await getApiSessionWithDatabase(request);
     if (!session?.user?.id) {
-      console.log('No authenticated user for video record status update');
+      logger.debug('No authenticated user for video record status update');
       return;
     }
 
@@ -849,7 +850,7 @@ async function updateVideoRecordStatus(
     // Extract video ID from URL
     const youtubeVideoId = extractVideoId(videoUrl);
     if (!youtubeVideoId) {
-      console.error('Failed to extract video ID from URL:', videoUrl);
+      logger.error('Failed to extract video ID from URL', { videoUrl });
       return;
     }
 
@@ -868,9 +869,9 @@ async function updateVideoRecordStatus(
         )
       );
 
-    console.log(`✅ Updated video record status to '${status}' for:`, youtubeVideoId);
+    logger.info(`✅ Updated video record status to '${status}' for:`, youtubeVideoId);
   } catch (error) {
-    console.error('Error updating video record status:', error);
+    logger.warn('Error updating video record status', { error: error instanceof Error ? error.message : String(error) });
     // Don't throw error to avoid breaking video processing
   }
 }
@@ -922,19 +923,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid template selected' }, { status: 400 });
     }
 
-    console.log('Processing video with template:', selectedTemplate);
-    console.log('Processing mode:', processingMode);
-    console.log('Verbosity level:', verbosity);
+    logger.info('Processing video with template:', selectedTemplate);
+    logger.info('Processing mode:', processingMode);
+    logger.info('Verbosity level:', verbosity);
 
     // Create or find existing video record in database
     await ensureVideoRecord(request, videoUrl);
 
     // NEW: Use enhanced GeminiClient with hybrid processing support
-    console.log('🚀 Using enhanced GeminiClient with hybrid processing...');
+    logger.info('🚀 Using enhanced GeminiClient with hybrid processing...');
     
     // Get current user session for processing limits - ensure user exists in database
     const session = await getApiSessionWithDatabase(request);
-    console.log('AUTH STATUS (process route):', {
+    logger.debug('AUTH STATUS (process route):', {
       hasSession: !!session,
       hasUser: !!session?.user,
       hasUserId: !!session?.user?.id,
@@ -943,7 +944,7 @@ export async function POST(request: NextRequest) {
     
     // Require authentication for video processing
     if (!session?.user?.id) {
-      console.error('❌ Authentication failed - no valid session or database user');
+      logger.error('❌ Authentication failed - no valid session or database user');
       return NextResponse.json({
         error: 'Authentication required',
         details: 'You must be signed in to process videos'
@@ -978,7 +979,7 @@ export async function POST(request: NextRequest) {
       }, { status: 429 });
     }
     
-    console.log('✅ Usage reservation successful:', usageReservation.reservationId);
+    logger.info('✅ Usage reservation successful:', usageReservation.reservationId);
     
     // 🔒 AUDIT: Log video processing start
     await auditLogger.logEvent({
@@ -1018,28 +1019,28 @@ export async function POST(request: NextRequest) {
     let contentAnalysis: any = null; // For compatibility with existing code
     
     // Log hybrid processing results
-    console.log(`✅ Processing completed with method: ${processingMethod}`);
-    console.log(`📋 Data sources used: ${dataSourcesUsed.join(', ')}`);
-    console.log(`💰 Processing cost: $${processingResult.cost?.toFixed(4) || '0.0000'}`);
-    console.log(`📈 Token usage: ${processingResult.tokenUsage || 0}`);
+    logger.info(`✅ Processing completed with method: ${processingMethod}`);
+    logger.debug(`📋 Data sources used: ${dataSourcesUsed.join(', ')}`);
+    logger.debug(`💰 Processing cost: $${processingResult.cost?.toFixed(4) || '0.0000'}`);
+    logger.debug(`📈 Token usage: ${processingResult.tokenUsage || 0}`);
     
     // Generate all verbosity levels from the result with user's preferred default
-    console.log('Generating all verbosity levels for instant switching...');
+    logger.debug('Generating all verbosity levels for instant switching...');
     const durationSeconds = processingResult.metadata?.videoDuration;
     const verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result, userId, durationSeconds);
-    console.log('✅ All verbosity levels generated successfully');
+    logger.info('✅ All verbosity levels generated successfully');
     
     // 🔗 POST-PROCESS: Convert plain text timestamps to clickable YouTube links
-    console.log('🔗 POST-PROCESS: Converting timestamps to clickable YouTube links...', { videoUrl });
+    logger.debug('🔗 POST-PROCESS: Converting timestamps to clickable YouTube links...', { videoUrl });
     const processedVerbosityVersions = {
       brief: convertTimestampsToLinks(verbosityVersions.brief, videoUrl),
       standard: convertTimestampsToLinks(verbosityVersions.standard, videoUrl),
       comprehensive: convertTimestampsToLinks(verbosityVersions.comprehensive, videoUrl)
     };
-    console.log('✅ Timestamp conversion completed for all verbosity levels');
+    logger.debug('✅ Timestamp conversion completed for all verbosity levels');
     
     // Auto-save notes to database with all verbosity levels
-    console.log('💾 Auto-saving notes to database with verbosity levels...');
+    logger.debug('💾 Auto-saving notes to database with verbosity levels...');
     try {
       const saveResult = await NotesService.saveNote({
         userId: userId,
@@ -1051,18 +1052,18 @@ export async function POST(request: NextRequest) {
       });
       
       if (saveResult.success) {
-        console.log('✅ Notes successfully saved to database with ID:', saveResult.noteId);
+        logger.info('✅ Notes successfully saved to database with ID:', saveResult.noteId);
       } else {
-        console.warn('⚠️ Failed to auto-save notes:', saveResult.error);
+        logger.warn('⚠️ Failed to auto-save notes', { error: saveResult.error });
         // Continue processing - don't fail the entire request
       }
     } catch (saveError) {
-      console.error('❌ Error during auto-save:', saveError);
+      logger.warn('❌ Error during auto-save', { error: saveError instanceof Error ? saveError.message : String(saveError) });
       // Continue processing - don't fail the entire request
     }
     
     // Update video status as completed AFTER verbosity generation and auto-save
-    console.log('🏁 Marking video processing as completed...');
+    logger.debug('🏁 Marking video processing as completed...');
     await updateVideoRecordStatus(request, videoUrl, 'completed');
     
     // Prepare response data in existing format for frontend compatibility
@@ -1101,12 +1102,12 @@ export async function POST(request: NextRequest) {
     }
     
     // Usage already tracked via atomic reservation system
-    console.log('✅ Usage tracking completed via atomic reservation system');
+    logger.debug('✅ Usage tracking completed via atomic reservation system');
     
     return NextResponse.json(responseData);
 
   } catch (error: any) {
-    console.error('Video processing error:', error);
+    logger.error('Video processing error', { error: error instanceof Error ? error.message : String(error) });
     
     // Mark video as failed in database
     await updateVideoRecordStatus(request, videoUrl, 'failed');

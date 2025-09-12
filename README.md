@@ -135,6 +135,10 @@ REDIS_URL=your_redis_url
 
 # Debug endpoints (optional; false by default)
 DEBUG_ENDPOINTS_ENABLED=false
+
+# Logging
+# LOG_LEVEL controls server log verbosity: error | warn | info | debug
+LOG_LEVEL=info
 ```
 
 ## Agent Workflow Commands

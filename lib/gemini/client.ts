@@ -5,6 +5,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { logger } from '@/lib/logging';
 import { Template, TEMPLATES, detectTutorialDomain } from '@/lib/templates';
 import { 
   EnhancedVideoAnalysis, 
@@ -155,7 +156,7 @@ export class GeminiClient {
     
     const processingId = `proc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    console.log(`🎬 Starting video processing: ${processingId}`);
+    logger.info(`🎬 Starting video processing: ${processingId}`);
     console.log(`📺 URL: ${request.youtubeUrl}`);
     console.log(`📋 Template: ${request.template.name}`);
 
@@ -186,7 +187,7 @@ export class GeminiClient {
       const processingMode = request.processingMode || 'auto';
       const shouldUseHybrid = this.shouldUseHybridProcessing(metadata, processingMode);
       
-      console.log(`🎯 Processing mode: ${processingMode} → Using: ${shouldUseHybrid ? 'HYBRID' : 'SINGLE-SOURCE'}`);
+      logger.debug(`🎯 Processing mode: ${processingMode} → Using: ${shouldUseHybrid ? 'HYBRID' : 'SINGLE-SOURCE'}`);
       
       // Process with enhanced strategy
       const result = shouldUseHybrid
@@ -198,7 +199,7 @@ export class GeminiClient {
       // Calculate cost based on processing method
       const cost = this.calculateCost(result.tokenUsage || 0, result.processingMethod);
 
-      console.log(`✅ Video processing completed: ${processingId}`);
+      logger.info(`✅ Video processing completed: ${processingId}`);
       console.log(`⏱️ Processing time: ${processingTime}ms`);
       console.log(`💰 Estimated cost: $${cost.toFixed(4)}`);
       console.log(`📊 Processing method: ${result.processingMethod}`);
@@ -219,7 +220,7 @@ export class GeminiClient {
       };
 
     } catch (error) {
-      console.error(`❌ Video processing failed: ${processingId}`, error);
+      logger.error(`❌ Video processing failed: ${processingId}`, { error: error instanceof Error ? error.message : String(error) });
       
       return {
         id: processingId,
@@ -267,7 +268,7 @@ export class GeminiClient {
     };
   }> {
     try {
-      console.log('🔍 Extracting comprehensive video metadata...');
+      logger.debug('🔍 Extracting comprehensive video metadata...');
       
       // Fetch rich metadata from YouTube Data API v3
       const youtubeMetadata = await fetchVideoMetadata(url);
@@ -306,7 +307,7 @@ export class GeminiClient {
         };
       }
       
-      console.log('⚠️ YouTube Data API unavailable, using fallback metadata');
+      logger.warn('⚠️ YouTube Data API unavailable, using fallback metadata');
       
       // Fallback to basic metadata if YouTube API fails
       return {
@@ -318,7 +319,7 @@ export class GeminiClient {
       };
       
     } catch (error) {
-      console.error('❌ Error extracting video metadata:', error);
+      logger.warn('❌ Error extracting video metadata', { error: error instanceof Error ? error.message : String(error) });
       
       // Return basic fallback metadata
       return {
@@ -462,10 +463,10 @@ export class GeminiClient {
       let transcriptSource: 'youtube' | 'gemini' = 'youtube';
       
       if (transcriptResult.success && transcriptResult.fullText) {
-        console.log(`✅ YouTube transcript extracted: ${transcriptResult.metadata?.wordCount} words`);
+        logger.debug(`✅ YouTube transcript extracted: ${transcriptResult.metadata?.wordCount} words`);
         transcript = cleanTranscriptText(transcriptResult.fullText);
       } else {
-        console.log(`⚠️ YouTube transcript failed: ${transcriptResult.error}`);
+        logger.debug(`⚠️ YouTube transcript failed: ${transcriptResult.error}`);
         console.log('🔄 Attempting Gemini transcript generation as fallback...');
         
         // Fallback: Generate transcript using Gemini's video analysis
@@ -479,7 +480,7 @@ export class GeminiClient {
         
         transcript = geminiTranscript.transcript;
         transcriptSource = 'gemini';
-        console.log(`✅ Gemini transcript generated: ${transcript.length} characters`);
+        logger.debug(`✅ Gemini transcript generated: ${transcript.length} characters`);
       }
       
       // Combine prompt with transcript
@@ -490,7 +491,7 @@ export class GeminiClient {
       const text = result.text;
       const tokenUsage = result.tokenUsage;
 
-      console.log(`🤖 Generated content from ${transcriptSource} transcript: ${text.length} characters, ${tokenUsage} tokens`);
+      logger.debug(`🤖 Generated content from ${transcriptSource} transcript: ${text.length} characters, ${tokenUsage} tokens`);
 
       return { 
         text, 
@@ -500,7 +501,7 @@ export class GeminiClient {
       };
 
     } catch (error) {
-      console.error('Gemini API error:', error);
+      logger.error('Gemini API error', { error: error instanceof Error ? error.message : String(error) });
       
       // Handle specific Gemini errors
       if (error instanceof Error) {
@@ -919,7 +920,7 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, just the JSON st
     error?: string;
   }> {
     try {
-      console.log('🎤 Attempting ENHANCED transcript generation with audio-focused analysis...');
+      logger.debug('🎤 Attempting ENHANCED transcript generation with audio-focused analysis...');
       
       // Extract video ID and analyze URL patterns
       const videoIdMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
@@ -1364,7 +1365,7 @@ This hybrid approach leverages the best of each data source to create premium-qu
       
       totalTokenUsage += result.tokenUsage;
       
-      console.log(`🎆 HYBRID processing completed successfully!`);
+      logger.info(`🎆 HYBRID processing completed successfully!`);
       console.log(`📋 Data sources used: ${dataSourcesUsed.join(', ')}`);
       console.log(`📊 Generated content: ${text.length} characters, ${totalTokenUsage} total tokens`);
       
@@ -1376,7 +1377,7 @@ This hybrid approach leverages the best of each data source to create premium-qu
       };
       
     } catch (error) {
-      console.error('❌ HYBRID processing failed, falling back to standard processing:', error);
+      logger.warn('❌ HYBRID processing failed, falling back to standard processing', { error: error instanceof Error ? error.message : String(error) });
       
       // Fallback to standard processing
       const fallbackResult = await this.generateContent(prompt, videoUrl);

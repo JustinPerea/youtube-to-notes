@@ -59,7 +59,6 @@ export function middleware(request: NextRequest) {
   const isPreview = process.env.VERCEL_ENV === 'preview';
   const scriptSrc = [
     "'self'",
-    "'unsafe-inline'", // TODO: remove once all scripts carry nonce
     `'nonce-${nonce}'`,
     'https://www.googletagmanager.com',
     'https://www.google-analytics.com',
@@ -68,6 +67,10 @@ export function middleware(request: NextRequest) {
     'https://ep2.adtrafficquality.google',
     'https://www.google.com',
   ];
+  // Keep 'unsafe-inline' only outside preview for now; plan removal later in production too
+  if (!isPreview) {
+    scriptSrc.splice(1, 0, "'unsafe-inline'");
+  }
   // Only allow 'unsafe-eval' in development; preview/prod exclude
   if (isDevelopment) {
     scriptSrc.splice(1, 0, "'unsafe-eval'");

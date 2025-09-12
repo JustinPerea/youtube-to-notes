@@ -104,3 +104,10 @@ Files touched:
 Files touched:
 - `middleware.ts`
 - `app/layout.tsx`
+
+### CSP (Preview) — Remove 'unsafe-inline'
+- Adjusted middleware CSP to exclude `'unsafe-inline'` for Vercel preview deployments. Inline scripts must carry the per-request nonce.
+- Production keeps `'unsafe-inline'` temporarily; we’ll remove it after validating preview stability.
+
+Files touched:
+- `middleware.ts`

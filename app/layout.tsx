@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import Script from 'next/script'
+import { headers } from 'next/headers'
 import AuthProvider from '../components/AuthProvider'
 import { ThemeProvider } from '../components/ui/ThemeProvider'
 import { Header } from '../components/Header'
@@ -24,13 +26,20 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const nonce = headers().get('x-nonce') || undefined
   return (
     <html lang="en">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <meta name="google-adsense-account" content="ca-pub-4135776739187234" />
         {/* AdSense verification script - always loaded for Google crawler */}
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4135776739187234" crossOrigin="anonymous"></script>
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4135776739187234"
+          async
+          strategy="afterInteractive"
+          nonce={nonce}
+          crossOrigin="anonymous"
+        />
       </head>
       <body className={inter.className}>
         <AdSenseScript />

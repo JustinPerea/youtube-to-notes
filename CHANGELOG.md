@@ -95,3 +95,12 @@ Files touched:
 - `lib/gemini/client.ts`
 - `app/api/videos/process/route.ts`
 - `env.example`, `README.md` (document LOG_LEVEL)
+### CSP Nonce Scaffolding
+- Generate a per-request CSP nonce in `middleware.ts` and attach it to the request/response headers (`x-nonce`).
+- Apply a dynamic `Content-Security-Policy` header in middleware that includes `'nonce-<value>'` in `script-src` while keeping `'unsafe-inline'` for now.
+- Update `app/layout.tsx` to load the AdSense script via `next/script` with the generated `nonce`.
+- This prepares us to safely remove `'unsafe-inline'` once all inline scripts are migrated to carry the nonce.
+
+Files touched:
+- `middleware.ts`
+- `app/layout.tsx`

@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
+  // Generate a per-request nonce for CSP (move toward nonce-based policy)
+  let nonce = '';
+  try {
+    // Use Web Crypto for randomness (Edge-compatible)
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    nonce = Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    // Fallback if crypto not available
+    nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
   // Allow Google AdSense crawler to access the site for verification
   const userAgent = request.headers.get('user-agent') || '';
   const isGoogleAdSenseCrawler = userAgent.includes('google') && 
@@ -24,14 +35,57 @@ export function middleware(request: NextRequest) {
     );
   }
 
+  // Attach nonce to downstream request (so app/layout can read it)
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+
   // Get the response
-  const response = NextResponse.next();
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
+  // Also reflect nonce on response for debugging/diagnostics
+  response.headers.set('x-nonce', nonce);
 
   // Security headers (additional to next.config.js)
   response.headers.set('X-Requested-With', 'XMLHttpRequest');
   response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
   response.headers.set('X-Download-Options', 'noopen');
   response.headers.set('X-Powered-By', 'Next.js');
+
+  // Dynamic CSP with nonce (keeps 'unsafe-inline' for now; will remove later once all scripts have nonce)
+  const isPreview = process.env.VERCEL_ENV === 'preview';
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'", // TODO: remove once all scripts carry nonce
+    `'nonce-${nonce}'`,
+    'https://www.googletagmanager.com',
+    'https://www.google-analytics.com',
+    'https://pagead2.googlesyndication.com',
+    'https://googleads.g.doubleclick.net',
+    'https://ep2.adtrafficquality.google',
+    'https://www.google.com',
+  ];
+  // Only allow 'unsafe-eval' in development; preview/prod exclude
+  if (isDevelopment) {
+    scriptSrc.splice(1, 0, "'unsafe-eval'");
+  }
+
+  const csp = [
+    "default-src 'self'",
+    `script-src ${scriptSrc.join(' ')}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https: https://i.ytimg.com https://yt3.googleusercontent.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://googleads.g.doubleclick.net",
+    "connect-src 'self' https://generativelanguage.googleapis.com https://*.supabase.co https://accounts.google.com https://www.googleapis.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google.com",
+    "frame-src 'self' https://accounts.google.com https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+  response.headers.set('Content-Security-Policy', csp);
 
   // CORS headers for API routes
   if (request.nextUrl.pathname.startsWith('/api/')) {

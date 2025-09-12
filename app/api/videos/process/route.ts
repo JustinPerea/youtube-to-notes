@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { TEMPLATES, Template } from '@/lib/templates';
+import { TEMPLATES, Template, detectTutorialDomain } from '@/lib/templates';
 import { videoProcessingRateLimiter, getClientIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import { validateVideoUrl } from '@/lib/validation';
 import { extractTranscript, extractTranscriptEnhanced, cleanTranscriptText } from '@/lib/transcript/extractor';
@@ -21,27 +21,6 @@ export const dynamic = 'force-dynamic';
 // Local type definitions for verbosity and domain
 type VerbosityLevel = 'concise' | 'standard' | 'comprehensive';
 type TutorialDomain = 'programming' | 'diy' | 'academic' | 'fitness' | 'general';
-
-// Local domain detection function - simplified version for API route
-function detectDomainFromMetadata(title: string = '', description: string = ''): TutorialDomain {
-  const text = (title + ' ' + description).toLowerCase();
-  
-  // Quick domain detection patterns
-  if (text.match(/(javascript|python|code|programming|react|html|css|api|software|developer?|github|web development)/)) {
-    return 'programming';
-  }
-  if (text.match(/(workout|exercise|fitness|gym|training|yoga|diet|muscle|cardio|strength)/)) {
-    return 'fitness';
-  }
-  if (text.match(/(diy|craft|build|make|repair|fix|tool|material|homemade|handmade|woodwork)/)) {
-    return 'diy';
-  }
-  if (text.match(/(education|lesson|study|learn|course|math|science|physics|chemistry|academic|research)/)) {
-    return 'academic';
-  }
-  
-  return 'general';
-}
 
 // Enhanced local implementation with verbosity and domain support
 function getTemplatePrompt(template: Template, durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string): string {
@@ -624,7 +603,12 @@ function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLe
   // Detect domain for tutorial-specific templates
   let detectedDomain: TutorialDomain = 'general';
   if (template.id === 'tutorial-guide' && videoMetadata) {
-    detectedDomain = detectDomainFromMetadata(videoMetadata.title, videoMetadata.description);
+    detectedDomain = detectTutorialDomain({
+      title: videoMetadata.title || '',
+      description: videoMetadata.description || '',
+      tags: videoMetadata.tags || [],
+      channelName: videoMetadata.channelName || ''
+    });
     console.log(`🎯 Detected tutorial domain: ${detectedDomain} for "${videoMetadata.title}"`);
   }
 
@@ -1184,4 +1168,3 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 }
-

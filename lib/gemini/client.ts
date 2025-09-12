@@ -5,7 +5,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Template, TEMPLATES } from '@/lib/templates';
+import { Template, TEMPLATES, detectTutorialDomain } from '@/lib/templates';
 import { 
   EnhancedVideoAnalysis, 
   EnhancedProcessingRequest, 
@@ -49,8 +49,9 @@ export interface ProcessingQueueItem {
 }
 
 export class GeminiClient {
-  private genAI: GoogleGenerativeAI;
+  private genAI: GoogleGenerativeAI | null = null;
   private models: Record<string, any> = {};
+  private initialized = false;
   private modelHierarchy: string[] = [
     "gemini-2.0-flash-exp",      // Primary: Best for video
     "gemini-1.5-flash",          // Fallback 1: Still handles video
@@ -60,27 +61,33 @@ export class GeminiClient {
   private isProcessing: boolean = false;
   private activeRequests: Map<string, Promise<any>> = new Map(); // Request deduplication
 
-  constructor() {
+  constructor() {}
+
+  // Lazy init to avoid throwing at import time
+  private ensureInitialized() {
+    if (this.initialized) return;
+
     const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-    
     if (!apiKey) {
-      throw new Error('GOOGLE_GEMINI_API_KEY environment variable is required');
+      throw new Error('Gemini not configured. Set GOOGLE_GEMINI_API_KEY on the server to enable processing.');
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);
-    
-    // Initialize all models
+    this.models = {};
+
     this.modelHierarchy.forEach(modelName => {
-      this.models[modelName] = this.genAI.getGenerativeModel({
+      this.models[modelName] = this.genAI!.getGenerativeModel({
         model: modelName,
         generationConfig: {
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 16384, // Increased for comprehensive tutorials with timestamps
+          maxOutputTokens: 16384,
         },
       });
     });
+
+    this.initialized = true;
   }
 
   /**
@@ -91,6 +98,9 @@ export class GeminiClient {
     tokenUsage: number;
     modelUsed: string;
   }> {
+    // Initialize SDK/models on first use
+    this.ensureInitialized();
+
     for (const modelName of this.modelHierarchy) {
       // Skip non-video models if video processing is required
       if (Array.isArray(prompt) && modelName.includes('pro') && !modelName.includes('flash')) {
@@ -324,8 +334,13 @@ export class GeminiClient {
   private buildPrompt(request: VideoProcessingRequest, metadata: any): string {
     const { template, customPrompt, youtubeUrl } = request;
     
-    // Detect domain from video metadata
-    const detectedDomain = this.detectDomainFromMetadata(metadata.videoTitle || '', metadata.youtubeMetadata?.description || '');
+    // Detect domain from video metadata (centralized utility)
+    const detectedDomain = detectTutorialDomain({
+      title: metadata.videoTitle || '',
+      description: metadata.youtubeMetadata?.description || '',
+      tags: metadata.youtubeMetadata?.tags || [],
+      channelName: metadata.youtubeMetadata?.channelTitle || ''
+    });
     
     // Use enhanced template processing with timestamp support
     let prompt = this.getTemplatePrompt(template, metadata.videoDuration, 'standard', detectedDomain, youtubeUrl);
@@ -396,26 +411,7 @@ export class GeminiClient {
     return template.prompt as string;
   }
 
-  // Domain detection from metadata (copied from API route)
-  private detectDomainFromMetadata(title: string = '', description: string = ''): 'programming' | 'diy' | 'academic' | 'fitness' | 'general' {
-    const text = (title + ' ' + description).toLowerCase();
-    
-    // Quick domain detection patterns
-    if (text.match(/(javascript|python|code|programming|react|html|css|api|software|developer?|github|web development)/)) {
-      return 'programming';
-    }
-    if (text.match(/(workout|exercise|fitness|gym|training|yoga|diet|muscle|cardio|strength)/)) {
-      return 'fitness';
-    }
-    if (text.match(/(diy|craft|build|make|repair|fix|tool|material|homemade|handmade|woodwork)/)) {
-      return 'diy';
-    }
-    if (text.match(/(education|lesson|study|learn|course|math|science|physics|chemistry|academic|research)/)) {
-      return 'academic';
-    }
-    
-    return 'general';
-  }
+  // Domain detection centralized via detectTutorialDomain from lib/templates
 
   private generateBasicAnalysis(metadata: any): string {
     const { videoTitle, channelName, videoDuration, youtubeMetadata } = metadata;

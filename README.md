@@ -167,3 +167,7 @@ This project uses an agent-based development workflow. All contributions go thro
 
 MIT License - see LICENSE file for details
 # Force Vercel redeploy - Fri Aug 29 12:27:40 EDT 2025
+
+## Changelog
+
+See `CHANGELOG.md` for a summary of recent changes, security hardening, and behavioral updates.

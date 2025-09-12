@@ -360,3 +360,14 @@ export function validateTemplate(template: Partial<Template>): string[] {
 }
 
 export default TEMPLATES;
+
+// Re-export domain detection utilities so imports from '@/lib/templates' work
+export {
+  detectTutorialDomain,
+} from './templates/index';
+
+export type {
+  TutorialDomain,
+  VideoMetadata,
+  VerbosityLevel,
+} from './templates/index';

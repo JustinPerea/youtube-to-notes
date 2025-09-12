@@ -80,36 +80,50 @@ export class ApiKeySecurityManager {
   }
 
   /**
-   * Encrypt an API key for secure storage
+   * Encrypt an API key for secure storage using AES-256-GCM
    */
   private encryptKey(key: string): string {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher('aes-256-gcm', this.encryptionKey);
-    
+    const iv = crypto.randomBytes(12); // 96-bit IV recommended for GCM
+    const secret = this.getKeyBuffer();
+    const cipher = crypto.createCipheriv('aes-256-gcm', secret, iv);
+
     let encrypted = cipher.update(key, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
     const authTag = cipher.getAuthTag();
-    
+
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
   }
 
   /**
-   * Decrypt an API key for use
+   * Decrypt an API key for use (AES-256-GCM)
    */
   private decryptKey(encryptedKey: string): string {
     const [ivHex, authTagHex, encrypted] = encryptedKey.split(':');
-    
+    if (!ivHex || !authTagHex || !encrypted) {
+      throw new Error('Invalid encrypted key format');
+    }
+
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
-    const decipher = crypto.createDecipher('aes-256-gcm', this.encryptionKey);
-    
+    const secret = this.getKeyBuffer();
+    const decipher = crypto.createDecipheriv('aes-256-gcm', secret, iv);
     decipher.setAuthTag(authTag);
-    
+
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
     return decrypted;
+  }
+
+  /**
+   * Derive a 32-byte key for AES-256 from the configured encryption key.
+   * If the configured key looks like a 64-hex string, treat it as raw key bytes.
+   * Otherwise, derive with scrypt using a static domain-separated salt.
+   */
+  private getKeyBuffer(): Buffer {
+    if (/^[0-9a-fA-F]{64}$/.test(this.encryptionKey)) {
+      return Buffer.from(this.encryptionKey, 'hex');
+    }
+    return crypto.scryptSync(this.encryptionKey, 'api-key-security', 32);
   }
 
   /**

@@ -23,24 +23,42 @@ export function middleware(request: NextRequest) {
 
   // CORS headers for API routes
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    // Allow specific origins
-    const allowedOrigins = [
-      'http://localhost:3003',
-      'http://localhost:3000',
-      'https://youtube-to-notes.vercel.app',
-      'https://*.vercel.app'
-    ];
+    const origin = request.headers.get('origin') || '';
 
-    const origin = request.headers.get('origin');
-    const isAllowedOrigin = allowedOrigins.some(allowedOrigin => {
-      if (allowedOrigin.includes('*')) {
-        return origin?.includes(allowedOrigin.replace('*', ''));
+    // Default: do not allow any origin unless matched
+    let isAllowedOrigin = false;
+
+    if (origin) {
+      try {
+        const url = new URL(origin);
+        const { hostname, protocol } = url;
+
+        // Allow production domains
+        if (hostname === 'kyotoscribe.com' || hostname === 'www.kyotoscribe.com') {
+          isAllowedOrigin = true;
+        }
+
+        // Allow localhost for development
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          // Optionally restrict to http only in dev
+          if (protocol === 'http:' || process.env.NODE_ENV !== 'production') {
+            isAllowedOrigin = true;
+          }
+        }
+
+        // Allow Vercel preview deployments (e.g., *.vercel.app)
+        if (hostname.endsWith('.vercel.app')) {
+          isAllowedOrigin = true;
+        }
+
+      } catch {
+        // Malformed origin header — leave isAllowedOrigin = false
       }
-      return origin === allowedOrigin;
-    });
+    }
 
-    if (isAllowedOrigin) {
-      response.headers.set('Access-Control-Allow-Origin', origin!);
+    if (isAllowedOrigin && origin) {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+      response.headers.set('Vary', 'Origin');
     }
 
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

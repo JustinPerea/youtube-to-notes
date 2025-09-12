@@ -23,6 +23,7 @@
     "test:api": "tsx scripts/test-api-endpoints.ts",
     "test:security": "tsx scripts/test-security.ts",
     "test:cost": "tsx scripts/test-cost-analysis.ts",
+    "test:crypto": "tsx scripts/test-encryption.ts",
     "health:check": "tsx scripts/health-check.ts",
     "setup:project": "tsx scripts/setup-project.ts",
     "docs:generate": "node scripts/generate-architecture-docs.js",

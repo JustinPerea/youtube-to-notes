@@ -12,6 +12,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Gate debug endpoints in production unless explicitly enabled
+  const isDebugEndpoint = request.nextUrl.pathname.startsWith('/api/debug/');
+  const debugEnabled = process.env.DEBUG_ENDPOINTS_ENABLED === 'true';
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  if (isDebugEndpoint && !isDevelopment && !debugEnabled) {
+    return new NextResponse(
+      JSON.stringify({ error: 'Not found' }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Get the response
   const response = NextResponse.next();
 
@@ -72,8 +84,6 @@ export function middleware(request: NextRequest) {
   }
 
   // Block suspicious requests - but allow development tools and debug endpoints
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const isDebugEndpoint = request.nextUrl.pathname.startsWith('/api/debug/');
   
   // In development, be more permissive for testing tools
   // Also allow debug endpoints in production for troubleshooting

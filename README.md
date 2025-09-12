@@ -118,6 +118,9 @@ youtube-to-notes/
 # Gemini API
 GOOGLE_GEMINI_API_KEY=your_gemini_api_key
 
+# YouTube Data API (rich metadata/captions)
+YOUTUBE_DATA_API_KEY=your_youtube_data_api_key
+
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -129,6 +132,9 @@ NEXTAUTH_URL=http://localhost:3000
 
 # Redis (for Bull/BullMQ)
 REDIS_URL=your_redis_url
+
+# Debug endpoints (optional; false by default)
+DEBUG_ENDPOINTS_ENABLED=false
 ```
 
 ## Agent Workflow Commands

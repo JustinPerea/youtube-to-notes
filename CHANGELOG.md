@@ -60,3 +60,18 @@ Files touched:
 Files touched:
 - `scripts/test-encryption.ts`
 - `package.json` (added `test:crypto`)
+
+### Debug Endpoints Gating
+- Added environment-based gate for all `/api/debug/*` routes in middleware.
+- In production/preview, debug endpoints return 404 unless `DEBUG_ENDPOINTS_ENABLED=true`.
+- Development environment remains fully open for debug endpoints.
+
+Files touched:
+- `middleware.ts`
+
+### Environment Docs
+- Documented `YOUTUBE_DATA_API_KEY` and `DEBUG_ENDPOINTS_ENABLED` in `.env.example` and README.
+
+Files touched:
+- `env.example`
+- `README.md`

@@ -82,6 +82,60 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST /api/youtube/metadata
+// Accepts JSON body: { url: string }
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const videoUrl: string | undefined = body?.url;
+
+    if (!videoUrl || typeof videoUrl !== 'string') {
+      return NextResponse.json(
+        { error: 'Video URL is required' },
+        { status: 400 }
+      );
+    }
+
+    // Extract video ID for cache key
+    const videoIdMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+    const videoId = videoIdMatch?.[1];
+
+    if (!videoId) {
+      return NextResponse.json(
+        { error: 'Invalid YouTube URL format' },
+        { status: 400 }
+      );
+    }
+
+    const cacheKey = CacheKeys.YOUTUBE_METADATA(videoId);
+    const cachedMetadata = memoryCache.get(cacheKey);
+    if (cachedMetadata) {
+      return NextResponse.json(cachedMetadata);
+    }
+
+    const metadata = await fetchVideoMetadata(videoUrl);
+
+    if (!metadata) {
+      return NextResponse.json(
+        { error: 'Failed to fetch video metadata or video not found' },
+        { status: 404 }
+      );
+    }
+
+    memoryCache.set(cacheKey, metadata, CacheTTL.YOUTUBE_METADATA);
+    return NextResponse.json(metadata);
+
+  } catch (error: any) {
+    return NextResponse.json(
+      { 
+        error: error.message || 'Failed to fetch YouTube metadata',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
+
 // Allow HEAD for link prefetchers and clients that probe endpoints
 export async function HEAD() {
   return new NextResponse(null, {

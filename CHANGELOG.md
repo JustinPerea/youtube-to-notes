@@ -120,6 +120,7 @@ Files touched:
 - `next.config.js`
 ### API Robustness
 - Add `HEAD` and `OPTIONS` handlers to `/api/youtube/metadata` to avoid 405 errors from link prefetchers or probes.
+- Add `POST` handler to `/api/youtube/metadata` that accepts `{ url }` in the JSON body and returns the raw metadata object (compat with existing client components).
 
 Files touched:
 - `app/api/youtube/metadata/route.ts`

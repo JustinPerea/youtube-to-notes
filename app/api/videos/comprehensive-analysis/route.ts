@@ -128,10 +128,12 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (existingVideo.length === 0) {
-      return NextResponse.json(
-        { error: 'Video not found in database' },
-        { status: 404 }
-      );
+      // Avoid noisy 404s in browser console; return success: false
+      return NextResponse.json({
+        success: false,
+        reason: 'video_not_found',
+        error: 'Video not found in database'
+      });
     }
 
     // Store comprehensive analysis in database
@@ -298,10 +300,12 @@ export async function GET(request: NextRequest) {
       .limit(1);
 
     if (analysis.length === 0) {
-      return NextResponse.json(
-        { error: 'Comprehensive analysis not found' },
-        { status: 404 }
-      );
+      // Avoid noisy 404s in browser console; return success: false
+      return NextResponse.json({
+        success: false,
+        reason: 'analysis_not_found',
+        error: 'Comprehensive analysis not found'
+      });
     }
 
     return NextResponse.json({

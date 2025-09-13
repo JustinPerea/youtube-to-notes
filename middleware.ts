@@ -35,6 +35,14 @@ export function middleware(request: NextRequest) {
     );
   }
 
+  // Gracefully handle HEAD requests for route metadata endpoints to avoid 405 noise
+  if (request.method === 'HEAD' && request.nextUrl.pathname.endsWith('/metadata')) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: { 'Allow': 'GET, HEAD, OPTIONS' }
+    });
+  }
+
   // Attach nonce to downstream request (so app/layout can read it)
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);

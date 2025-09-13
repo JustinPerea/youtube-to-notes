@@ -2,7 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## 2025-09-12
+## v0.2.0 — 2025-09-12
+
+Security and reliability release with CSP hardening, secret handling improvements, logging controls, and API robustness fixes.
 
 ### Security/CORS
 - Removed global CORS headers from `next.config.js` to avoid overexposure and conflicts with per-route logic.

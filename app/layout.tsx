@@ -3,11 +3,16 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { headers } from 'next/headers'
 import { ADSENSE_CONFIG } from '@/lib/adsense/config'
+import NextDynamic from 'next/dynamic'
 import AuthProvider from '../components/AuthProvider'
 import { ThemeProvider } from '../components/ui/ThemeProvider'
 import { Header } from '../components/Header'
 import { OnboardingWrapper } from '../components/OnboardingWrapper'
-import { AdSenseScript } from '../components/ads/AdSenseScript'
+// Load AdSense client component only when configured (saves bundle/CPU)
+const AdSenseScriptDynamic = NextDynamic(
+  () => import('../components/ads/AdSenseScript').then(m => m.AdSenseScript),
+  { ssr: false }
+)
 import { CookieBanner } from '../components/CookieBanner'
 
 // Force dynamic rendering to prevent build issues
@@ -27,26 +32,27 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   const nonce = headers().get('x-nonce') || undefined
-  const ua = (headers().get('user-agent') || '').toLowerCase()
-  const isGoogleAdSenseCrawler = ua.includes('google') && (ua.includes('adsense') || ua.includes('crawler') || ua.includes('bot'))
-  const shouldIncludeAdsScript = isGoogleAdSenseCrawler || (ADSENSE_CONFIG.enabled && !!ADSENSE_CONFIG.publisherId)
+  const adsConfigured = ADSENSE_CONFIG.enabled && !!ADSENSE_CONFIG.publisherId
+  const publisherClient = adsConfigured ? `ca-pub-${ADSENSE_CONFIG.publisherId}` : undefined
   return (
     <html lang="en">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-        <meta name="google-adsense-account" content="ca-pub-4135776739187234" />
-        {/* AdSense verification script - include only for crawler or when configured */}
-        {shouldIncludeAdsScript && (
-          <script
-            async
-            nonce={nonce}
-            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4135776739187234"
-            crossOrigin="anonymous"
-          />
+        {/* Load AdSense only when explicitly enabled and configured */}
+        {adsConfigured && (
+          <>
+            <meta name="google-adsense-account" content={publisherClient} />
+            <script
+              async
+              nonce={nonce}
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherClient}`}
+              crossOrigin="anonymous"
+            />
+          </>
         )}
       </head>
       <body className={inter.className}>
-        <AdSenseScript />
+        {adsConfigured && <AdSenseScriptDynamic />}
         <ThemeProvider>
           <AuthProvider>
             <OnboardingWrapper>

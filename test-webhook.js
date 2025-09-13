@@ -2,8 +2,11 @@
 
 const crypto = require('crypto');
 
-// Your webhook secret
-const webhookSecret = 'polar_whs_fhx7VoVeKLJuxNgcRrR6P8n2VWvc16REICGFl49u5gU';
+// Your webhook secret (load from env; do not hardcode secrets)
+const webhookSecret = process.env.POLAR_WEBHOOK_SECRET || 'YOUR_POLAR_WEBHOOK_SECRET_HERE';
+if (!process.env.POLAR_WEBHOOK_SECRET) {
+  console.warn('[warn] POLAR_WEBHOOK_SECRET not set. Update your environment or edit this script locally for testing.');
+}
 
 // Test payload
 const payload = JSON.stringify({

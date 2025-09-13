@@ -3,6 +3,7 @@ import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { updateUserSubscription } from '@/lib/subscription/service';
+import { isDebugEnabled } from '@/lib/security/debug-gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,9 @@ export const dynamic = 'force-dynamic';
  * GET /api/debug/downgrade-user?email=justinmperea@gmail.com
  */
 export async function GET(req: NextRequest) {
+  if (!isDebugEnabled()) {
+    return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+  }
   try {
     const { searchParams } = new URL(req.url);
     const email = searchParams.get('email');

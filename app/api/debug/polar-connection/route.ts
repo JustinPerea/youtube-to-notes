@@ -5,8 +5,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isDebugEnabled } from '@/lib/security/debug-gate';
 
 export async function GET(req: NextRequest) {
+  if (!isDebugEnabled()) {
+    return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+  }
   try {
     // Allow unauthenticated access for debugging purposes
     // const session = await auth();

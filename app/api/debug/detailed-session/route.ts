@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isDebugEnabled } from '@/lib/security/debug-gate';
 import { getServerSession } from '@/lib/auth';
 import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  if (!isDebugEnabled()) {
+    return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+  }
   try {
     // Test both auth methods
     const customSession = await getServerSession(request);

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isDebugEnabled } from '@/lib/security/debug-gate';
 
 // Minimal test - simulating exactly what the failing webhook does
 export async function POST(req: NextRequest) {
+  if (!isDebugEnabled()) {
+    return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+  }
   try {
     console.log("🧪 Minimal webhook test starting...");
     

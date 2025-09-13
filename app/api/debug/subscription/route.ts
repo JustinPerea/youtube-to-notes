@@ -4,6 +4,7 @@ import { db } from '@/lib/db/connection';
 import { users, userMonthlyUsage } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getUserSubscription, getUserUsage } from '@/lib/subscription/service';
+import { isDebugEnabled } from '@/lib/security/debug-gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,9 @@ export const dynamic = 'force-dynamic';
  * GET /api/debug/subscription - Get detailed subscription info for debugging
  */
 export async function GET(req: NextRequest) {
+  if (!isDebugEnabled()) {
+    return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+  }
   try {
     console.log('🔍 Subscription debug endpoint accessed');
 
@@ -192,6 +196,9 @@ export async function GET(req: NextRequest) {
  * POST /api/debug/subscription - Fix common subscription issues (admin only)
  */
 export async function POST(req: NextRequest) {
+  if (!isDebugEnabled()) {
+    return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+  }
   try {
     const session = await getApiSessionWithDatabase(req);
     if (!session || !session.user || !session.user.id) {

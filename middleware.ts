@@ -61,7 +61,7 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Requested-With', 'XMLHttpRequest');
   response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
   response.headers.set('X-Download-Options', 'noopen');
-  response.headers.set('X-Powered-By', 'Next.js');
+  // Do not set X-Powered-By to reduce server fingerprinting
 
   // Dynamic CSP with nonce (keeps 'unsafe-inline' for now; will remove later once all scripts have nonce)
   const isPreview = process.env.VERCEL_ENV === 'preview';
@@ -133,57 +133,71 @@ export function middleware(request: NextRequest) {
       }
     }
 
+    // Always vary by Origin to prevent cache confusion across origins
+    if (origin) {
+      const existingVary = response.headers.get('Vary') || '';
+      if (!existingVary.toLowerCase().includes('origin')) {
+        response.headers.append('Vary', 'Origin');
+      }
+    }
+    // Reflect allowed origin and enable credentials only when origin is allowed
     if (isAllowedOrigin && origin) {
       response.headers.set('Access-Control-Allow-Origin', origin);
-      response.headers.set('Vary', 'Origin');
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
     }
 
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id');
-    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id, X-Requested-With');
+    response.headers.set('Access-Control-Expose-Headers', 'X-Nonce, X-User-Authenticated');
 
     // Handle preflight requests
     if (request.method === 'OPTIONS') {
+      // Cache preflight responses for 10 minutes
+      response.headers.set('Access-Control-Max-Age', '600');
       return new NextResponse(null, { status: 200, headers: response.headers });
     }
   }
 
-  // Block suspicious requests - but allow development tools and debug endpoints
-  
+  // Block suspicious requests - avoid false positives for API/preflight/HEAD
   // In development, be more permissive for testing tools
   // Also allow debug endpoints in production for troubleshooting
   if (!isDevelopment && !isDebugEndpoint) {
-    const suspiciousPatterns = [
-      /bot/i,
-      /crawler/i,
-      /spider/i,
-      /scraper/i,
-      /postman/i,
-      /curl/i,
-      /wget/i,
-      /python/i,
-      /perl/i,
-      /ruby/i
-    ];
+    const path = request.nextUrl.pathname;
+    const isApiPath = path.startsWith('/api/');
+    const isPreflightOrHead = request.method === 'OPTIONS' || request.method === 'HEAD';
+    if (!isApiPath && !isPreflightOrHead) {
+      const suspiciousPatterns = [
+        /bot/i,
+        /crawler/i,
+        /spider/i,
+        /scraper/i,
+        /postman/i,
+        /curl/i,
+        /wget/i,
+        /python/i,
+        /perl/i,
+        /ruby/i
+      ];
 
-    // Allow legitimate bots but block suspicious ones
-    const isSuspiciousBot = suspiciousPatterns.some(pattern => 
-      pattern.test(userAgent) && 
-      !userAgent.includes('googlebot') && 
-      !userAgent.includes('bingbot') &&
-      !userAgent.includes('slurp') && // Yahoo
-      !userAgent.includes('google') && // Allow all Google services including AdSense crawler
-      !userAgent.includes('adsense') // Specifically allow AdSense crawler
-    );
-
-    if (isSuspiciousBot) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Access denied' }), 
-        { 
-          status: 403, 
-          headers: { 'Content-Type': 'application/json' } 
-        }
+      // Allow legitimate bots but block suspicious ones
+      const isSuspiciousBot = suspiciousPatterns.some(pattern => 
+        pattern.test(userAgent) && 
+        !userAgent.includes('googlebot') && 
+        !userAgent.includes('bingbot') &&
+        !userAgent.includes('slurp') && // Yahoo
+        !userAgent.includes('google') && // Allow all Google services including AdSense crawler
+        !userAgent.includes('adsense') // Specifically allow AdSense crawler
       );
+
+      if (isSuspiciousBot) {
+        return new NextResponse(
+          JSON.stringify({ error: 'Access denied' }), 
+          { 
+            status: 403, 
+            headers: { 'Content-Type': 'application/json' } 
+          }
+        );
+      }
     }
   }
 
@@ -221,8 +235,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder files
-     * - api/debug (debug endpoints for troubleshooting)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/|api/debug/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/api/:path*',
   ],
 };

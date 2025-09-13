@@ -139,7 +139,23 @@ DEBUG_ENDPOINTS_ENABLED=false
 # Logging
 # LOG_LEVEL controls server log verbosity: error | warn | info | debug
 LOG_LEVEL=info
+
+# Encryption (recommended in production)
+# 64-hex AES-256-GCM key for API key encryption
+# Generate with: `openssl rand -hex 32`
+API_ENCRYPTION_KEY=
+
+# AdSense (optional; enable only when configured)
+# Set both to enable AdSense in Preview/Production
+NEXT_PUBLIC_ADSENSE_ENABLED=false
+# Publisher ID without the `ca-pub-` prefix
+NEXT_PUBLIC_ADSENSE_PUBLISHER_ID=
 ```
+
+### Vercel Deployment Notes (v0.2.0)
+- Vercel sets `NODE_ENV` and `VERCEL_ENV` automatically; you do not need to define them.
+- Set `DEBUG_ENDPOINTS_ENABLED=false` in both Production and Preview to gate `/api/debug/*`.
+- See `VERCEL_ENV_SETUP.md` for the complete list and guidance.
 
 ## Agent Workflow Commands
 

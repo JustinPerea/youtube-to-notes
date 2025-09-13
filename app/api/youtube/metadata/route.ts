@@ -81,3 +81,23 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Allow HEAD for link prefetchers and clients that probe endpoints
+export async function HEAD() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Allow': 'GET, HEAD, OPTIONS',
+    },
+  });
+}
+
+// Respond to OPTIONS explicitly if hit directly (middleware also handles CORS)
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Allow': 'GET, HEAD, OPTIONS',
+    },
+  });
+}

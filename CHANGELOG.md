@@ -118,3 +118,8 @@ Files touched:
 Files touched:
 - `middleware.ts`
 - `next.config.js`
+### API Robustness
+- Add `HEAD` and `OPTIONS` handlers to `/api/youtube/metadata` to avoid 405 errors from link prefetchers or probes.
+
+Files touched:
+- `app/api/youtube/metadata/route.ts`

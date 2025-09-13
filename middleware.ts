@@ -67,8 +67,8 @@ export function middleware(request: NextRequest) {
     'https://ep2.adtrafficquality.google',
     'https://www.google.com',
   ];
-  // Keep 'unsafe-inline' only outside preview for now; plan removal later in production too
-  if (!isPreview) {
+  // Only allow 'unsafe-inline' in development (helps during local debugging)
+  if (isDevelopment) {
     scriptSrc.splice(1, 0, "'unsafe-inline'");
   }
   // Only allow 'unsafe-eval' in development; preview/prod exclude

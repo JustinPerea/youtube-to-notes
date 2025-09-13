@@ -111,3 +111,10 @@ Files touched:
 
 Files touched:
 - `middleware.ts`
+### CSP (Production) — Remove 'unsafe-inline'
+- Updated middleware CSP to only allow `'unsafe-inline'` in development. Both preview and production now require nonced scripts.
+- Moved CSP header responsibility entirely to middleware (removed CSP header from next.config.js) to avoid conflicts and enable nonce-based policy.
+
+Files touched:
+- `middleware.ts`
+- `next.config.js`

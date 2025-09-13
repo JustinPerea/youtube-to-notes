@@ -123,3 +123,10 @@ Files touched:
 
 Files touched:
 - `app/api/youtube/metadata/route.ts`
+
+### AdSense Script Loading
+- Replace `next/script` with a native `<script>` carrying the CSP nonce to avoid AdSense warnings about `data-nscript`.
+- Only include the AdSense script for Google AdSense crawler or when AdSense is configured (`NEXT_PUBLIC_ADSENSE_ENABLED=true` and publisher ID set). This avoids preloading/unused warnings.
+
+Files touched:
+- `app/layout.tsx`

@@ -167,8 +167,9 @@ export async function POST(req: NextRequest) {
         break;
         
       case 'subscription.canceled':
-        console.log('❌ Processing subscription.canceled - Tier downgrades');
-        await handleSubscriptionCanceled(event.data);
+        console.log('❌ DISABLED: subscription.canceled - Emergency safety measure');
+        console.log('❌ MANUAL INTERVENTION REQUIRED: This event is temporarily disabled due to mass cancellation incident');
+        // await handleSubscriptionCanceled(event.data);
         break;
         
       case 'checkout.created':

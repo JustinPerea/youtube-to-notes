@@ -90,11 +90,13 @@ export async function GET(req: NextRequest) {
       body: JSON.stringify(webhookEvent),
     });
 
+    // Read body once to avoid "Body already read" errors
+    const raw = await res.text();
     let webhookResponse: any = null;
     try {
-      webhookResponse = await res.json();
+      webhookResponse = JSON.parse(raw);
     } catch (_) {
-      webhookResponse = { raw: await res.text() };
+      webhookResponse = { raw };
     }
 
     // Reload user after webhook processing
@@ -141,4 +143,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-

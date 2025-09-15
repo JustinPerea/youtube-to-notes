@@ -95,11 +95,13 @@ export async function GET(req: NextRequest) {
       body: JSON.stringify(webhookEvent),
     });
 
+    // Read body once to avoid "Body already read" errors
+    const raw = await res.text();
     let webhookResponse: any = null;
     try {
-      webhookResponse = await res.json();
+      webhookResponse = JSON.parse(raw);
     } catch (_) {
-      webhookResponse = { raw: await res.text() };
+      webhookResponse = { raw };
     }
 
     // Reload
@@ -133,4 +135,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Simulation failed', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
-

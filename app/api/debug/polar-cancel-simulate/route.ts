@@ -84,9 +84,13 @@ export async function GET(req: NextRequest) {
 
     // POST to the actual webhook endpoint to exercise end-to-end logic
     const webhookUrl = new URL('/api/polar/webhook', req.url).toString();
+    const bypass = req.headers.get('x-vercel-protection-bypass') || undefined;
     const res = await fetch(webhookUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}),
+      },
       body: JSON.stringify(webhookEvent),
     });
 

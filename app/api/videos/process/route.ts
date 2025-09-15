@@ -190,27 +190,27 @@ ${dynamicPrompt}`;
         return `
 REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY CLICKABLE TIMESTAMPS:
 
-🚨🚨🚨 CRITICAL: ALL timestamps MUST be clickable YouTube links using format [MM:SS](url&t=XXXs) 🚨🚨🚨
+🚨🚨🚨 CRITICAL: ALL timestamps MUST be clickable YouTube links using format [MM:SS](${videoUrl}&t=XXXs) 🚨🚨🚨
 
 ${tutorialPrompt}`;
 
       case 'tutorial-guide-fallback': // Keep old version as fallback
         return `
-REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY TIMESTAMPS:
+REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY CLICKABLE TIMESTAMPS:
 
-🚨🚨🚨 CRITICAL: ALL section headers MUST include timestamps in [MM:SS] format 🚨🚨🚨
+🚨🚨🚨 CRITICAL: ALL section headers MUST include clickable YouTube timestamps in [MM:SS](${videoUrl}&t=XXXs) format 🚨🚨🚨
 
 # Tutorial Guide: [Topic from Video]
 
 ## 📖 What You'll Learn
-[Learning outcomes with timestamps where appropriate]
+[Learning outcomes with clickable timestamps where appropriate]
 
 ## 📋 Prerequisites
 [Prerequisites section]
 
 ## Step-by-Step Instructions
 
-### **[MM:SS]** Step 1: [Title]
+### **[MM:SS](${videoUrl}&t=XXXs)** Step 1: [Title]
 **Objective:** [Clear objective]
 
 **Instructions:**
@@ -218,19 +218,19 @@ REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY TIMESTAMPS:
 2. [Next instruction]
 
 **Tips:**
-- [Helpful tip with [MM:SS] reference where relevant]
+- [Helpful tip with **[MM:SS](${videoUrl}&t=XXXs)** reference where relevant]
 
 **Expected Result:** [What should be achieved]
 
-### **[MM:SS]** Step 2: [Title]
+### **[MM:SS](${videoUrl}&t=XXXs)** Step 2: [Title]
 [Continue same format for all steps...]
 
 ## 🎯 Quick Navigation (Click to jump to video)
-- **[0:30]** Step 1: [Title] 
-- **[2:15]** Step 2: [Title]
-- **[4:20]** Step 3: [Title]
+- **[0:30](${videoUrl}&t=30s)** Step 1: [Title]
+- **[2:15](${videoUrl}&t=135s)** Step 2: [Title]
+- **[4:20](${videoUrl}&t=260s)** Step 3: [Title]
 
-ABSOLUTE REQUIREMENT: Include actual timestamps from the original content in the [MM:SS] format for EVERY step header and in the Quick Navigation section.`;
+ABSOLUTE REQUIREMENT: Include actual timestamps from the original content in the **[MM:SS](${videoUrl}&t=XXXs)** format for EVERY step header and in the Quick Navigation section.`;
 
       default:
         return `Maintain the exact structure and format of the ${template.name} template`;

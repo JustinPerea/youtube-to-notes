@@ -733,12 +733,11 @@ For each slide, provide:
     ],
     limitations: [
       'Requires practical content',
-      'May need additional context',
-      'Premium feature'
+      'May need additional context'
     ],
     estimatedTokens: 4500,
     processingTime: 5,
-    isPremium: true
+    isPremium: false
   },
 
 

@@ -135,14 +135,11 @@ export async function POST(req: NextRequest) {
         const portalUrl = sessionUrl 
           || process.env.POLAR_CUSTOMER_PORTAL_URL 
           || 'https://polar.sh/login';
+        const loginRequired = !sessionUrl;
+
         return NextResponse.json({
           type: 'manage',
           options: [
-            {
-              title: 'View Current Plan',
-              description: `You are currently on the ${user.subscriptionTier.charAt(0).toUpperCase() + user.subscriptionTier.slice(1)} plan`,
-              action: 'info'
-            },
             {
               title: 'Change Plan', 
               description: 'Upgrade or downgrade your subscription',
@@ -151,7 +148,9 @@ export async function POST(req: NextRequest) {
             },
             {
               title: 'Manage Subscription',
-              description: 'Cancel, modify, or view your subscription details in Polar',
+              description: loginRequired
+                ? 'Cancel, modify, or view your subscription details in Polar (login may be required)'
+                : 'Cancel, modify, or view your subscription details in Polar',
               action: 'polar_portal',
               url: portalUrl
             },

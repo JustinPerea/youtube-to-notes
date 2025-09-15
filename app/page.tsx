@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Footer } from '../components/Footer';
 import { OrbBackground } from '../components/ui/OrbBackground';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
@@ -10,9 +11,23 @@ import { HomePageAd } from '../components/ads/FreeUserAdBanner';
 
 export default function Home() {
   const router = useRouter();
+  const { data: session, status } = useSession();
 
   const handleGetStarted = () => {
     router.push('/process');
+  };
+
+  // Determine button text and styling based on authentication state
+  const getButtonContent = () => {
+    if (status === 'loading') {
+      return "Loading...";
+    }
+
+    if (session?.user) {
+      return "Generate Notes ✨";
+    }
+
+    return "Get Started Free ✨";
   };
 
   return (
@@ -54,7 +69,7 @@ export default function Home() {
               <div className="absolute inset-0 -top-2 -bottom-2 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               {/* Ripple effect on hover */}
               <div className="absolute top-1/2 left-1/2 w-0 h-0 rounded-full bg-white/30 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-600 group-hover:w-[300px] group-hover:h-[300px]"></div>
-              <span className="relative z-10 drop-shadow-sm">Get Started Free ✨</span>
+              <span className="relative z-10 drop-shadow-sm">{getButtonContent()}</span>
             </button>
           </section>
 

@@ -569,6 +569,7 @@ function BillingManagementCard({
   loading: boolean;
   billingOptions?: BillingManagementResponse | null;
 }) {
+  const [cancelLoading, setCancelLoading] = React.useState(false);
   const getPlanPrice = (tier?: string) => {
     // Try to get actual price from billing options first
     if (billingOptions?.subscriptionDetails?.actualPrice) {
@@ -621,8 +622,8 @@ function BillingManagementCard({
             </div>
           </div>
 
-          {/* Manage Billing Button */}
-          <div className="billing-actions">
+          {/* Manage / Cancel Actions */}
+          <div className="billing-actions flex flex-col sm:flex-row gap-3">
             <button
               onClick={onManageBilling}
               disabled={billingLoading}
@@ -637,10 +638,49 @@ function BillingManagementCard({
                 'Manage Billing & Subscriptions'
               )}
             </button>
+            {subscription?.tier && subscription.tier !== 'free' && (
+              <button
+                onClick={async () => {
+                  if (cancelLoading) return;
+                  const confirmText = 'This will cancel your subscription at the end of the current billing period. You will retain access until then. Continue?';
+                  if (!window.confirm(confirmText)) return;
+                  try {
+                    setCancelLoading(true);
+                    const res = await fetch('/api/polar/cancel-subscription', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok || !json.success) {
+                      alert(`Failed to schedule cancellation${json?.details ? `: ${json.details}` : ''}`);
+                      return;
+                    }
+                    alert('Cancellation scheduled. Your plan remains active until the current period ends.');
+                    window.location.reload();
+                  } catch (e: any) {
+                    alert(`Failed to cancel: ${e?.message || 'Unknown error'}`);
+                  } finally {
+                    setCancelLoading(false);
+                  }
+                }}
+                disabled={cancelLoading || subscription?.cancelAtPeriodEnd}
+                className="cancel-at-period-end-btn bg-white text-[var(--text-primary)] border border-[var(--card-border)] px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={subscription?.cancelAtPeriodEnd ? 'Cancellation already scheduled' : 'Cancel at period end'}
+              >
+                {subscription?.cancelAtPeriodEnd
+                  ? 'Cancellation Scheduled'
+                  : cancelLoading
+                    ? 'Scheduling…'
+                    : 'Cancel at Period End'}
+              </button>
+            )}
             
-            <p className="text-sm text-[var(--text-secondary)] mt-4">
-              Manage your subscription, update payment methods, download invoices, and cancel your subscription through our secure billing portal.
-            </p>
+            <div className="mt-2 text-sm text-[var(--text-secondary)]">
+              <p>Manage your subscription, update payment methods, and download invoices in the billing portal.</p>
+              {subscription?.tier && subscription.tier !== 'free' && (
+                <p className="mt-1">Use “Cancel at Period End” to stop renewals while retaining access until your period ends.</p>
+              )}
+            </div>
           </div>
 
           {/* Upgrade/Downgrade Info */}

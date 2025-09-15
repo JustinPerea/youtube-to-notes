@@ -34,6 +34,46 @@ async function fetchPolarSubscriptionDetails(subscriptionId: string) {
   }
 }
 
+// Try to create a Polar customer portal session and return a one-time URL
+async function createPolarPortalSession(customerId: string, returnUrl: string): Promise<string | null> {
+  try {
+    const token = process.env.POLAR_ACCESS_TOKEN;
+    if (!token || !customerId) return null;
+
+    const endpoints = [
+      'https://api.polar.sh/v1/customer-portal/sessions',
+      'https://api.polar.sh/v1/customer_portal/sessions',
+      `https://api.polar.sh/v1/customers/${customerId}/portal`,
+    ];
+
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ customer_id: customerId, return_url: returnUrl }),
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          console.warn('Polar portal session attempt failed:', { url, status: res.status, txt });
+          continue;
+        }
+        const data: any = await res.json().catch(() => ({}));
+        const portalUrl = data.url || data.portal_url || data.session_url || null;
+        if (portalUrl) return portalUrl as string;
+      } catch (e) {
+        console.warn('Polar portal session endpoint error:', url, e);
+      }
+    }
+  } catch (e) {
+    console.error('createPolarPortalSession error:', e);
+  }
+  return null;
+}
+
 // Helper function to format pricing
 function formatPolarPricing(amount: number, currency: string = 'USD', interval: string = 'month') {
   const formatted = (amount / 100).toLocaleString('en-US', {
@@ -90,14 +130,16 @@ export async function POST(req: NextRequest) {
       // Paid users - provide Polar customer portal if available, or billing information
       if (user.polarCustomerId) {
         // If we have a Polar customer ID, we can provide more specific management
+        const defaultReturn = process.env.NODE_ENV === 'production' ? 'https://www.kyotoscribe.com/profile' : 'http://localhost:3003/profile';
+        const sessionUrl = await createPolarPortalSession(user.polarCustomerId, defaultReturn);
+        const portalUrl = sessionUrl 
+          || process.env.POLAR_CUSTOMER_PORTAL_URL 
+          || 'https://polar.sh/login';
+        const loginRequired = !sessionUrl;
+
         return NextResponse.json({
           type: 'manage',
           options: [
-            {
-              title: 'View Current Plan',
-              description: `You are currently on the ${user.subscriptionTier.charAt(0).toUpperCase() + user.subscriptionTier.slice(1)} plan`,
-              action: 'info'
-            },
             {
               title: 'Change Plan', 
               description: 'Upgrade or downgrade your subscription',
@@ -106,11 +148,11 @@ export async function POST(req: NextRequest) {
             },
             {
               title: 'Manage Subscription',
-              description: 'Cancel, modify, or view your subscription details in Polar',
+              description: loginRequired
+                ? 'Cancel, modify, or view your subscription details in Polar (login may be required)'
+                : 'Cancel, modify, or view your subscription details in Polar',
               action: 'polar_portal',
-              url: user.polarCustomerId
-                ? `https://polar.sh/customer-portal`
-                : `https://polar.sh/login`
+              url: portalUrl
             },
             {
               title: 'Contact Support',

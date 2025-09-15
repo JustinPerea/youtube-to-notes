@@ -15,6 +15,7 @@ import { eq, sql, or } from "drizzle-orm";
 // - audit logger 
 // - subscription service
 import { type SubscriptionTier } from "@/lib/subscription/config";
+import { getRuntimeFlag, FLAG_POLAR_DOWNGRADE_ON_CANCEL } from "@/lib/config/feature-flags";
 
 // ⚡ OPTIMIZED: Single-query user lookup with prioritized OR conditions  
 async function findUserForWebhook(webhookData: any): Promise<any | null> {
@@ -167,9 +168,8 @@ export async function POST(req: NextRequest) {
         break;
         
       case 'subscription.canceled':
-        console.log('❌ DISABLED: subscription.canceled - Emergency safety measure');
-        console.log('❌ MANUAL INTERVENTION REQUIRED: This event is temporarily disabled due to mass cancellation incident');
-        // await handleSubscriptionCanceled(event.data);
+        console.log('⚠️ Processing subscription.canceled with safety guards');
+        await handleSubscriptionCanceled(event.data);
         break;
         
       case 'checkout.created':
@@ -473,11 +473,38 @@ async function handleSubscriptionUpdated(subscription: any) {
     .where(eq(users.id, user.id));
 
   console.log(`✅ Subscription updated successfully - user ${user.id} status: ${status}`);
+
+  // Optional safe downgrade: only when the period has ended
+  try {
+    const endAt = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+    const periodEnded = endAt ? endAt.getTime() <= Date.now() : false;
+    const hasActiveAdminOverride = user.adminOverrideTier && (!user.adminOverrideExpires || user.adminOverrideExpires > new Date());
+
+    if (getRuntimeFlag(FLAG_POLAR_DOWNGRADE_ON_CANCEL, process.env.POLAR_DOWNGRADE_ON_CANCEL === 'true') && status === 'canceled' && periodEnded && !hasActiveAdminOverride) {
+      console.log(`🎯 Safe downgrade on subscription.updated for user ${user.id} (period ended)`);
+      await db
+        .update(users)
+        .set({ subscriptionTier: 'free', updatedAt: new Date() })
+        .where(eq(users.id, user.id));
+      console.log(`✅ Downgraded user ${user.id} to free tier after period end`);
+    } else if (status === 'canceled' && periodEnded && hasActiveAdminOverride) {
+      console.log(`ℹ️ Period ended but admin override active for user ${user.id}; preserving tier`);
+    }
+  } catch (e) {
+    console.warn('⚠️ Post-update downgrade check failed:', e);
+  }
 }
 
 async function handleSubscriptionCanceled(subscription: any) {
   console.log('❌ Polar subscription canceled:', subscription.id);
-  
+
+  // Defensive parse of time fields
+  const now = new Date();
+  const currentPeriodEnd = subscription?.current_period_end ? new Date(subscription.current_period_end) : null;
+  const currentPeriodStart = subscription?.current_period_start ? new Date(subscription.current_period_start) : null;
+  const cancelAtPeriodEnd = Boolean(subscription?.cancel_at_period_end);
+  const hasEnded = currentPeriodEnd ? currentPeriodEnd.getTime() <= now.getTime() : false;
+
   // Find user by polar subscription ID
   const dbUsers = await db
     .select()
@@ -491,29 +518,74 @@ async function handleSubscriptionCanceled(subscription: any) {
   }
 
   const user = dbUsers[0];
-  console.log(`🔄 Canceling subscription for user ${user.id} - reverting to free tier`);
 
   // Check for admin override - don't downgrade if user has active admin override
-  const hasActiveAdminOverride = user.adminOverrideTier && 
-    (!user.adminOverrideExpires || user.adminOverrideExpires > new Date());
+  const hasActiveAdminOverride = user.adminOverrideTier && (!user.adminOverrideExpires || user.adminOverrideExpires > now);
 
-  if (hasActiveAdminOverride) {
-    console.log(`⚠️ User ${user.id} has active admin override - preserving tier but updating status`);
+  // Case A: Cancellation scheduled at period end -> do NOT downgrade tier now
+  if (cancelAtPeriodEnd && !hasEnded) {
+    console.log(`🛑 Scheduled cancellation for user ${user.id}. Preserving tier until period end: ${currentPeriodEnd?.toISOString()}`);
+    await db
+      .update(users)
+      .set({
+        // Preserve tier; only track flags and period
+        subscriptionCancelAtPeriodEnd: true,
+        subscriptionCurrentPeriodStart: currentPeriodStart || user.subscriptionCurrentPeriodStart,
+        subscriptionCurrentPeriodEnd: currentPeriodEnd || user.subscriptionCurrentPeriodEnd,
+        // Leave subscriptionStatus unchanged here; updated events will sync status
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+
+    console.log(`✅ Recorded scheduled cancellation. Tier unchanged for user ${user.id}`);
+    return;
   }
 
-  // Update the user's subscription status in the database
+  // Case B: Immediate cancellation or period already ended
+  if (!hasEnded) {
+    // Be extra safe: if provider says canceled but end is in the future, treat as scheduled
+    console.log(`⚠️ Provider reports canceled but end is future for user ${user.id}. Treating as scheduled.`);
+    await db
+      .update(users)
+      .set({
+        subscriptionCancelAtPeriodEnd: true,
+        subscriptionCurrentPeriodStart: currentPeriodStart || user.subscriptionCurrentPeriodStart,
+        subscriptionCurrentPeriodEnd: currentPeriodEnd || user.subscriptionCurrentPeriodEnd,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+    return;
+  }
+
+  // Only downgrade when period has ended (idempotent by value) and flag allows
+  if (!getRuntimeFlag(FLAG_POLAR_DOWNGRADE_ON_CANCEL, process.env.POLAR_DOWNGRADE_ON_CANCEL === 'true')) {
+    console.log('🛡️ POLAR_DOWNGRADE_ON_CANCEL is false. Skipping tier downgrade. Updating status only.');
+    await db
+      .update(users)
+      .set({
+        subscriptionCancelAtPeriodEnd: false,
+        subscriptionCurrentPeriodStart: currentPeriodStart || user.subscriptionCurrentPeriodStart,
+        subscriptionCurrentPeriodEnd: currentPeriodEnd || user.subscriptionCurrentPeriodEnd,
+        subscriptionStatus: 'canceled',
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+    console.log(`✅ Recorded final cancellation without tier change for user ${user.id}`);
+    return;
+  }
+
+  // Proceed to downgrade only if no active admin override
   const updateData: any = {
     subscriptionStatus: 'canceled',
-    subscriptionCurrentPeriodStart: subscription.current_period_start ? new Date(subscription.current_period_start) : user.subscriptionCurrentPeriodStart,
-    subscriptionCurrentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end) : user.subscriptionCurrentPeriodEnd,
-    subscriptionCancelAtPeriodEnd: true,
+    subscriptionCancelAtPeriodEnd: false,
+    subscriptionCurrentPeriodStart: currentPeriodStart || user.subscriptionCurrentPeriodStart,
+    subscriptionCurrentPeriodEnd: currentPeriodEnd || user.subscriptionCurrentPeriodEnd,
     updatedAt: new Date(),
   };
 
-  // Only downgrade tier if no active admin override
   if (!hasActiveAdminOverride) {
     updateData.subscriptionTier = 'free';
-    console.log(`🎯 Downgrading user ${user.id} to free tier`);
+    console.log(`🎯 Downgrading user ${user.id} to free tier (period ended)`);
   } else {
     console.log(`ℹ️ Preserving admin override tier for user ${user.id}`);
   }
@@ -523,7 +595,7 @@ async function handleSubscriptionCanceled(subscription: any) {
     .set(updateData)
     .where(eq(users.id, user.id));
 
-  console.log(`✅ Subscription canceled successfully - user ${user.id} reverted to ${hasActiveAdminOverride ? 'admin override tier' : 'free tier'}`);
+  console.log(`✅ Finalized cancellation for user ${user.id}. Tier=${!hasActiveAdminOverride ? 'free' : user.adminOverrideTier}`);
 }
 
 async function handleOrderPaid(order: any) {

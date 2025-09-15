@@ -809,12 +809,11 @@ Format with academic writing style, proper headings, and detailed analysis. Incl
     ],
     limitations: [
       'Requires academic content',
-      'Extended processing time',
-      'Premium feature'
+      'Extended processing time'
     ],
     estimatedTokens: 6000,
     processingTime: 6,
-    isPremium: true
+    isPremium: false
   }
 ];
 

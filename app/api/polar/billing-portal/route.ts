@@ -105,10 +105,12 @@ export async function POST(req: NextRequest) {
               url: `${process.env.NODE_ENV === 'production' ? 'https://www.kyotoscribe.com' : 'http://localhost:3003'}/pricing`
             },
             {
-              title: 'Cancel Subscription',
-              description: 'Cancel your current subscription',
-              action: 'cancel',
-              warning: 'Your subscription will remain active until the end of your current billing period'
+              title: 'Manage Subscription',
+              description: 'Cancel, modify, or view your subscription details in Polar',
+              action: 'polar_portal',
+              url: user.polarCustomerId
+                ? `https://polar.sh/customer-portal`
+                : `https://polar.sh/login`
             },
             {
               title: 'Contact Support',

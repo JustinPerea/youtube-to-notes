@@ -9,7 +9,19 @@
         "--project-ref=guuxhmfzimnryzusjykm"
       ],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "sbp_2117b3fde2fbe49de442cb610b1f087b9583198e"
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    },
+    "vercel": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@vercel/mcp"
+      ],
+      "env": {
+        "VERCEL_TOKEN": "${VERCEL_TOKEN}",
+        "VERCEL_ORG_ID": "${VERCEL_ORG_ID}",
+        "VERCEL_PROJECT_ID": "${VERCEL_PROJECT_ID}"
       }
     }
   }

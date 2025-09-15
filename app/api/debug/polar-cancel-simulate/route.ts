@@ -3,6 +3,7 @@ import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { isDebugEnabled } from '@/lib/security/debug-gate';
+import { POST as PolarWebhookPOST } from '@/app/api/polar/webhook/route';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,17 +83,13 @@ export async function GET(req: NextRequest) {
       data: subscription,
     };
 
-    // POST to the actual webhook endpoint to exercise end-to-end logic
-    const webhookUrl = new URL('/api/polar/webhook', req.url).toString();
-    const bypass = req.headers.get('x-vercel-protection-bypass') || undefined;
-    const res = await fetch(webhookUrl, {
+    // Call the webhook handler directly to avoid external protection
+    const internalReq = new Request('http://internal/api/polar/webhook', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(webhookEvent),
     });
+    const res = await PolarWebhookPOST(internalReq as any);
 
     // Read body once to avoid "Body already read" errors
     const raw = await res.text();

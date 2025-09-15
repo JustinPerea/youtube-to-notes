@@ -7,6 +7,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "crypto";
 import { db } from "@/lib/db/connection";
 import { users, userMonthlyUsage } from "@/lib/db/schema";
 import { eq, sql, or } from "drizzle-orm";
@@ -139,6 +140,21 @@ export async function POST(req: NextRequest) {
     if (!webhookSecret || !proProductId || !basicProductId) {
       console.error('❌ Missing required environment variables');
       return NextResponse.json({ error: 'Configuration error' }, { status: 500 });
+    }
+
+    // Verify signature
+    const signature = req.headers.get('polar-signature') || '';
+    try {
+      const expected = 'sha256=' + createHmac('sha256', webhookSecret).update(payload, 'utf8').digest('hex');
+      const a = Buffer.from(signature);
+      const b = Buffer.from(expected);
+      if (a.length !== b.length || !timingSafeEqual(a, b)) {
+        console.error('❌ Invalid Polar signature');
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      }
+    } catch (e) {
+      console.error('❌ Failed to verify signature:', e);
+      return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 });
     }
     
     // Parse payload (simplified - no complex validation)

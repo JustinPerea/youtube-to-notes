@@ -31,6 +31,7 @@
     "docs:update": "node scripts/update-architecture-docs.js",
     "docs:update-full": "node scripts/update-architecture-docs.js full",
     "docs:validate-only": "node scripts/update-architecture-docs.js validation_only",
+    "github:release": "tsx scripts/github-create-release.ts v0.2.0",
     "docs:serve": "cd docs/architecture && python3 -m http.server 8080",
     "docs:open": "open docs/architecture/architecture-dashboard.html",
     "pre-commit": "npm run docs:validate && npm run lint",

@@ -142,42 +142,21 @@ export default function ProfilePage() {
 
   // Handle billing option selection
   const handleBillingOption = async (option: any) => {
-    if (option.action === 'cancel') {
-      // Handle cancellation logic
-      const confirmMessage = 'Are you sure you want to cancel your subscription?\n\n' + 
-        (option.warning || '') + 
-        '\n\nYou will retain access to premium features until the end of your current billing period.';
-      
-      if (confirm(confirmMessage)) {
-        try {
-          setDeleteLoading(true); // Reuse loading state for cancellation
-          
-          const response = await fetch('/api/polar/cancel-subscription', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
+    if (option.action === 'polar_portal') {
+      // Redirect to Polar customer portal for subscription management
+      if (option.url) {
+        const confirmMessage = 'You will be redirected to Polar\'s secure customer portal where you can:\n\n' +
+          '• Cancel your subscription\n' +
+          '• Update payment methods\n' +
+          '• View billing history\n' +
+          '• Modify subscription settings\n\n' +
+          'Continue to Polar?';
 
-          const result = await response.json();
-          console.log('Cancellation response:', result);
-
-          if (response.ok && result.success) {
-            const endDate = new Date(result.subscription.currentPeriodEnd).toLocaleDateString();
-            alert('✅ Subscription cancelled successfully!\n\nYou will retain access to premium features until ' + endDate + '.');
-            
-            // Refresh the page to update subscription status
-            window.location.reload();
-          } else {
-            alert('❌ Failed to cancel subscription: ' + (result.error || 'Unknown error') + 
-              '\n\nPlease contact support@shibabrothers.com for assistance.');
-          }
-        } catch (error) {
-          console.error('Cancellation error:', error);
-          alert('❌ Failed to cancel subscription. Please try again or contact support@shibabrothers.com.');
-        } finally {
-          setDeleteLoading(false);
+        if (confirm(confirmMessage)) {
+          window.open(option.url, '_blank');
         }
+      } else {
+        alert('Unable to open Polar portal. Please contact support@shibabrothers.com for assistance.');
       }
     } else if (option.url) {
       if (option.action === 'support') {

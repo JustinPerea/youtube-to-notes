@@ -5,6 +5,16 @@ import { eq, sql, or } from "drizzle-orm";
 
 // Test webhook payload processing with the exact data causing 500 errors
 export async function GET(req: NextRequest) {
+  // Disable this debug endpoint outside development unless explicitly enabled
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const debugEnabled = process.env.DEBUG_ENDPOINTS_ENABLED === 'true';
+  if (!isDevelopment && !debugEnabled) {
+    return NextResponse.json({
+      status: 'skipped',
+      message: 'Debug webhook payload test disabled outside development',
+    });
+  }
+
   try {
     console.log("🧪 Testing webhook payload processing...");
     

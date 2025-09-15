@@ -465,7 +465,7 @@ function SubscriptionOverviewCard({
                 </p>
                 {usageData.subscription.currentPeriodEnd && (
                   <p className="text-[var(--text-secondary)] mt-1">
-                    {usageData.subscription.cancelAtPeriodEnd ? 'Expires' : 'Renews'}: {formatDate(usageData.subscription.currentPeriodEnd)}
+                    {usageData.subscription.status === 'canceled' || usageData.subscription.cancelAtPeriodEnd ? 'Expires' : 'Renews'}: {formatDate(usageData.subscription.currentPeriodEnd)}
                   </p>
                 )}
               </div>

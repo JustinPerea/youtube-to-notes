@@ -3,6 +3,7 @@ import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { isDebugEnabled } from '@/lib/security/debug-gate';
+import { createHmac } from 'crypto';
 import { POST as PolarWebhookPOST } from '@/app/api/polar/webhook/route';
 
 export const dynamic = 'force-dynamic';
@@ -89,10 +90,15 @@ export async function GET(req: NextRequest) {
     const webhookEvent = { type, data };
 
     // Call the webhook handler directly to avoid external protection
+    // Compute a valid Polar signature for the payload
+    const rawBody = JSON.stringify(webhookEvent);
+    const secret = process.env.POLAR_WEBHOOK_SECRET || '';
+    const signature = 'sha256=' + createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex');
+
     const internalReq = new Request('http://internal/api/polar/webhook', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(webhookEvent),
+      headers: { 'Content-Type': 'application/json', 'polar-signature': signature },
+      body: rawBody,
     });
     const res = await (PolarWebhookPOST as any)(internalReq);
 

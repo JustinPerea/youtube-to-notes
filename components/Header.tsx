@@ -51,18 +51,22 @@ export function Header() {
                 My Notes
               </Link>
             )}
-            <Link href="/roadmap" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
-              Roadmap
-            </Link>
-            <Link href="/features" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
-              Features
-            </Link>
-            <Link href="/formats" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
-              Formats
-            </Link>
-            <Link href="/pricing" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
-              Pricing
-            </Link>
+            {!session && (
+              <>
+                <Link href="/roadmap" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+                  Roadmap
+                </Link>
+                <Link href="/features" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+                  Features
+                </Link>
+                <Link href="/formats" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+                  Formats
+                </Link>
+                <Link href="/pricing" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
+                  Pricing
+                </Link>
+              </>
+            )}
             <Link href="/about" className="nav-link text-[var(--text-secondary)] text-sm font-medium transition-colors duration-300 hover:text-[var(--accent-pink)]">
               About
             </Link>
@@ -112,34 +116,38 @@ export function Header() {
                   My Notes
                 </Link>
               )}
-              <Link 
-                href="/roadmap" 
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
-                onClick={closeMobileMenu}
-              >
-                Roadmap
-              </Link>
-              <Link 
-                href="/features" 
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
-                onClick={closeMobileMenu}
-              >
-                Features
-              </Link>
-              <Link 
-                href="/formats" 
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
-                onClick={closeMobileMenu}
-              >
-                Formats
-              </Link>
-              <Link 
-                href="/pricing" 
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
-                onClick={closeMobileMenu}
-              >
-                Pricing
-              </Link>
+              {!session && (
+                <>
+                  <Link
+                    href="/roadmap"
+                    className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                    onClick={closeMobileMenu}
+                  >
+                    Roadmap
+                  </Link>
+                  <Link
+                    href="/features"
+                    className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                    onClick={closeMobileMenu}
+                  >
+                    Features
+                  </Link>
+                  <Link
+                    href="/formats"
+                    className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                    onClick={closeMobileMenu}
+                  >
+                    Formats
+                  </Link>
+                  <Link
+                    href="/pricing"
+                    className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"
+                    onClick={closeMobileMenu}
+                  >
+                    Pricing
+                  </Link>
+                </>
+              )}
               <Link 
                 href="/about" 
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-pink)] transition-colors font-medium"

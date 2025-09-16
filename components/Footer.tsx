@@ -42,12 +42,15 @@ export function Footer() {
           >
             Features
           </button>
-          <button 
+          <button
             onClick={() => handleTabNavigation('#pricing')}
             className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)] bg-transparent border-none cursor-pointer text-left"
           >
             Pricing
           </button>
+          <a href="/formats" className="footer-link block text-[var(--text-secondary)] text-sm mb-3 transition-colors duration-300 hover:text-[var(--accent-pink)]">
+            Formats
+          </a>
         </div>
         
         <div className="footer-column">

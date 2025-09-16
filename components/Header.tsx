@@ -35,8 +35,12 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="nav-logo flex items-center gap-3">
-            <div className="shiba-icon w-9 h-9 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF8FB3] rounded-[10px] flex items-center justify-center text-xl shadow-[0_2px_8px_rgba(255,107,157,0.2)]">
-              🐕
+            <div className="logo-container w-9 h-9 rounded-[10px] shadow-[0_2px_8px_rgba(255,107,157,0.2)]">
+              <img
+                src="/images/logos/main-logo.png"
+                alt="Kyoto Scribe Logo"
+                className="w-full h-full object-cover rounded-[10px]"
+              />
             </div>
             <span className="text-xl font-bold text-[var(--text-primary)]">Kyoto Scribe</span>
           </Link>

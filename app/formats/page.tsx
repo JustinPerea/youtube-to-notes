@@ -5,8 +5,8 @@ import { Footer } from '../../components/Footer';
 
 export const metadata: Metadata = {
   title: 'Note Formats - Kyoto Scribe 🐕 | AI-Generated Learning Materials',
-  description: 'Choose from multiple AI-generated formats tailored to your learning needs. Basic summaries, detailed study notes, presentation slides, and more.',
-  keywords: 'note formats, AI study notes, presentation slides, basic summary, tutorial notes, mind maps, study guides',
+  description: 'Choose from 5 AI-generated formats: Basic Summary, Study Notes, Presentation Slides, Tutorial Guide with clickable timestamps, and Research Paper Format.',
+  keywords: 'note formats, AI study notes, presentation slides, basic summary, tutorial guide, research paper, clickable timestamps, step by step instructions',
 }
 
 export default function Formats() {
@@ -142,110 +142,84 @@ export default function Formats() {
                 </div>
               </div>
 
-              {/* Tutorial Notes - Coming Soon */}
-              <div className="format-card bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6 transition-all duration-300 hover:transform hover:translate-y-[-4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] relative opacity-75">
-                <div className="coming-soon-banner absolute -top-2 -right-2 bg-gradient-to-r from-[var(--accent-pink)] to-[#FF8FB3] text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg transform rotate-12">
-                  COMING SOON
+              {/* Tutorial Guide - Available Now */}
+              <div className="format-card bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6 transition-all duration-300 hover:transform hover:translate-y-[-4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] relative">
+                <div className="new-badge absolute top-3 right-3 bg-gradient-to-r from-green-400 to-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  NEW
                 </div>
                 <div className="format-header mb-4">
-                  <div className="format-icon w-12 h-12 bg-gray-300 rounded-xl flex items-center justify-center text-2xl mb-3 mx-auto">
-                    🎓
+                  <div className="format-icon w-12 h-12 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF8FB3] rounded-xl flex items-center justify-center text-2xl mb-3 mx-auto">
+                    🔧
                   </div>
-                  <h3 className="text-xl font-bold text-[var(--text-muted)] mb-2 text-center">Tutorial Notes</h3>
+                  <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2 text-center">Tutorial Guide</h3>
                 </div>
                 <div className="format-content">
-                  <p className="text-[var(--text-muted)] text-sm leading-relaxed mb-4">
-                    Step-by-step tutorial format perfect for how-to videos and instructional content.
+                  <p className="text-[var(--text-secondary)] text-sm leading-relaxed mb-4">
+                    Advanced step-by-step instructions with clickable YouTube timestamps, domain detection, and verbosity controls.
                   </p>
                   <div className="format-features">
-                    <h4 className="text-sm font-semibold text-[var(--text-muted)] mb-2">Will Include:</h4>
-                    <ul className="text-xs text-[var(--text-muted)] space-y-1">
+                    <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Includes:</h4>
+                    <ul className="text-xs text-[var(--text-secondary)] space-y-1">
                       <li className="flex items-center gap-2">
-                        <span className="text-gray-400">○</span>
-                        <span>Step-by-step instructions</span>
+                        <span className="text-green-500">✓</span>
+                        <span>Clickable YouTube timestamps</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <span className="text-gray-400">○</span>
-                        <span>Prerequisites and tools</span>
+                        <span className="text-green-500">✓</span>
+                        <span>Domain detection (Programming/DIY/Fitness)</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <span className="text-gray-400">○</span>
-                        <span>Troubleshooting tips</span>
+                        <span className="text-green-500">✓</span>
+                        <span>Verbosity controls (Concise/Standard/Comprehensive)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        <span>Prerequisites and troubleshooting</span>
                       </li>
                     </ul>
                   </div>
                 </div>
               </div>
 
-              {/* Mind Map - Coming Soon */}
-              <div className="format-card bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6 transition-all duration-300 hover:transform hover:translate-y-[-4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] relative opacity-75">
-                <div className="coming-soon-banner absolute -top-2 -right-2 bg-gradient-to-r from-[var(--accent-pink)] to-[#FF8FB3] text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg transform rotate-12">
-                  COMING SOON
+              {/* Research Paper Format */}
+              <div className="format-card bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6 transition-all duration-300 hover:transform hover:translate-y-[-4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] relative">
+                <div className="new-badge absolute top-3 right-3 bg-gradient-to-r from-green-400 to-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  NEW
                 </div>
                 <div className="format-header mb-4">
-                  <div className="format-icon w-12 h-12 bg-gray-300 rounded-xl flex items-center justify-center text-2xl mb-3 mx-auto">
-                    🧠
+                  <div className="format-icon w-12 h-12 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF8FB3] rounded-xl flex items-center justify-center text-2xl mb-3 mx-auto">
+                    📄
                   </div>
-                  <h3 className="text-xl font-bold text-[var(--text-muted)] mb-2 text-center">Mind Map</h3>
+                  <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2 text-center">Research Paper Format</h3>
                 </div>
                 <div className="format-content">
-                  <p className="text-[var(--text-muted)] text-sm leading-relaxed mb-4">
-                    Visual mind map format showing connections between concepts and ideas.
+                  <p className="text-[var(--text-secondary)] text-sm leading-relaxed mb-4">
+                    Academic-style analysis with scholarly structure, methodology, findings, and conclusions.
                   </p>
                   <div className="format-features">
-                    <h4 className="text-sm font-semibold text-[var(--text-muted)] mb-2">Will Include:</h4>
-                    <ul className="text-xs text-[var(--text-muted)] space-y-1">
+                    <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Includes:</h4>
+                    <ul className="text-xs text-[var(--text-secondary)] space-y-1">
                       <li className="flex items-center gap-2">
-                        <span className="text-gray-400">○</span>
-                        <span>Central topic branching</span>
+                        <span className="text-green-500">✓</span>
+                        <span>Abstract and introduction</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <span className="text-gray-400">○</span>
-                        <span>Connected concepts</span>
+                        <span className="text-green-500">✓</span>
+                        <span>Methodology and findings</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <span className="text-gray-400">○</span>
-                        <span>Visual organization</span>
+                        <span className="text-green-500">✓</span>
+                        <span>Discussion and conclusions</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        <span>Academic writing style</span>
                       </li>
                     </ul>
                   </div>
                 </div>
               </div>
 
-              {/* Study Guide - Coming Soon */}
-              <div className="format-card bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6 transition-all duration-300 hover:transform hover:translate-y-[-4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] relative opacity-75">
-                <div className="coming-soon-banner absolute -top-2 -right-2 bg-gradient-to-r from-[var(--accent-pink)] to-[#FF8FB3] text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg transform rotate-12">
-                  COMING SOON
-                </div>
-                <div className="format-header mb-4">
-                  <div className="format-icon w-12 h-12 bg-gray-300 rounded-xl flex items-center justify-center text-2xl mb-3 mx-auto">
-                    📖
-                  </div>
-                  <h3 className="text-xl font-bold text-[var(--text-muted)] mb-2 text-center">Study Guide</h3>
-                </div>
-                <div className="format-content">
-                  <p className="text-[var(--text-muted)] text-sm leading-relaxed mb-4">
-                    Comprehensive study guide with practice questions and review materials.
-                  </p>
-                  <div className="format-features">
-                    <h4 className="text-sm font-semibold text-[var(--text-muted)] mb-2">Will Include:</h4>
-                    <ul className="text-xs text-[var(--text-muted)] space-y-1">
-                      <li className="flex items-center gap-2">
-                        <span className="text-gray-400">○</span>
-                        <span>Review questions</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="text-gray-400">○</span>
-                        <span>Key terms glossary</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="text-gray-400">○</span>
-                        <span>Practice exercises</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
             </div>
           </section>
 
@@ -260,7 +234,7 @@ export default function Formats() {
               </p>
             </div>
 
-            <div className="guide-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="guide-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="guide-item bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6 text-center">
                 <div className="guide-icon text-3xl mb-4">⚡</div>
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Quick Review</h3>
@@ -291,6 +265,17 @@ export default function Formats() {
                 </p>
                 <div className="recommended bg-[var(--accent-pink-soft)] text-[var(--accent-pink)] px-3 py-1 rounded-full text-xs font-semibold">
                   Use Presentation Slides
+                </div>
+              </div>
+
+              <div className="guide-item bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--card-border)] rounded-2xl p-6 text-center">
+                <div className="guide-icon text-3xl mb-4">🔧</div>
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">How-To Videos</h3>
+                <p className="text-sm text-[var(--text-secondary)] mb-4">
+                  Following tutorials or learning step-by-step processes?
+                </p>
+                <div className="recommended bg-[var(--accent-pink-soft)] text-[var(--accent-pink)] px-3 py-1 rounded-full text-xs font-semibold">
+                  Use Tutorial Guide
                 </div>
               </div>
             </div>

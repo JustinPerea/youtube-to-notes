@@ -26,8 +26,8 @@ const pricingTiers: PricingTier[] = [
     description: 'Perfect for trying out our AI-powered note generation',
     videoLimit: '5 notes per month',
     features: [
-      'All note formats (Basic Summary, Study Notes, Presentation Slides)',
-      'PDF export with watermark', 
+      'All 5 note formats: Basic Summary, Study Notes, Presentation Slides, Tutorial Guide (with clickable timestamps), Research Paper Format',
+      'PDF export with watermark',
       '100MB storage',
       'Chatbot coming soon'
     ],
@@ -44,7 +44,7 @@ const pricingTiers: PricingTier[] = [
     videoLimit: '100 notes per month',
     features: [
       '📝 100 NOTES PER MONTH - Perfect for regular users',
-      'All note formats (Basic Summary, Study Notes, Presentation Slides)',
+      'All 5 note formats: Basic Summary, Study Notes, Presentation Slides, Tutorial Guide (with clickable timestamps), Research Paper Format',
       'Chatbot coming soon',
       '5GB storage',
       'Standard processing speed',
@@ -64,7 +64,8 @@ const pricingTiers: PricingTier[] = [
     popularBadge: true,
     features: [
       '🎯 UNLIMITED VIDEOS - Never worry about limits',
-      'All formats + advanced exports (Word, PowerPoint)',
+      'All 5 note formats: Basic Summary, Study Notes, Presentation Slides, Tutorial Guide (with clickable timestamps), Research Paper Format',
+      'Advanced exports (Word, PowerPoint) + PDF without watermark',
       'Chatbot coming soon',
       '50GB storage',
       'Priority processing (2x faster)',

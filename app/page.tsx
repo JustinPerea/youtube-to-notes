@@ -51,26 +51,41 @@ export default function Home() {
               Get comprehensive notes from YouTube videos with AI-powered analysis in seconds
             </p>
             
-            {/* Get Started Button */}
-            <button
-              onClick={handleGetStarted}
-              className="get-started-btn px-14 py-5 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF5A8C] text-white border-none rounded-[50px] text-xl font-bold transition-all duration-300 relative overflow-hidden group hover:transform hover:scale-105 mb-20 animate-pulse-glow"
-              style={{
-                boxShadow: '0 6px 25px rgba(255,107,157,0.3)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 8px 35px rgba(255,107,157,0.45)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 6px 25px rgba(255,107,157,0.3)';
-              }}
-            >
-              {/* Shimmer effect */}
-              <div className="absolute inset-0 -top-2 -bottom-2 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-              {/* Ripple effect on hover */}
-              <div className="absolute top-1/2 left-1/2 w-0 h-0 rounded-full bg-white/30 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-600 group-hover:w-[300px] group-hover:h-[300px]"></div>
-              <span className="relative z-10 drop-shadow-sm">{getButtonContent()}</span>
-            </button>
+            {/* Get Started Button Container - allows rocket to overflow */}
+            <div className="relative inline-block mb-20 group">
+              {/* Rocket Overlay Image - positioned outside button to prevent clipping */}
+              <div className="absolute -left-4 -bottom-2 z-30 pointer-events-none">
+                <img
+                  src="/images/ui/button-overlay.png"
+                  alt="Rocket launch"
+                  className="w-28 h-28 sm:w-32 sm:h-32 object-contain transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1"
+                  style={{
+                    filter: 'drop-shadow(0 0 20px rgba(255, 107, 157, 0.4)) drop-shadow(0 0 40px rgba(255, 107, 157, 0.2))'
+                  }}
+                />
+              </div>
+
+              {/* Get Started Button */}
+              <button
+                onClick={handleGetStarted}
+                className="get-started-btn px-14 py-5 pl-32 bg-gradient-to-br from-[var(--accent-pink)] to-[#FF5A8C] text-white border-none rounded-[50px] text-xl font-bold transition-all duration-300 relative overflow-hidden hover:transform hover:scale-105 animate-pulse-glow"
+                style={{
+                  boxShadow: '0 6px 25px rgba(255,107,157,0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 8px 35px rgba(255,107,157,0.45)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 6px 25px rgba(255,107,157,0.3)';
+                }}
+              >
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 -top-2 -bottom-2 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                {/* Ripple effect on hover */}
+                <div className="absolute top-1/2 left-1/2 w-0 h-0 rounded-full bg-white/30 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-600 group-hover:w-[300px] group-hover:h-[300px]"></div>
+                <span className="relative z-10 drop-shadow-sm text-center">{getButtonContent()}</span>
+              </button>
+            </div>
           </section>
 
           {/* How It Works Section */}

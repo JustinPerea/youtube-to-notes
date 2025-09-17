@@ -18,7 +18,7 @@ const features = [
   {
     icon: '🎯',
     title: 'Multiple Formats',
-    description: 'Generate summaries, study notes, presentations, tutorials, and more.',
+    description: 'Choose from 5 AI-generated formats: • Basic Summary • Study Notes • Presentation Slides • Tutorial Guide (with clickable timestamps) • Research Paper Format',
     color: 'from-purple-400 to-pink-400'
   },
   {

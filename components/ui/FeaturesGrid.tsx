@@ -12,7 +12,7 @@ export function FeaturesGrid() {
     {
       icon: '🎯',
       title: 'Multiple Formats',
-      description: 'Choose from summaries, detailed notes, presentation slides, and many more formats coming soon to match your learning style'
+      description: 'Choose from 5 AI-generated formats: • Basic Summary • Study Notes • Presentation Slides • Tutorial Guide (with clickable timestamps) • Research Paper Format'
     },
     {
       icon: '📄',

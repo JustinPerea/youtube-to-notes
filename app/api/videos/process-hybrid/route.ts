@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   try {
     // Apply rate limiting
     const clientId = getClientIdentifier(request);
-    const rateLimitResult = applyRateLimit(request, videoProcessingRateLimiter, clientId);
+    const rateLimitResult = await applyRateLimit(request, videoProcessingRateLimiter, clientId);
     
     if (!rateLimitResult.success) {
       return NextResponse.json(

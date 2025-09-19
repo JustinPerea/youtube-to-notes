@@ -208,9 +208,13 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
                   className="mx-auto block w-64 px-3 py-2 glass-input rounded-xl text-high-contrast focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
                 >
                   {TEMPLATES.filter((template) => {
-                    const config = template as typeof template & { isPremium?: boolean };
+                    const config = template as { isPremium?: boolean };
                     return !config.isPremium;
-                  }).map((template) => (
+                  }).map((template) => ({
+                    id: template.id,
+                    name: template.name,
+                    icon: (template as { icon?: string }).icon || '',
+                  })).map((template) => (
                     <option key={template.id} value={template.id} className="bg-gray-800 text-white">
                       {template.icon} {template.name}
                     </option>

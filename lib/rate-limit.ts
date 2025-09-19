@@ -1,107 +1,110 @@
 import { NextRequest } from 'next/server';
+import { createClient } from 'redis';
 
 interface RateLimitConfig {
   windowMs: number;
   maxRequests: number;
 }
 
-interface RateLimitRecord {
-  count: number;
-  resetTime: number;
+type RateLimitResult = { allowed: boolean; remaining: number; resetTime: number };
+
+interface IRateLimiter {
+  isAllowed(identifier: string): Promise<RateLimitResult> | RateLimitResult;
+  cleanup?(): void;
 }
 
-class RateLimiter {
-  private requests: Map<string, RateLimitRecord> = new Map();
-  
+class MemoryRateLimiter implements IRateLimiter {
+  private requests = new Map<string, { count: number; resetTime: number }>();
   constructor(private config: RateLimitConfig) {}
-  
-  isAllowed(identifier: string): { allowed: boolean; remaining: number; resetTime: number } {
+
+  isAllowed(identifier: string): RateLimitResult {
     const now = Date.now();
     const record = this.requests.get(identifier);
-    
-    // If no record exists or window has expired, create new record
+
     if (!record || now > record.resetTime) {
-      this.requests.set(identifier, {
-        count: 1,
-        resetTime: now + this.config.windowMs
-      });
-      return {
-        allowed: true,
-        remaining: this.config.maxRequests - 1,
-        resetTime: now + this.config.windowMs
-      };
+      const resetTime = now + this.config.windowMs;
+      this.requests.set(identifier, { count: 1, resetTime });
+      return { allowed: true, remaining: this.config.maxRequests - 1, resetTime };
     }
-    
-    // Check if limit exceeded
+
     if (record.count >= this.config.maxRequests) {
-      return {
-        allowed: false,
-        remaining: 0,
-        resetTime: record.resetTime
-      };
+      return { allowed: false, remaining: 0, resetTime: record.resetTime };
     }
-    
-    // Increment count
+
     record.count++;
     this.requests.set(identifier, record);
-    
-    return {
-      allowed: true,
-      remaining: this.config.maxRequests - record.count,
-      resetTime: record.resetTime
-    };
+    return { allowed: true, remaining: this.config.maxRequests - record.count, resetTime: record.resetTime };
   }
-  
-  // Clean up expired records (optional, for memory management)
+
   cleanup() {
     const now = Date.now();
     for (const [key, record] of this.requests.entries()) {
-      if (now > record.resetTime) {
-        this.requests.delete(key);
-      }
+      if (now > record.resetTime) this.requests.delete(key);
     }
   }
 }
 
-// Rate limiters for different endpoints
-export const apiRateLimiter = new RateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100 // 100 requests per window
-});
+class RedisRateLimiter implements IRateLimiter {
+  private client;
+  constructor(private config: RateLimitConfig, redisUrl: string) {
+    this.client = createClient({ url: redisUrl });
+    // Do not await connect here to avoid blocking import-time in serverless
+    this.client.connect().catch(() => {
+      // Fallback: if connect fails, we swallow here; applyRateLimit will failover via try/catch
+    });
+  }
 
-export const authRateLimiter = new RateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5 // 5 auth attempts per window
-});
+  async isAllowed(identifier: string): Promise<RateLimitResult> {
+    const key = `rate:${identifier}:${Math.floor(Date.now() / this.config.windowMs)}`;
+    const ttlSeconds = Math.ceil(this.config.windowMs / 1000);
+    try {
+      const count = await this.client.incr(key);
+      if (count === 1) {
+        // First hit: set window
+        await this.client.expire(key, ttlSeconds);
+      }
+      const ttl = await this.client.ttl(key);
+      const resetTime = Date.now() + (ttl > 0 ? ttl * 1000 : this.config.windowMs);
+      const remaining = Math.max(0, this.config.maxRequests - count);
+      return { allowed: count <= this.config.maxRequests, remaining, resetTime };
+    } catch (e) {
+      // If Redis fails, conservatively allow and let caller decide; upstream can log
+      const resetTime = Date.now() + this.config.windowMs;
+      return { allowed: true, remaining: this.config.maxRequests - 1, resetTime };
+    }
+  }
+}
 
-export const videoProcessingRateLimiter = new RateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 50 // 50 video processing requests per hour
-});
+function createRateLimiter(config: RateLimitConfig): IRateLimiter {
+  const redisUrl =
+    process.env.REDIS_URL ||
+    process.env.UPSTASH_REDIS_URL ||
+    process.env.UPSTASH_REDIS_CONNECTION_URL;
+  if (redisUrl) return new RedisRateLimiter(config, redisUrl);
+  return new MemoryRateLimiter(config);
+}
+
+// Rate limiters for different endpoints (Redis if configured, else memory)
+export const apiRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 100 });
+export const authRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 5 });
+export const videoProcessingRateLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, maxRequests: 50 });
 
 // Helper function to get client identifier
 export function getClientIdentifier(request: NextRequest): string {
-  // Use IP address as primary identifier
-  const ip = request.ip || 
-             request.headers.get('x-forwarded-for') ||
-             request.headers.get('x-real-ip') ||
-             'unknown';
-  
-  // If user is authenticated, include user ID for better tracking
+  const ip = request.ip || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
   const userId = request.headers.get('x-user-id');
-  
   return userId ? `${ip}:${userId}` : ip;
 }
 
 // Rate limiting middleware function
-export function applyRateLimit(
-  request: NextRequest, 
-  limiter: RateLimiter,
+export async function applyRateLimit(
+  request: NextRequest,
+  limiter: IRateLimiter,
   identifier?: string
 ) {
   const clientId = identifier || getClientIdentifier(request);
-  const result = limiter.isAllowed(clientId);
-  
+  const result = await limiter.isAllowed(clientId as string);
+
   if (!result.allowed) {
     return {
       success: false,
@@ -109,17 +112,20 @@ export function applyRateLimit(
       retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000)
     };
   }
-  
-  return {
-    success: true,
-    remaining: result.remaining,
-    resetTime: result.resetTime
-  };
+
+  return { success: true, remaining: result.remaining, resetTime: result.resetTime };
 }
 
-// Cleanup expired records periodically (optional)
-setInterval(() => {
-  apiRateLimiter.cleanup();
-  authRateLimiter.cleanup();
-  videoProcessingRateLimiter.cleanup();
-}, 60 * 1000); // Clean up every minute
+// Cleanup expired memory records periodically only when using memory backend
+if (!(apiRateLimiter as any).client && typeof setInterval === 'function') {
+  const cleanupInterval = setInterval(() => {
+    (apiRateLimiter as MemoryRateLimiter).cleanup?.();
+    (authRateLimiter as MemoryRateLimiter).cleanup?.();
+    (videoProcessingRateLimiter as MemoryRateLimiter).cleanup?.();
+  }, 60 * 1000);
+
+  // Allow serverless runtimes to idle when nothing else is pending
+  if (typeof (cleanupInterval as any).unref === 'function') {
+    (cleanupInterval as any).unref();
+  }
+}

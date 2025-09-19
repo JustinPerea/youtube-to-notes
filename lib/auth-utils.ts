@@ -2,22 +2,27 @@ import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { ensureUserExists } from '@/lib/services/user-service';
 
-export async function getApiSession(request: NextRequest) {
+export async function getApiSession(request?: NextRequest) {
   try {
     console.log('AUTH-UTILS: Starting session retrieval...');
     
     // Direct session API call - the only reliable method in NextAuth v5
-    const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3003' 
-      : (process.env.NEXTAUTH_URL?.trim() || 
-         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.trim()}` : 
+    const baseUrl = process.env.NODE_ENV === 'development'
+      ? 'http://localhost:3003'
+      : (process.env.NEXTAUTH_URL?.trim() ||
+         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.trim()}` :
          'https://kyotoscribe.com'));
     
     const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
+      method: 'GET',
       headers: {
-        'Cookie': request.headers.get('cookie') || '',
+        'Cookie': request?.headers?.get('cookie') || '',
         'Content-Type': 'application/json'
-      }
+      },
+      // Prevent server-side caching from leaking sessions between users
+      cache: 'no-store',
+      next: { revalidate: 0 },
+      credentials: 'include'
     });
     
     console.log('AUTH-UTILS: Session API response:', {

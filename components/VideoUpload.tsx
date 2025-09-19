@@ -8,7 +8,7 @@ import { VideoPreview } from './VideoPreview';
 import SimplePdfDownload from './SimplePdfDownload';
 import { extractVideoInfo, isValidYouTubeUrl } from '../lib/utils/youtube';
 import { useSession } from 'next-auth/react';
-import { TEMPLATES } from '../lib/templates/index';
+import { TEMPLATES } from '@/lib/templates';
 
 interface ProcessingResult {
   title: string;
@@ -127,6 +127,9 @@ export function VideoUpload({ selectedTemplate = 'basic-summary', onTemplateChan
           content: result.content,
           templateId: selectedTemplate,
           tags: ['youtube', 'ai-generated'],
+          youtubeUrl: videoUrl.trim(),
+          videoId: videoInfo.videoId || undefined,
+          verbosityVersions: result.verbosityVersions,
         }),
       });
 

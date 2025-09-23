@@ -4,6 +4,7 @@ import { TEMPLATES } from '@/lib/templates';
 import { validateVideoUrl } from '@/lib/validation';
 import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { reserveUsage } from '@/lib/subscription/service';
+import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
 
 // Async processing route for long videos with streaming response
 export const dynamic = 'force-dynamic';
@@ -95,7 +96,7 @@ async function processSingleChunk(
     `data: ${JSON.stringify({ type: 'status', message: 'Analyzing video content...', progress: 30 })}\n\n`
   ));
 
-  const result = await model.generateContent([
+  const generation = await model.generateContent([
     template.prompt,
     {
       fileData: {
@@ -105,18 +106,27 @@ async function processSingleChunk(
     }
   ]);
 
+  const response = await generation.response;
+  const tokenUsage = response.usageMetadata?.totalTokenCount;
+  const rawContent = await response.text();
+  const content = convertTimestampsToLinks(rawContent, videoUrl);
+
   controller.enqueue(new TextEncoder().encode(
     `data: ${JSON.stringify({ type: 'status', message: 'Generating content...', progress: 70 })}\n\n`
   ));
 
-  const content = await result.response.text();
-  
   controller.enqueue(new TextEncoder().encode(
     `data: ${JSON.stringify({ 
-      type: 'result', 
-      content,
+      type: 'result',
       template: template.id,
-      progress: 90
+      progress: 90,
+      result: buildStreamResultPayload({
+        content,
+        templateId: template.id,
+        videoUrl,
+        tokenUsage,
+        chunkInfo: { mode: 'single' }
+      })
     })}\n\n`
   ));
 }
@@ -144,7 +154,7 @@ async function processMultipleChunks(
     const chunkPrompt = createChunkPrompt(template, i, chunkCount);
     
     try {
-      const result = await model.generateContent([
+      const generation = await model.generateContent([
         chunkPrompt,
         {
           fileData: {
@@ -154,7 +164,8 @@ async function processMultipleChunks(
         }
       ]);
 
-      const chunkContent = await result.response.text();
+      const response = await generation.response;
+      const chunkContent = await response.text();
       chunks.push({
         index: i,
         content: chunkContent,
@@ -180,15 +191,21 @@ async function processMultipleChunks(
     `data: ${JSON.stringify({ type: 'status', message: 'Combining results...', progress: 85 })}\n\n`
   ));
 
-  const combinedContent = await combineChunks(chunks, template);
+  const combinedRawContent = await combineChunks(chunks, template);
+  const combinedContent = convertTimestampsToLinks(combinedRawContent, videoUrl);
   
   controller.enqueue(new TextEncoder().encode(
     `data: ${JSON.stringify({ 
-      type: 'result', 
-      content: combinedContent,
+      type: 'result',
       template: template.id,
       chunks: chunks.length,
-      progress: 95
+      progress: 95,
+      result: buildStreamResultPayload({
+        content: combinedContent,
+        templateId: template.id,
+        videoUrl,
+        chunkInfo: { mode: 'chunked', chunks: chunks.length }
+      })
     })}\n\n`
   ));
 }
@@ -226,6 +243,43 @@ async function combineChunks(chunks: any[], template: any): Promise<string> {
 ---
 
 *Note: This content was processed in ${chunks.length} parts for optimal performance with long-form video content.*`;
+}
+
+function buildStreamResultPayload({
+  content,
+  templateId,
+  videoUrl,
+  tokenUsage,
+  chunkInfo,
+}: {
+  content: string;
+  templateId: string;
+  videoUrl: string;
+  tokenUsage?: number;
+  chunkInfo?: {
+    mode: 'single' | 'chunked';
+    chunks?: number;
+  };
+}) {
+  return {
+    title: `Notes from ${videoUrl}`,
+    template: templateId,
+    content,
+    processingMethod: 'async-stream',
+    dataSourcesUsed: ['Gemini Streaming'],
+    tokensUsed: tokenUsage,
+    allVerbosityLevels: {
+      brief: content,
+      standard: content,
+      comprehensive: content,
+    },
+    selectedVerbosity: 'standard',
+    metadata: {
+      videoUrl,
+      mode: chunkInfo?.mode,
+      chunks: chunkInfo?.chunks,
+    },
+  };
 }
 
 // Estimate video duration from URL (placeholder - would integrate with YouTube API)

@@ -9,6 +9,7 @@ import ProcessingStatusBar from './ProcessingStatusBar';
 import { useSession } from 'next-auth/react';
 import { extractVideoId } from '@/lib/utils/youtube';
 import { ResultsCompletionAd } from './ads/FreeUserAdBanner';
+import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
 // Simplified UI - removed complex quality indicators
 
 interface ProcessingResult {
@@ -132,6 +133,32 @@ export function VideoUploadProcessor({
   
   // NEW: Progress aggregation from concurrent requests (Phase 1 - Step 1.2)
   const [progressStates, setProgressStates] = useState<Record<string, number>>({});
+
+  const [streamingPreferred, setStreamingPreferred] = React.useState(
+    process.env.NEXT_PUBLIC_FORCE_STREAMING === 'true'
+  );
+  const [streamingResolved, setStreamingResolved] = React.useState(
+    process.env.NEXT_PUBLIC_FORCE_STREAMING === 'true' || process.env.NEXT_PUBLIC_DISABLE_STREAMING === 'true'
+  );
+
+  React.useEffect(() => {
+    if (process.env.NEXT_PUBLIC_FORCE_STREAMING === 'true') {
+      setStreamingPreferred(true);
+      setStreamingResolved(true);
+      return;
+    }
+    if (process.env.NEXT_PUBLIC_DISABLE_STREAMING === 'true') {
+      setStreamingPreferred(false);
+      setStreamingResolved(true);
+      return;
+    }
+    if (typeof window === 'undefined') return;
+    const hostname = window.location.hostname;
+    setStreamingPreferred(hostname !== 'localhost' && hostname !== '127.0.0.1');
+    setStreamingResolved(true);
+  }, []);
+
+  const lastStatusRef = React.useRef<string | null>(null);
   
   // Simplified UI - removed unused state variables
 
@@ -163,6 +190,176 @@ export function VideoUploadProcessor({
       : 0;
   };
 
+  type StreamCallbacks = {
+    onStatus?: (message?: string, progress?: number) => void;
+    onProgress?: (progress: number) => void;
+  };
+
+  const buildResultFromStream = (payload: any, templateId: string): ProcessingResult => {
+    const baseContent = typeof payload?.content === 'string' ? payload.content : '';
+    const normalizedContent = baseContent
+      ? convertTimestampsToLinks(baseContent, videoUrl)
+      : baseContent;
+
+    const allVerbosity = payload?.allVerbosityLevels || payload?.verbosityVersions || {
+      brief: normalizedContent,
+      standard: normalizedContent,
+      comprehensive: normalizedContent,
+    };
+
+    return {
+      title: payload?.title || `Notes from ${videoUrl}`,
+      content: normalizedContent,
+      template: templateId,
+      processingMethod: payload?.processingMethod || 'async-stream',
+      dataSourcesUsed: payload?.dataSourcesUsed || ['Gemini Streaming'],
+      contentAnalysis: payload?.contentAnalysis,
+      quality: payload?.quality,
+      verbosityVersions: allVerbosity,
+      allVerbosityLevels: allVerbosity,
+      transcript: payload?.transcript,
+      processingStats: payload?.processingStats,
+      tokensUsed: payload?.tokensUsed ?? payload?.tokenUsage,
+    };
+  };
+
+  const processTemplateStandard = async (
+    templateId: string,
+    callbacks: StreamCallbacks = {}
+  ): Promise<ProcessingResult> => {
+    const response = await fetch('/api/videos/process', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        videoUrl: videoUrl.trim(),
+        selectedTemplate: templateId,
+        processingMode,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || `Failed to process ${templateId} format`);
+    }
+
+    callbacks.onProgress?.(100);
+    return data as ProcessingResult;
+  };
+
+  const processTemplateStreaming = async (
+    templateId: string,
+    callbacks: StreamCallbacks = {}
+  ): Promise<ProcessingResult> => {
+    const response = await fetch('/api/videos/process-async', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        videoUrl: videoUrl.trim(),
+        selectedTemplate: templateId,
+        processingMode,
+        forceAsync: true,
+      }),
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+
+    if (!response.ok) {
+      let errorDetail = 'Failed to process video asynchronously';
+      try {
+        const data = await response.json();
+        errorDetail = data.error || errorDetail;
+      } catch (e) {
+        // ignore JSON parsing errors
+      }
+      throw new Error(errorDetail);
+    }
+
+    if (!contentType.includes('text/event-stream')) {
+      const data = await response.json();
+
+      if (data?.redirect) {
+        return processTemplateStandard(templateId, callbacks);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      callbacks.onProgress?.(100);
+      return data as ProcessingResult;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('Streaming reader not available');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalResult: ProcessingResult | null = null;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      let boundary = buffer.indexOf('\n\n');
+      while (boundary !== -1) {
+        const rawEvent = buffer.slice(0, boundary).trim();
+        buffer = buffer.slice(boundary + 2);
+        boundary = buffer.indexOf('\n\n');
+
+        if (!rawEvent.startsWith('data:')) continue;
+
+        const payloadStr = rawEvent.replace(/^data:\s*/, '');
+        if (!payloadStr) continue;
+
+        let eventData: any;
+        try {
+          eventData = JSON.parse(payloadStr);
+        } catch (error) {
+          console.warn('Failed to parse SSE payload', error);
+          continue;
+        }
+
+        if (eventData.type === 'status') {
+          callbacks.onStatus?.(eventData.message, eventData.progress);
+          if (typeof eventData.progress === 'number') {
+            callbacks.onProgress?.(eventData.progress);
+          }
+        } else if (eventData.type === 'result') {
+          const resultPayload = eventData.result || eventData;
+          finalResult = buildResultFromStream(resultPayload, templateId);
+        } else if (eventData.type === 'error') {
+          throw new Error(eventData.message || 'Streaming error occurred');
+        }
+      }
+    }
+
+    if (!finalResult) {
+      throw new Error('No result received from streaming endpoint');
+    }
+
+    callbacks.onProgress?.(100);
+    return finalResult;
+  };
+
+  const processTemplateRequest = (
+    templateId: string,
+    callbacks: StreamCallbacks = {}
+  ) => {
+    if (streamingPreferred) {
+      return processTemplateStreaming(templateId, callbacks);
+    }
+    return processTemplateStandard(templateId, callbacks);
+  };
+
   // NEW: Progressive result display (Phase 2 - Step 2.2)
   React.useEffect(() => {
     const completed = Object.values(templateStatuses).filter(s => s.status === 'complete');
@@ -183,10 +380,11 @@ export function VideoUploadProcessor({
   }, [progressStates, isProcessing]);
 
   React.useEffect(() => {
+    if (!streamingResolved) return;
     if (videoUrl && selectedTemplates.length > 0) {
       handleProcess();
     }
-  }, [videoUrl, selectedTemplates]);
+  }, [videoUrl, selectedTemplates, streamingResolved]);
 
   const addProcessingStep = (step: string, progressValue?: number) => {
     setProcessingStepsList(prev => [...prev, step]);
@@ -213,6 +411,7 @@ export function VideoUploadProcessor({
     setStartTime(Date.now());
     setEstimatedTimeRemaining(null);
     setCanRetry(false);
+    lastStatusRef.current = null;
     
     // NEW: Initialize template statuses (Phase 1 - Step 1.3)
     const initialStatuses: Record<string, TemplateStatus> = {};
@@ -305,28 +504,43 @@ export function VideoUploadProcessor({
         for (let i = 0; i < selectedTemplates.length; i++) {
           const template = selectedTemplates[i];
           setCurrentProcessingIndex(i);
-          
+          lastStatusRef.current = null;
+
           addProcessingStep(`📋 Processing format ${i + 1}/${selectedTemplates.length}: ${template}...`, 30 + (i * 50 / selectedTemplates.length));
           
-          const response = await fetch('/api/videos/process', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              videoUrl: videoUrl.trim(),
-              selectedTemplate: template,
-              processingMode
-            }),
+          updateTemplateStatus(template, {
+            status: 'processing',
+            progress: 0,
+            startedAt: Date.now()
           });
+          updateTemplateProgress(template, 0);
+
+          const templateResult = await processTemplateRequest(template, {
+            onStatus: (message, progressValue) => {
+              if (message && lastStatusRef.current !== message) {
+                addProcessingStep(message);
+                lastStatusRef.current = message;
+              }
+              if (typeof progressValue === 'number') {
+                updateTemplateStatus(template, { progress: Math.round(progressValue) });
+                updateTemplateProgress(template, progressValue);
+              }
+            },
+            onProgress: progressValue => {
+              updateTemplateStatus(template, { progress: Math.round(progressValue) });
+              updateTemplateProgress(template, progressValue);
+            }
+          });
+
+          allResults.push(templateResult);
+          updateTemplateStatus(template, {
+            status: 'complete',
+            progress: 100,
+            result: templateResult,
+            completedAt: Date.now()
+          });
+          updateTemplateProgress(template, 100);
           
-          const data = await response.json();
-          
-          if (!response.ok) {
-            throw new Error(data.error || `Failed to process ${template} format`);
-          }
-          
-          allResults.push(data);
           addProcessingStep(`✅ ${template} completed`, 30 + ((i + 1) * 50 / selectedTemplates.length));
         }
       }
@@ -401,6 +615,15 @@ export function VideoUploadProcessor({
       } else {
         setCanRetry(false);
       }
+
+      const failingTemplate = selectedTemplates[currentProcessingIndex] || selectedTemplates[selectedTemplates.length - 1];
+      if (failingTemplate) {
+        updateTemplateStatus(failingTemplate, {
+          status: 'error',
+          error: userFriendlyError,
+          completedAt: Date.now()
+        });
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -442,23 +665,18 @@ export function VideoUploadProcessor({
         updateTemplateStatus(template, { progress: 25 });
         updateTemplateProgress(template, 25);
 
-        const response = await fetch('/api/videos/process', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const templateResult = await processTemplateRequest(template, {
+          onStatus: (_message, progressValue) => {
+            if (typeof progressValue === 'number') {
+              updateTemplateStatus(template, { progress: Math.round(progressValue) });
+              updateTemplateProgress(template, progressValue);
+            }
           },
-          body: JSON.stringify({
-            videoUrl: videoUrl.trim(),
-            selectedTemplate: template,
-            processingMode
-          }),
+          onProgress: progressValue => {
+            updateTemplateStatus(template, { progress: Math.round(progressValue) });
+            updateTemplateProgress(template, progressValue);
+          }
         });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.error || `Failed to process ${template} format`);
-        }
 
         addProcessingStep(`✅ ${template} completed successfully`, 50 + (index * 10));
         
@@ -466,7 +684,7 @@ export function VideoUploadProcessor({
         updateTemplateStatus(template, { 
           status: 'complete', 
           progress: 100, 
-          result: data,
+          result: templateResult,
           completedAt: Date.now() 
         });
         updateTemplateProgress(template, 100);
@@ -474,7 +692,7 @@ export function VideoUploadProcessor({
         return {
           template,
           index,
-          data,
+          data: templateResult,
           status: 'success' as const,
           completedAt: Date.now()
         };

@@ -200,6 +200,10 @@ function parseTimestampToSeconds(timestamp: string): number {
   return 0;
 }
 
+export function timestampStringToSeconds(timestamp: string): number {
+  return parseTimestampToSeconds(timestamp);
+}
+
 /**
  * Post-process generated content to convert plain timestamps to clickable YouTube links
  * 
@@ -229,7 +233,11 @@ export function convertTimestampsToLinks(content: string, videoUrl: string): str
     // Match plain timestamps at start of lines like "0:30 - Topic"
     /^(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–—]/gm,
     // Match plain timestamps at end of sentences like "Learn techniques. 00:00"
-    /\b(\d{1,2}:\d{2}(?::\d{2})?)(?=\s*[.!?]?\s*$|\s*[.!?]\s)/gm
+    /\b(\d{1,2}:\d{2}(?::\d{2})?)(?=\s*[.!?]?\s*$|\s*[.!?]\s)/gm,
+    // Match timestamps wrapped in parentheses e.g. (01:23) or (1:02:03)
+    /\((\d{1,2}:\d{2}(?::\d{2})?)\)/g,
+    // Match standalone timestamps like 01:23 or 1:02:03 in plain text
+    /(?<![\d\[(])(\d{1,2}:\d{2}(?::\d{2})?)(?![\d:])/g
   ];
 
   let processedContent = content;
@@ -260,6 +268,12 @@ export function convertTimestampsToLinks(content: string, videoUrl: string): str
         return `${markdownLink} -`;
       } else if (index === 4) {
         // "Learn techniques. 00:00" -> "Learn techniques. [00:00](url)"
+        return markdownLink;
+      } else if (index === 5) {
+        // "(00:00)" -> "([00:00](url))"
+        return `(${markdownLink})`;
+      } else if (index === 6) {
+        // Plain "00:00" -> "[00:00](url)"
         return markdownLink;
       }
       

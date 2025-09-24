@@ -240,3 +240,42 @@ export function getYouTubeThumbnail(
   
   return `https://img.youtube.com/vi/${videoId}/${qualityMap[quality]}.jpg`;
 }
+
+/**
+ * Parse a YouTube link that contains a timestamp and return base URL + seconds.
+ */
+export function parseYouTubeTimestampLink(href: string): { videoUrl: string; seconds: number } | null {
+  try {
+    const url = new URL(href);
+    const timestampParam = url.searchParams.get('t');
+    if (!timestampParam) return null;
+
+    const seconds = parseTimestampParam(timestampParam);
+    if (Number.isNaN(seconds)) return null;
+
+    url.searchParams.delete('t');
+    return {
+      videoUrl: url.toString(),
+      seconds,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseTimestampParam(value: string): number {
+  if (!value) return NaN;
+
+  if (/^\d+$/.test(value)) {
+    return parseInt(value, 10);
+  }
+
+  const match = value.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/i);
+  if (!match) return NaN;
+
+  const hours = match[1] ? parseInt(match[1], 10) : 0;
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+  const seconds = match[3] ? parseInt(match[3], 10) : 0;
+
+  return hours * 3600 + minutes * 60 + seconds;
+}

@@ -617,6 +617,8 @@ function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLe
     let startInstruction = '';
     if (template.id === 'basic-summary') {
       startInstruction = 'Ensure the first characters of your response must be "**Video Summary**" with no text before it.';
+    } else if (template.id === 'tutorial-guide') {
+      startInstruction = 'Ensure the very first characters of your response must be "# Tutorial Guide:" with no words, acknowledgements, or phrases before it.';
     } else {
       startInstruction = `Ensure the first characters of your response must be "**${template.name}**" with no text before it.`;
     }

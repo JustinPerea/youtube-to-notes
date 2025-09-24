@@ -7,9 +7,10 @@ import PresentationSlides from './PresentationSlides';
 import SimplePdfDownload from './SimplePdfDownload';
 import ProcessingStatusBar from './ProcessingStatusBar';
 import { useSession } from 'next-auth/react';
-import { extractVideoId } from '@/lib/utils/youtube';
+import { extractVideoId, parseYouTubeTimestampLink } from '@/lib/utils/youtube';
 import { ResultsCompletionAd } from './ads/FreeUserAdBanner';
 import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
+import { TimestampButton } from './ui/TimestampButton';
 // Simplified UI - removed complex quality indicators
 
 interface ProcessingResult {
@@ -66,6 +67,8 @@ interface ProcessingResult {
     transcriptWordCount?: number;
   };
   tokensUsed?: number;
+  noteId?: string;
+  autoSaved?: boolean;
 }
 
 // NEW: Individual template status management (Phase 1 - Step 1.3)
@@ -77,6 +80,8 @@ interface TemplateStatus {
   error?: string;
   startedAt?: number;
   completedAt?: number;
+  noteId?: string;
+  autoSaved?: boolean;
 }
 
 interface VideoUploadProcessorProps {
@@ -220,6 +225,8 @@ export function VideoUploadProcessor({
       transcript: payload?.transcript,
       processingStats: payload?.processingStats,
       tokensUsed: payload?.tokensUsed ?? payload?.tokenUsage,
+      noteId: payload?.noteId,
+      autoSaved: !!payload?.noteId,
     };
   };
 
@@ -232,6 +239,7 @@ export function VideoUploadProcessor({
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         videoUrl: videoUrl.trim(),
         selectedTemplate: templateId,
@@ -253,17 +261,20 @@ export function VideoUploadProcessor({
     templateId: string,
     callbacks: StreamCallbacks = {}
   ): Promise<ProcessingResult> => {
+    const requestPayload = {
+      videoUrl: videoUrl.trim(),
+      selectedTemplate: templateId,
+      processingMode,
+      forceAsync: true,
+    };
+
     const response = await fetch('/api/videos/process-async', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        videoUrl: videoUrl.trim(),
-        selectedTemplate: templateId,
-        processingMode,
-        forceAsync: true,
-      }),
+      credentials: 'include',
+      body: JSON.stringify(requestPayload),
     });
 
     const contentType = response.headers.get('content-type') || '';
@@ -294,56 +305,86 @@ export function VideoUploadProcessor({
       return data as ProcessingResult;
     }
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('Streaming reader not available');
-    }
+    const reader = response.body?.getReader?.();
 
     const decoder = new TextDecoder();
     let buffer = '';
     let finalResult: ProcessingResult | null = null;
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
+    const handleEventPayload = (payloadStr: string) => {
+      if (!payloadStr) return;
 
-      buffer += decoder.decode(value, { stream: true });
+      let eventData: any;
+      try {
+        eventData = JSON.parse(payloadStr);
+      } catch (error) {
+        console.warn('Failed to parse SSE payload', error, { payload: payloadStr });
+        return;
+      }
 
-      let boundary = buffer.indexOf('\n\n');
-      while (boundary !== -1) {
-        const rawEvent = buffer.slice(0, boundary).trim();
-        buffer = buffer.slice(boundary + 2);
-        boundary = buffer.indexOf('\n\n');
+      if (eventData.type === 'status') {
+        callbacks.onStatus?.(eventData.message, eventData.progress);
+        if (typeof eventData.progress === 'number') {
+          callbacks.onProgress?.(eventData.progress);
+        }
+      } else if (eventData.type === 'result') {
+        const resultPayload = eventData.result || eventData;
+        finalResult = buildResultFromStream(resultPayload, templateId);
+      } else if (eventData.type === 'error') {
+        console.error('Streaming error event', eventData);
+        throw new Error(eventData.message || 'Streaming error occurred');
+      }
+    };
 
-        if (!rawEvent.startsWith('data:')) continue;
+    try {
+      if (!reader) {
+        console.warn('ReadableStream reader not available; buffering full SSE response');
+        const fullBody = await response.text();
+        fullBody
+          .split('\n\n')
+          .map(chunk => chunk.trim())
+          .filter(Boolean)
+          .forEach(chunk => {
+            const dataLine = chunk
+              .split('\n')
+              .find(line => line.startsWith('data:'));
+            if (!dataLine) return;
+            const payloadStr = dataLine.replace(/^data:\s*/, '');
+            handleEventPayload(payloadStr);
+          });
+      } else {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
 
-        const payloadStr = rawEvent.replace(/^data:\s*/, '');
-        if (!payloadStr) continue;
+          buffer += decoder.decode(value, { stream: true });
 
-        let eventData: any;
-        try {
-          eventData = JSON.parse(payloadStr);
-        } catch (error) {
-          console.warn('Failed to parse SSE payload', error);
-          continue;
+          let boundary = buffer.indexOf('\n\n');
+          while (boundary !== -1) {
+            const rawEvent = buffer.slice(0, boundary).trim();
+            buffer = buffer.slice(boundary + 2);
+            boundary = buffer.indexOf('\n\n');
+
+            if (!rawEvent.startsWith('data:')) continue;
+            const payloadStr = rawEvent.replace(/^data:\s*/, '');
+            handleEventPayload(payloadStr);
+          }
         }
 
-        if (eventData.type === 'status') {
-          callbacks.onStatus?.(eventData.message, eventData.progress);
-          if (typeof eventData.progress === 'number') {
-            callbacks.onProgress?.(eventData.progress);
-          }
-        } else if (eventData.type === 'result') {
-          const resultPayload = eventData.result || eventData;
-          finalResult = buildResultFromStream(resultPayload, templateId);
-        } else if (eventData.type === 'error') {
-          throw new Error(eventData.message || 'Streaming error occurred');
+        // Flush any remaining buffered data
+        const remaining = buffer.trim();
+        if (remaining.startsWith('data:')) {
+          handleEventPayload(remaining.replace(/^data:\s*/, ''));
         }
       }
+    } catch (streamError: any) {
+      console.error('Streaming handling error, aborting stream', streamError);
+      throw streamError;
     }
 
     if (!finalResult) {
-      throw new Error('No result received from streaming endpoint');
+      console.error('Streaming completed without final result', { templateId, requestPayload });
+      throw new Error('Streaming did not return a final result');
     }
 
     callbacks.onProgress?.(100);
@@ -370,8 +411,8 @@ export function VideoUploadProcessor({
 
   // NEW: Update overall progress from aggregated template progress (Phase 1 - Step 1.2)
   React.useEffect(() => {
-    const useParallelProcessing = process.env.NEXT_PUBLIC_PARALLEL_PROCESSING === 'true';
-    if (useParallelProcessing && isProcessing) {
+    const allowParallel = process.env.NEXT_PUBLIC_PARALLEL_PROCESSING === 'true' && !streamingPreferred;
+    if (allowParallel && isProcessing) {
       const overallProgress = calculateOverallProgress();
       if (overallProgress > 0) {
         setProgress(Math.min(30 + overallProgress * 0.6, 95)); // Map 0-100 to 30-95 range
@@ -494,9 +535,9 @@ export function VideoUploadProcessor({
       let allResults: ProcessingResult[] = [];
       
       // Feature flag for parallel vs sequential processing
-      const useParallelProcessing = process.env.NEXT_PUBLIC_PARALLEL_PROCESSING === 'true';
+      const allowParallel = process.env.NEXT_PUBLIC_PARALLEL_PROCESSING === 'true' && !streamingPreferred;
       
-      if (useParallelProcessing) {
+      if (allowParallel) {
         // NEW: Parallel processing implementation
         allResults = await handleParallelProcessing(videoUrl, selectedTemplates, processingMode, addProcessingStep);
       } else {
@@ -537,7 +578,9 @@ export function VideoUploadProcessor({
             status: 'complete',
             progress: 100,
             result: templateResult,
-            completedAt: Date.now()
+            completedAt: Date.now(),
+            noteId: templateResult.noteId,
+            autoSaved: !!templateResult.noteId,
           });
           updateTemplateProgress(template, 100);
           
@@ -685,7 +728,9 @@ export function VideoUploadProcessor({
           status: 'complete', 
           progress: 100, 
           result: templateResult,
-          completedAt: Date.now() 
+          completedAt: Date.now(),
+          noteId: templateResult.noteId,
+          autoSaved: !!templateResult.noteId,
         });
         updateTemplateProgress(template, 100);
         
@@ -750,8 +795,18 @@ export function VideoUploadProcessor({
     setSaveNoteMessage(null);
 
     try {
+      const unsavedResults = results.filter(result => !result.noteId);
+
+      if (unsavedResults.length === 0) {
+        setSaveNoteMessage('Notes are already saved automatically.');
+        setTimeout(() => setSaveNoteMessage(null), 2500);
+        return;
+      }
+
+      const updatedResults = [...results];
+
       // Save all generated notes
-      for (const result of results) {
+      for (const result of unsavedResults) {
         const response = await fetch('/api/notes/save', {
           method: 'POST',
           headers: {
@@ -766,15 +821,33 @@ export function VideoUploadProcessor({
             verbosityVersions: result.allVerbosityLevels,
           }),
         });
-        
+
         const data = await response.json();
         
         if (!data.success) {
           throw new Error(data.error || `Failed to save ${result.template} note`);
         }
+
+        if (data.noteId) {
+          // Update cached result with returned noteId
+          const idx = updatedResults.findIndex(r => r.template === result.template);
+          if (idx !== -1) {
+            updatedResults[idx] = {
+              ...updatedResults[idx],
+              noteId: data.noteId,
+              autoSaved: true,
+            };
+          }
+
+          updateTemplateStatus(result.template, {
+            noteId: data.noteId,
+            autoSaved: true,
+          });
+        }
       }
 
-      setSaveNoteMessage(`All ${results.length} note${results.length > 1 ? 's' : ''} saved successfully!`);
+      setResults(updatedResults);
+      setSaveNoteMessage(`Saved ${unsavedResults.length} note${unsavedResults.length > 1 ? 's' : ''} successfully.`);
       setTimeout(() => setSaveNoteMessage(null), 3000);
     } catch (error: any) {
       setSaveNoteMessage(error.message || 'Failed to save notes');
@@ -1001,23 +1074,31 @@ export function VideoUploadProcessor({
                       h2: ({children}) => <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">{children}</h2>,
                       h3: ({children}) => <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{children}</h3>,
                       a: ({href, children}) => {
-                        // Check if this is a timestamp link (YouTube URL with timestamp)
-                        const isTimestampLink = href && href.includes('youtube.com/watch') && href.includes('&t=');
-                        if (isTimestampLink) {
+                        if (!href) {
+                          return <span className="text-blue-400">{children}</span>;
+                        }
+
+                        const parsed = parseYouTubeTimestampLink(href);
+                        if (parsed) {
                           return (
-                            <a 
-                              href={href} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors duration-200 no-underline mx-1"
-                              title="Click to jump to this timestamp in the YouTube video"
-                            >
-                              🔗 {children}
-                            </a>
+                            <TimestampButton
+                              time={parsed.seconds}
+                              videoUrl={parsed.videoUrl}
+                              className="mx-1"
+                            />
                           );
                         }
-                        // Regular link styling
-                        return <a href={href} className="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">{children}</a>;
+
+                        return (
+                          <a
+                            href={href}
+                            className="text-blue-400 hover:text-blue-300 underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {children}
+                          </a>
+                        );
                       },
                       p: ({children}) => <p className="mb-3 text-[var(--text-primary)]">{children}</p>,
                       ul: ({children}) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,

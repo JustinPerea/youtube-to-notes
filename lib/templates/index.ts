@@ -239,6 +239,12 @@ NOW PROCEED WITH THE TUTORIAL AND INCLUDE CLICKABLE YOUTUBE TIMESTAMPS AS SPECIF
 
   return `${timestampInstructions}
 
+STRICT OUTPUT FORMAT - NO INTRODUCTORY TEXT:
+- CRITICAL: START EXACTLY with "# Tutorial Guide:" followed immediately by the topic. No characters (including whitespace) may appear before the # symbol.
+- ABSOLUTELY DO NOT include conversational or meta language such as "Okay", "Here is", "Let me", "I will", "Sure", "Absolutely", or similar preambles anywhere in the response.
+- Maintain a professional, non-conversational tone throughout the entire response.
+- Follow the exact markdown structure shown below without adding extra sections or introductory paragraphs.
+
 Transform this YouTube video into a ${verbosity}-level ${domain} tutorial guide (${config.contentReduction}). Structure it as a practical, step-by-step instruction manual optimized for ${domain} content:
 
 # Tutorial Guide: [Topic from Video]

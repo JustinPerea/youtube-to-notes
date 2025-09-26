@@ -43,7 +43,9 @@ async function processVideoInChunks(
   const needsRichVideo = template.id === 'tutorial-guide' || template.id === 'presentation-slides';
   const primaryModel = needsRichVideo ? 'gemini-2.0-flash-exp' : 'gemini-1.5-flash-8b';
   chunkStrategy.model = primaryModel;
-  chunkStrategy.maxTokens = primaryModel.includes('2.0') ? 32768 : chunkStrategy.maxTokens;
+  chunkStrategy.maxTokens = primaryModel.includes('flash-8b')
+    ? Math.min(chunkStrategy.maxTokens, 8000)
+    : 32768;
 
   const model = genAI.getGenerativeModel({ 
     model: chunkStrategy.model,

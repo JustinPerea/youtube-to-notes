@@ -51,7 +51,6 @@ export interface ProcessingQueueItem {
 
 export class GeminiClient {
   private genAI: GoogleGenerativeAI | null = null;
-  private models: Record<string, any> = {};
   private initialized = false;
   private modelHierarchy: string[] = [
     "gemini-2.0-flash-exp",        // Primary: Best for video
@@ -74,23 +73,6 @@ export class GeminiClient {
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.models = {};
-
-    this.modelHierarchy.forEach(modelName => {
-      const maxTokens = modelName.includes('flash-8b')
-        ? 8000 // 8B variants support <8192 tokens
-        : 16384;
-
-      this.models[modelName] = this.genAI!.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: maxTokens,
-        },
-      });
-    });
 
     this.initialized = true;
   }
@@ -115,7 +97,24 @@ export class GeminiClient {
 
       try {
         console.log(`🔄 Trying ${modelName}...`);
-        const model = this.models[modelName];
+        const generationConfig = modelName.includes('flash-8b')
+          ? {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 8000,
+            }
+          : {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 16384,
+            };
+
+        const model = this.genAI!.getGenerativeModel({
+          model: modelName,
+          generationConfig,
+        });
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();

@@ -491,7 +491,7 @@ Generate comprehensive content based on this transcript.`;
     if (error.status === 429) {
       logger.warn('Primary model quota exceeded, trying fallback...');
       const fallbackModel = genAI.getGenerativeModel({ 
-        model: modelSelection.fallbackModel,
+        model: 'gemini-1.5-flash-8b',
         generationConfig: { temperature: 0.1, maxOutputTokens: 3000 }
       });
       

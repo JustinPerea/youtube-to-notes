@@ -75,29 +75,29 @@ async function getModelForUser(userId: string): Promise<{
     switch (tier) {
       case 'free':
         return {
-          primaryModel: 'gemini-1.5-flash-8b',
+          primaryModel: 'gemini-2.0-flash',
           fallbackModel: 'gemini-2.0-flash-exp',
-          tierMessage: 'Using our widely available fast model tuned for efficiency'
+          tierMessage: 'Using our full-quality flash model tuned for efficiency'
         };
       
       case 'basic':
         return {
-          primaryModel: 'gemini-1.5-flash-8b',
+          primaryModel: 'gemini-2.0-flash',
           fallbackModel: 'gemini-2.0-flash-exp',
-          tierMessage: 'Priority access to enhanced processing with fallback to experimental flash capabilities'
+          tierMessage: 'Priority access to powerful video understanding with experimental fallback'
         };
       
       case 'pro':
         return {
-          primaryModel: 'gemini-2.0-flash-exp',
-          fallbackModel: 'gemini-1.5-flash-8b',
+          primaryModel: 'gemini-2.0-flash',
+          fallbackModel: 'gemini-2.0-flash-exp',
           tierMessage: 'Premium access to cutting-edge AI models with enhanced video understanding'
         };
       
       default:
         // Default to free tier behavior
         return {
-          primaryModel: 'gemini-1.5-flash-8b',
+          primaryModel: 'gemini-2.0-flash',
           fallbackModel: 'gemini-2.0-flash-exp',
           tierMessage: 'Using standard processing model'
         };
@@ -106,7 +106,7 @@ async function getModelForUser(userId: string): Promise<{
     logger.warn('Error determining user model preference', { error: error instanceof Error ? error.message : String(error) });
     // Safe fallback to free tier
     return {
-      primaryModel: 'gemini-1.5-flash-8b',
+      primaryModel: 'gemini-2.0-flash',
       fallbackModel: 'gemini-2.0-flash-exp',
       tierMessage: 'Using reliable foundation model'
     };
@@ -491,7 +491,7 @@ Generate comprehensive content based on this transcript.`;
     if (error.status === 429) {
       logger.warn('Primary model quota exceeded, trying fallback...');
       const fallbackModel = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash-8b',
+        model: 'gemini-2.0-flash-exp',
         generationConfig: { temperature: 0.1, maxOutputTokens: 3000 }
       });
       
@@ -661,10 +661,10 @@ ${startInstruction}`;
 async function processVideoInChunks(videoUrl: string, prompt: string, template: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
   const model = genAI.getGenerativeModel({ 
-    model: 'gemini-1.5-flash-8b',
+    model: 'gemini-2.0-flash',
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 4000, // Smaller chunks
+      maxOutputTokens: 6000, // Smaller chunks for 2.0 flash
     }
   });
 
@@ -708,10 +708,10 @@ async function processVideoInChunks(videoUrl: string, prompt: string, template: 
     logger.warn('Chunked processing failed, falling back to simple processing', { error: error instanceof Error ? error.message : String(error) });
     
     const fallbackModel = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash-8b',
+      model: 'gemini-2.0-flash-exp',
       generationConfig: {
         temperature: 0.1,
-        maxOutputTokens: 2000,
+        maxOutputTokens: 4000,
       }
     });
     
@@ -734,12 +734,12 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
 
 // Try alternative model if quota exceeded
 const getModel = (useAlternative = false) => {
-  const modelName = useAlternative ? 'gemini-1.5-flash-8b' : 'gemini-2.0-flash-exp';
+  const modelName = useAlternative ? 'gemini-2.0-flash-exp' : 'gemini-2.0-flash';
   return genAI.getGenerativeModel({ 
     model: modelName,
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: useAlternative ? 8000 : 32768,
+      maxOutputTokens: 32768,
     }
   });
 };

@@ -53,8 +53,8 @@ export class GeminiClient {
   private genAI: GoogleGenerativeAI | null = null;
   private initialized = false;
   private modelHierarchy: string[] = [
-    "gemini-2.0-flash-exp",        // Primary: Best for video
-    "gemini-1.5-flash-8b",         // Widely available fast model
+    "gemini-2.0-flash",            // Primary: Full-quality video model
+    "gemini-2.0-flash-exp",        // Fallback: Experimental flash variant
     "gemini-1.5-pro"               // Final fallback: text-only but reliable
   ];
   private processingQueue: ProcessingQueueItem[] = [];
@@ -97,19 +97,12 @@ export class GeminiClient {
 
       try {
         console.log(`🔄 Trying ${modelName}...`);
-        const generationConfig = modelName.includes('flash-8b')
-          ? {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 8000,
-            }
-          : {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 16384,
-            };
+        const generationConfig = {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: modelName.includes('1.5-pro') ? 8192 : 32768,
+        };
 
         const model = this.genAI!.getGenerativeModel({
           model: modelName,

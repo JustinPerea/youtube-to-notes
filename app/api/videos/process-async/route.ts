@@ -33,18 +33,18 @@ async function processVideoInChunks(
   // Determine chunk strategy based on video length
   let chunkStrategy;
   if (estimatedDuration <= DURATION_THRESHOLDS.MEDIUM) {
-    chunkStrategy = { chunks: 1, model: 'gemini-2.0-flash-exp', maxTokens: 32768 };
+    chunkStrategy = { chunks: 1, model: 'gemini-2.0-flash', maxTokens: 32768 };
   } else if (estimatedDuration <= DURATION_THRESHOLDS.LONG) {
-    chunkStrategy = { chunks: 2, model: 'gemini-1.5-flash-8b', maxTokens: 8000 };
+    chunkStrategy = { chunks: 2, model: 'gemini-2.0-flash-exp', maxTokens: 32768 };
   } else {
-    chunkStrategy = { chunks: 4, model: 'gemini-1.5-flash-8b', maxTokens: 4000 };
+    chunkStrategy = { chunks: 4, model: 'gemini-2.0-flash-exp', maxTokens: 20000 };
   }
 
   const needsRichVideo = template.id === 'tutorial-guide' || template.id === 'presentation-slides';
-  const primaryModel = needsRichVideo ? 'gemini-2.0-flash-exp' : 'gemini-1.5-flash-8b';
+  const primaryModel = needsRichVideo ? 'gemini-2.0-flash' : 'gemini-2.0-flash-exp';
   chunkStrategy.model = primaryModel;
-  chunkStrategy.maxTokens = primaryModel.includes('flash-8b')
-    ? Math.min(chunkStrategy.maxTokens, 8000)
+  chunkStrategy.maxTokens = primaryModel.includes('flash-exp')
+    ? Math.min(chunkStrategy.maxTokens, 32768)
     : 32768;
 
   const model = genAI.getGenerativeModel({ 
@@ -456,8 +456,8 @@ async function createVerbosityLevels(originalContent: string, videoUrl: string) 
 
 async function generateWithFallback(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
   const models = [
+    'gemini-2.0-flash',
     'gemini-2.0-flash-exp',
-    'gemini-1.5-flash-8b',
     'gemini-1.5-pro'
   ];
 

@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     if (process.env.GOOGLE_GEMINI_API_KEY && configTest.results.urlValidation) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
-        const modelCandidates = ['gemini-1.5-flash-8b', 'gemini-2.0-flash-exp'];
+        const modelCandidates = ['gemini-2.0-flash', 'gemini-2.0-flash-exp'];
         let lastError: any = null;
 
         for (const modelName of modelCandidates) {

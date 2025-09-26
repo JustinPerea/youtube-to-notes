@@ -75,30 +75,30 @@ async function getModelForUser(userId: string): Promise<{
     switch (tier) {
       case 'free':
         return {
-          primaryModel: 'gemini-1.5-flash',
-          fallbackModel: 'gemini-1.5-pro',
+          primaryModel: 'gemini-1.5-flash-latest',
+          fallbackModel: 'gemini-1.5-flash-8b',
           tierMessage: 'Using our reliable foundation model optimized for quality and efficiency'
         };
       
       case 'basic':
         return {
-          primaryModel: 'gemini-1.5-flash',
-          fallbackModel: 'gemini-2.0-flash-exp',
+          primaryModel: 'gemini-1.5-flash-latest',
+          fallbackModel: 'gemini-1.5-flash-8b',
           tierMessage: 'Priority access to enhanced processing with fallback to latest experimental features'
         };
       
       case 'pro':
         return {
           primaryModel: 'gemini-2.0-flash-exp',
-          fallbackModel: 'gemini-1.5-flash',
+          fallbackModel: 'gemini-1.5-flash-latest',
           tierMessage: 'Premium access to cutting-edge AI models with enhanced video understanding'
         };
       
       default:
         // Default to free tier behavior
         return {
-          primaryModel: 'gemini-1.5-flash',
-          fallbackModel: 'gemini-1.5-pro',
+          primaryModel: 'gemini-1.5-flash-latest',
+          fallbackModel: 'gemini-1.5-flash-8b',
           tierMessage: 'Using standard processing model'
         };
     }
@@ -106,8 +106,8 @@ async function getModelForUser(userId: string): Promise<{
     logger.warn('Error determining user model preference', { error: error instanceof Error ? error.message : String(error) });
     // Safe fallback to free tier
     return {
-      primaryModel: 'gemini-1.5-flash',
-      fallbackModel: 'gemini-1.5-pro',
+      primaryModel: 'gemini-1.5-flash-latest',
+      fallbackModel: 'gemini-1.5-flash-8b',
       tierMessage: 'Using reliable foundation model'
     };
   }
@@ -300,8 +300,15 @@ Remember: ALL three versions MUST have identical structure, only varying in cont
       logger.info(`✅ Verbosity generation successful with ${modelSelection.primaryModel}`);
       return await result.response.text();
     } catch (error: any) {
-      if (error.status === 429 || error.message?.includes('quota')) {
-        logger.warn(`⚠️ ${modelSelection.primaryModel} quota exceeded, trying fallback: ${modelSelection.fallbackModel}...`);
+      const errorMessage = error.message?.toLowerCase?.() || '';
+      const shouldFallback =
+        error.status === 429 ||
+        error.status === 404 ||
+        errorMessage.includes('quota') ||
+        errorMessage.includes('not found');
+
+      if (shouldFallback) {
+        logger.warn(`⚠️ ${modelSelection.primaryModel} unavailable (${error.status || 'unknown status'}), trying fallback: ${modelSelection.fallbackModel}...`);
         
         // Use tier-appropriate fallback model
         model = genAI.getGenerativeModel({ 
@@ -484,7 +491,7 @@ Generate comprehensive content based on this transcript.`;
     if (error.status === 429) {
       logger.warn('Primary model quota exceeded, trying fallback...');
       const fallbackModel = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash',
+        model: modelSelection.fallbackModel,
         generationConfig: { temperature: 0.1, maxOutputTokens: 3000 }
       });
       
@@ -727,7 +734,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
 
 // Try alternative model if quota exceeded
 const getModel = (useAlternative = false) => {
-  const modelName = useAlternative ? 'gemini-1.5-flash' : 'gemini-2.0-flash-exp';
+  const modelName = useAlternative ? 'gemini-1.5-flash-8b' : 'gemini-2.0-flash-exp';
   return genAI.getGenerativeModel({ 
     model: modelName,
     generationConfig: {

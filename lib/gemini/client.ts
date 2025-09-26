@@ -54,9 +54,11 @@ export class GeminiClient {
   private models: Record<string, any> = {};
   private initialized = false;
   private modelHierarchy: string[] = [
-    "gemini-2.0-flash-exp",      // Primary: Best for video
-    "gemini-1.5-flash",          // Fallback 1: Still handles video
-    "gemini-1.5-pro"             // Fallback 2: Text-only but reliable
+    "gemini-2.0-flash-exp",        // Primary: Best for video
+    "gemini-1.5-flash-latest",     // Preferred fast model
+    "gemini-1.5-flash",            // Alias (may map to different revisions)
+    "gemini-1.5-flash-8b",         // Smaller revision available to more keys
+    "gemini-1.5-pro"               // Final fallback: text-only but reliable
   ];
   private processingQueue: ProcessingQueueItem[] = [];
   private isProcessing: boolean = false;

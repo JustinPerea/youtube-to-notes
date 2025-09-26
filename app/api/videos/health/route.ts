@@ -148,36 +148,55 @@ export async function POST(request: NextRequest) {
     if (process.env.GOOGLE_GEMINI_API_KEY && configTest.results.urlValidation) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ 
-          model: 'gemini-1.5-flash', // Use more conservative model for testing
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 500,
-          }
-        });
+        const modelCandidates = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+        let lastError: any = null;
 
-        const testStart = Date.now();
-        const result = await model.generateContent([
-          'Briefly describe what you can see in the first few seconds of this video.',
-          {
-            fileData: {
-              mimeType: 'video/*',
-              fileUri: testVideoUrl
+        for (const modelName of modelCandidates) {
+          try {
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 500,
+              }
+            });
+
+            const testStart = Date.now();
+            const result = await model.generateContent([
+              'Briefly describe what you can see in the first few seconds of this video.',
+              {
+                fileData: {
+                  mimeType: 'video/*',
+                  fileUri: testVideoUrl
+                }
+              }
+            ]);
+
+            await result.response.text();
+            configTest.estimatedProcessingTime = Date.now() - testStart;
+            configTest.results.geminiConnection = true;
+            configTest.results.processingCapability = true;
+
+            // Estimate full processing time based on test
+            const estimatedFullTime = configTest.estimatedProcessingTime * 10; // Rough estimate
+            if (estimatedFullTime > 240000) { // 4 minutes
+              configTest.recommendations.push('Video may require async processing due to length');
             }
+
+            lastError = null;
+            break;
+          } catch (modelError: any) {
+            lastError = modelError;
+            if (modelName === modelCandidates[modelCandidates.length - 1]) {
+              throw modelError;
+            }
+            // Try next candidate in list
           }
-        ]);
-
-        await result.response.text();
-        configTest.estimatedProcessingTime = Date.now() - testStart;
-        configTest.results.geminiConnection = true;
-        configTest.results.processingCapability = true;
-
-        // Estimate full processing time based on test
-        const estimatedFullTime = configTest.estimatedProcessingTime * 10; // Rough estimate
-        if (estimatedFullTime > 240000) { // 4 minutes
-          configTest.recommendations.push('Video may require async processing due to length');
         }
 
+        if (lastError) {
+          throw lastError;
+        }
       } catch (geminiError: any) {
         configTest.recommendations.push(`Gemini processing test failed: ${geminiError.message}`);
         

@@ -55,9 +55,7 @@ export class GeminiClient {
   private initialized = false;
   private modelHierarchy: string[] = [
     "gemini-2.0-flash-exp",        // Primary: Best for video
-    "gemini-1.5-flash-latest",     // Preferred fast model
-    "gemini-1.5-flash",            // Alias (may map to different revisions)
-    "gemini-1.5-flash-8b",         // Smaller revision available to more keys
+    "gemini-1.5-flash-8b",         // Widely available fast model
     "gemini-1.5-pro"               // Final fallback: text-only but reliable
   ];
   private processingQueue: ProcessingQueueItem[] = [];
@@ -79,13 +77,17 @@ export class GeminiClient {
     this.models = {};
 
     this.modelHierarchy.forEach(modelName => {
+      const maxTokens = modelName.includes('flash-8b')
+        ? 8000 // 8B variants support <8192 tokens
+        : 16384;
+
       this.models[modelName] = this.genAI!.getGenerativeModel({
         model: modelName,
         generationConfig: {
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 16384,
+          maxOutputTokens: maxTokens,
         },
       });
     });

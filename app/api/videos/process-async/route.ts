@@ -35,13 +35,13 @@ async function processVideoInChunks(
   if (estimatedDuration <= DURATION_THRESHOLDS.MEDIUM) {
     chunkStrategy = { chunks: 1, model: 'gemini-2.0-flash-exp', maxTokens: 32768 };
   } else if (estimatedDuration <= DURATION_THRESHOLDS.LONG) {
-    chunkStrategy = { chunks: 2, model: 'gemini-1.5-flash', maxTokens: 8192 };
+    chunkStrategy = { chunks: 2, model: 'gemini-1.5-flash-8b', maxTokens: 8000 };
   } else {
-    chunkStrategy = { chunks: 4, model: 'gemini-1.5-flash', maxTokens: 4096 };
+    chunkStrategy = { chunks: 4, model: 'gemini-1.5-flash-8b', maxTokens: 4000 };
   }
 
   const needsRichVideo = template.id === 'tutorial-guide' || template.id === 'presentation-slides';
-  const primaryModel = needsRichVideo ? 'gemini-2.0-flash-exp' : 'gemini-1.5-flash';
+  const primaryModel = needsRichVideo ? 'gemini-2.0-flash-exp' : 'gemini-1.5-flash-8b';
   chunkStrategy.model = primaryModel;
   chunkStrategy.maxTokens = primaryModel.includes('2.0') ? 32768 : chunkStrategy.maxTokens;
 
@@ -455,8 +455,6 @@ async function createVerbosityLevels(originalContent: string, videoUrl: string) 
 async function generateWithFallback(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
   const models = [
     'gemini-2.0-flash-exp',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash',
     'gemini-1.5-flash-8b',
     'gemini-1.5-pro'
   ];

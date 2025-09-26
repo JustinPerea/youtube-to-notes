@@ -75,30 +75,30 @@ async function getModelForUser(userId: string): Promise<{
     switch (tier) {
       case 'free':
         return {
-          primaryModel: 'gemini-1.5-flash-latest',
-          fallbackModel: 'gemini-1.5-flash-8b',
-          tierMessage: 'Using our reliable foundation model optimized for quality and efficiency'
+          primaryModel: 'gemini-1.5-flash-8b',
+          fallbackModel: 'gemini-2.0-flash-exp',
+          tierMessage: 'Using our widely available fast model tuned for efficiency'
         };
       
       case 'basic':
         return {
-          primaryModel: 'gemini-1.5-flash-latest',
-          fallbackModel: 'gemini-1.5-flash-8b',
-          tierMessage: 'Priority access to enhanced processing with fallback to latest experimental features'
+          primaryModel: 'gemini-1.5-flash-8b',
+          fallbackModel: 'gemini-2.0-flash-exp',
+          tierMessage: 'Priority access to enhanced processing with fallback to experimental flash capabilities'
         };
       
       case 'pro':
         return {
           primaryModel: 'gemini-2.0-flash-exp',
-          fallbackModel: 'gemini-1.5-flash-latest',
+          fallbackModel: 'gemini-1.5-flash-8b',
           tierMessage: 'Premium access to cutting-edge AI models with enhanced video understanding'
         };
       
       default:
         // Default to free tier behavior
         return {
-          primaryModel: 'gemini-1.5-flash-latest',
-          fallbackModel: 'gemini-1.5-flash-8b',
+          primaryModel: 'gemini-1.5-flash-8b',
+          fallbackModel: 'gemini-2.0-flash-exp',
           tierMessage: 'Using standard processing model'
         };
     }
@@ -106,8 +106,8 @@ async function getModelForUser(userId: string): Promise<{
     logger.warn('Error determining user model preference', { error: error instanceof Error ? error.message : String(error) });
     // Safe fallback to free tier
     return {
-      primaryModel: 'gemini-1.5-flash-latest',
-      fallbackModel: 'gemini-1.5-flash-8b',
+      primaryModel: 'gemini-1.5-flash-8b',
+      fallbackModel: 'gemini-2.0-flash-exp',
       tierMessage: 'Using reliable foundation model'
     };
   }
@@ -661,7 +661,7 @@ ${startInstruction}`;
 async function processVideoInChunks(videoUrl: string, prompt: string, template: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
   const model = genAI.getGenerativeModel({ 
-    model: 'gemini-1.5-flash',
+    model: 'gemini-1.5-flash-8b',
     generationConfig: {
       temperature: 0.1,
       maxOutputTokens: 4000, // Smaller chunks
@@ -708,7 +708,7 @@ async function processVideoInChunks(videoUrl: string, prompt: string, template: 
     logger.warn('Chunked processing failed, falling back to simple processing', { error: error instanceof Error ? error.message : String(error) });
     
     const fallbackModel = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
+      model: 'gemini-1.5-flash-8b',
       generationConfig: {
         temperature: 0.1,
         maxOutputTokens: 2000,
@@ -739,7 +739,7 @@ const getModel = (useAlternative = false) => {
     model: modelName,
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: useAlternative ? 8192 : 32768,
+      maxOutputTokens: useAlternative ? 8000 : 32768,
     }
   });
 };

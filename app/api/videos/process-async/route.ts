@@ -253,8 +253,6 @@ async function processMultipleChunks(
     const videoDuration = coverageInfo.videoDuration ?? estimatedDuration;
     const coverageGap = videoDuration - coverageInfo.finalTimestamp;
     const coverageThreshold = Math.max(120, videoDuration * 0.05);
-    coverageInfo.videoDuration = videoDuration;
-    coverageInfo.coverageGap = coverageGap;
     if (coverageGap > coverageThreshold) {
       console.warn('⚠️ Tutorial coverage gap detected after chunked processing.', {
         videoDuration,

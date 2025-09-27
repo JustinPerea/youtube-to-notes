@@ -183,8 +183,9 @@ async function processMultipleChunks(
   estimatedDuration: number,
   userId: string
 ) {
-  const chunks = [];
-  
+  const chunks: Array<{ index: number; content: string; timestamp: number; chunkStartSeconds: number; chunkEndSeconds: number }> = [];
+  const chunkDuration = estimatedDuration / chunkCount;
+
   for (let i = 0; i < chunkCount; i++) {
     const progress = 20 + (i * 60 / chunkCount);
     controller.enqueue(new TextEncoder().encode(
@@ -197,6 +198,8 @@ async function processMultipleChunks(
 
     // Create chunk-specific prompts
     const chunkPrompt = createChunkPrompt(template, i, chunkCount, estimatedDuration, videoUrl);
+    const chunkStartSeconds = Math.floor(chunkDuration * i);
+    const chunkEndSeconds = Math.min(estimatedDuration, Math.floor(chunkDuration * (i + 1)));
     
     try {
       const generation = await model.generateContent([
@@ -211,11 +214,13 @@ async function processMultipleChunks(
 
       const response = await generation.response;
       const chunkContent = await response.text();
-      chunks.push({
-        index: i,
-        content: chunkContent,
-        timestamp: Date.now()
-      });
+    chunks.push({
+      index: i,
+      content: chunkContent,
+      timestamp: Date.now(),
+      chunkStartSeconds,
+      chunkEndSeconds
+    });
 
       // Add delay between chunks to avoid rate limiting
       if (i < chunkCount - 1) {
@@ -357,6 +362,15 @@ function buildStreamResultPayload({
     comprehensive: convertTimestampsToLinks(sanitize(allVerbosityLevels.comprehensive), videoUrl),
   };
 
+  const coverage = calculateCoverage(chunks, videoUrl);
+  const warnings: string[] = [];
+  if (coverage && coverage.finalTimestamp && coverage.videoDuration) {
+    const gap = coverage.videoDuration - coverage.finalTimestamp;
+    if (gap > Math.max(120, coverage.videoDuration * 0.05)) {
+      warnings.push(`Output stops at ${formatTimestamp(coverage.finalTimestamp)} while the video runs ${formatTimestamp(coverage.videoDuration)}. Consider retrying or using transcript-only mode.`);
+    }
+  }
+
   return {
     title: `Notes from ${videoUrl}`,
     template: templateId,
@@ -371,7 +385,24 @@ function buildStreamResultPayload({
       videoUrl,
       mode: chunkInfo?.mode,
       chunks: chunkInfo?.chunks,
+      coverage,
     },
+    warnings: warnings.length ? warnings : undefined,
+  };
+}
+
+function calculateCoverage(
+  chunks: Array<{ chunkStartSeconds: number; chunkEndSeconds: number }>,
+  videoUrl: string
+): { finalTimestamp: number; videoDuration?: number } | null {
+  if (!Array.isArray(chunks) || chunks.length === 0) {
+    return null;
+  }
+
+  const finalTimestamp = Math.max(...chunks.map(chunk => chunk.chunkEndSeconds || 0));
+  return {
+    finalTimestamp,
+    videoDuration: undefined,
   };
 }
 

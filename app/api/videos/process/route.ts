@@ -11,6 +11,7 @@ import { db } from '@/lib/db/drizzle';
 import { videos, users } from '@/lib/db/schema';
 import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
 import { enforceNonConversationalOpening, sanitizeTutorialGuideOutput } from '@/lib/output/sanitizers';
+import { fetchVideoMetadata } from '@/lib/services/youtube-api';
 import { eq, and } from 'drizzle-orm';
 import { extractVideoId } from '@/lib/utils/youtube';
 import { getUserSubscription, reserveUsage } from '@/lib/subscription/service';
@@ -1034,6 +1035,7 @@ export async function POST(request: NextRequest) {
     const result = processingResult.result!;
     const processingMethod = processingResult.metadata?.processingMethod || 'unknown';
     const dataSourcesUsed = processingResult.metadata?.dataSourcesUsed || [];
+    let durationSeconds = processingResult.metadata?.videoDuration;
     let contentAnalysis: any = null; // For compatibility with existing code
     
     // Log hybrid processing results
@@ -1044,7 +1046,13 @@ export async function POST(request: NextRequest) {
     
     // Generate all verbosity levels from the result with user's preferred default
     logger.debug('Generating all verbosity levels for instant switching...');
-    const durationSeconds = processingResult.metadata?.videoDuration;
+    if (!durationSeconds || durationSeconds <= 0) {
+      const metadata = await fetchVideoMetadata(videoUrl);
+      if (metadata?.durationSeconds && metadata.durationSeconds > 0) {
+        durationSeconds = metadata.durationSeconds;
+      }
+    }
+
     const verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result, userId, durationSeconds);
     logger.info('✅ All verbosity levels generated successfully');
     

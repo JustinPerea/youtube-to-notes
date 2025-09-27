@@ -249,8 +249,9 @@ async function processMultipleChunks(
 
   const coverageInfo = calculateCoverage(chunks, estimatedDuration);
   if (coverageInfo) {
-    const coverageGap = coverageInfo.videoDuration - coverageInfo.finalTimestamp;
-    const coverageThreshold = Math.max(120, coverageInfo.videoDuration * 0.05);
+    const videoDuration = coverageInfo.videoDuration ?? estimatedDuration;
+    const coverageGap = videoDuration - coverageInfo.finalTimestamp;
+    const coverageThreshold = Math.max(120, videoDuration * 0.05);
     if (coverageGap > coverageThreshold) {
       console.warn('⚠️ Tutorial coverage gap detected. Falling back to synchronous processing.', {
         coverageInfo,

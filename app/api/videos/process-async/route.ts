@@ -332,6 +332,8 @@ function buildStreamResultPayload({
   processingMethod,
   dataSourcesUsed,
   noteId,
+  coverageChunks,
+  coverageVideoDuration,
 }: {
   content: string;
   templateId: string;
@@ -349,6 +351,8 @@ function buildStreamResultPayload({
   processingMethod?: string;
   dataSourcesUsed?: string[];
   noteId?: string;
+  coverageChunks?: Array<{ chunkStartSeconds: number; chunkEndSeconds: number }>;
+  coverageVideoDuration?: number;
 }) {
   const allVerbosityLevels = verbosityLevels || {
     brief: content,
@@ -364,9 +368,9 @@ function buildStreamResultPayload({
     comprehensive: convertTimestampsToLinks(sanitize(allVerbosityLevels.comprehensive), videoUrl),
   };
 
-  const coverageInfo = chunkInfo?.mode === 'chunked' && chunks ? calculateCoverage(chunks, videoUrl) : null;
+  const coverageInfo = chunkInfo?.mode === 'chunked' && coverageChunks ? calculateCoverage(coverageChunks, coverageVideoDuration) : null;
   const warnings: string[] = [];
-  if (coverageInfo && coverageInfo.videoDuration && coverageInfo.finalTimestamp) {
+  if (coverageInfo?.videoDuration && coverageInfo.finalTimestamp !== undefined) {
     const gap = coverageInfo.videoDuration - coverageInfo.finalTimestamp;
     if (gap > Math.max(120, coverageInfo.videoDuration * 0.05)) {
       warnings.push(`Output stops at ${formatTimestamp(coverageInfo.finalTimestamp)} while the video runs ${formatTimestamp(coverageInfo.videoDuration)}. Consider retrying or using transcript-only mode.`);
@@ -394,7 +398,7 @@ function buildStreamResultPayload({
 }
 function calculateCoverage(
   chunks: Array<{ chunkStartSeconds: number; chunkEndSeconds: number }>,
-  videoUrl: string
+  videoDuration?: number
 ): { finalTimestamp: number; videoDuration?: number } | null {
   if (!Array.isArray(chunks) || chunks.length === 0) {
     return null;
@@ -403,7 +407,7 @@ function calculateCoverage(
   const finalTimestamp = Math.max(...chunks.map(chunk => chunk.chunkEndSeconds || 0));
   return {
     finalTimestamp,
-    videoDuration: undefined,
+    videoDuration,
   };
 }
 

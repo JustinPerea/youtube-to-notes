@@ -231,7 +231,9 @@ async function processMultipleChunks(
       chunks.push({
         index: i,
         content: `[Chunk ${i + 1} processing failed: ${error.message}]`,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        chunkStartSeconds,
+        chunkEndSeconds
       });
     }
   }

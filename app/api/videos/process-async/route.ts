@@ -364,12 +364,12 @@ function buildStreamResultPayload({
     comprehensive: convertTimestampsToLinks(sanitize(allVerbosityLevels.comprehensive), videoUrl),
   };
 
-  const coverage = calculateCoverage(chunks, videoUrl);
+  const coverageInfo = chunkInfo?.mode === 'chunked' && chunks ? calculateCoverage(chunks, videoUrl) : null;
   const warnings: string[] = [];
-  if (coverage && coverage.finalTimestamp && coverage.videoDuration) {
-    const gap = coverage.videoDuration - coverage.finalTimestamp;
-    if (gap > Math.max(120, coverage.videoDuration * 0.05)) {
-      warnings.push(`Output stops at ${formatTimestamp(coverage.finalTimestamp)} while the video runs ${formatTimestamp(coverage.videoDuration)}. Consider retrying or using transcript-only mode.`);
+  if (coverageInfo && coverageInfo.videoDuration && coverageInfo.finalTimestamp) {
+    const gap = coverageInfo.videoDuration - coverageInfo.finalTimestamp;
+    if (gap > Math.max(120, coverageInfo.videoDuration * 0.05)) {
+      warnings.push(`Output stops at ${formatTimestamp(coverageInfo.finalTimestamp)} while the video runs ${formatTimestamp(coverageInfo.videoDuration)}. Consider retrying or using transcript-only mode.`);
     }
   }
 
@@ -387,12 +387,11 @@ function buildStreamResultPayload({
       videoUrl,
       mode: chunkInfo?.mode,
       chunks: chunkInfo?.chunks,
-      coverage,
+      coverage: coverageInfo,
     },
     warnings: warnings.length ? warnings : undefined,
   };
 }
-
 function calculateCoverage(
   chunks: Array<{ chunkStartSeconds: number; chunkEndSeconds: number }>,
   videoUrl: string

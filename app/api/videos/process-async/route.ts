@@ -247,6 +247,26 @@ async function processMultipleChunks(
   const verbosityLevels = await createVerbosityLevels(combinedRawContent, videoUrl);
   const combinedContent = verbosityLevels.standard;
 
+  const coverageInfo = calculateCoverage(chunks, estimatedDuration);
+  if (coverageInfo) {
+    const coverageGap = coverageInfo.videoDuration - coverageInfo.finalTimestamp;
+    const coverageThreshold = Math.max(120, coverageInfo.videoDuration * 0.05);
+    if (coverageGap > coverageThreshold) {
+      console.warn('⚠️ Tutorial coverage gap detected. Falling back to synchronous processing.', {
+        coverageInfo,
+        coverageGap,
+        coverageThreshold,
+      });
+      await processWithSynchronousFallback({
+        controller,
+        videoUrl,
+        template,
+        userId,
+      });
+      return;
+    }
+  }
+
   const noteId = await autoSaveGeneratedNote({
     userId,
     videoUrl,
@@ -267,6 +287,8 @@ async function processMultipleChunks(
         chunkInfo: { mode: 'chunked', chunks: chunks.length },
         verbosityLevels,
         noteId,
+        coverageChunks: chunks,
+        coverageVideoDuration: estimatedDuration,
       })
     })}\n\n`
   ));

@@ -248,23 +248,23 @@ async function processMultipleChunks(
   const combinedContent = verbosityLevels.standard;
 
   const coverageInfo = calculateCoverage(chunks, estimatedDuration);
+  const coverageWarnings: string[] = [];
   if (coverageInfo) {
     const videoDuration = coverageInfo.videoDuration ?? estimatedDuration;
     const coverageGap = videoDuration - coverageInfo.finalTimestamp;
     const coverageThreshold = Math.max(120, videoDuration * 0.05);
+    coverageInfo.videoDuration = videoDuration;
+    coverageInfo.coverageGap = coverageGap;
     if (coverageGap > coverageThreshold) {
-      console.warn('⚠️ Tutorial coverage gap detected. Falling back to synchronous processing.', {
-        coverageInfo,
+      console.warn('⚠️ Tutorial coverage gap detected after chunked processing.', {
+        videoDuration,
+        finalTimestamp: coverageInfo.finalTimestamp,
         coverageGap,
         coverageThreshold,
       });
-      await processWithSynchronousFallback({
-        controller,
-        videoUrl,
-        template,
-        userId,
-      });
-      return;
+      coverageWarnings.push(
+        `Coverage warning: output stops at ${formatTimestamp(coverageInfo.finalTimestamp)} while the video runs ${formatTimestamp(videoDuration)}. Consider rerunning or using transcript mode.`
+      );
     }
   }
 
@@ -288,8 +288,8 @@ async function processMultipleChunks(
         chunkInfo: { mode: 'chunked', chunks: chunks.length },
         verbosityLevels,
         noteId,
-        coverageChunks: chunks,
-        coverageVideoDuration: estimatedDuration,
+        coverageInfo,
+        additionalWarnings: coverageWarnings,
       })
     })}\n\n`
   ));
@@ -355,8 +355,8 @@ function buildStreamResultPayload({
   processingMethod,
   dataSourcesUsed,
   noteId,
-  coverageChunks,
-  coverageVideoDuration,
+  coverageInfo,
+  additionalWarnings,
 }: {
   content: string;
   templateId: string;
@@ -374,8 +374,8 @@ function buildStreamResultPayload({
   processingMethod?: string;
   dataSourcesUsed?: string[];
   noteId?: string;
-  coverageChunks?: Array<{ chunkStartSeconds: number; chunkEndSeconds: number }>;
-  coverageVideoDuration?: number;
+  coverageInfo?: ReturnType<typeof calculateCoverage>;
+  additionalWarnings?: string[];
 }) {
   const allVerbosityLevels = verbosityLevels || {
     brief: content,
@@ -391,8 +391,7 @@ function buildStreamResultPayload({
     comprehensive: convertTimestampsToLinks(sanitize(allVerbosityLevels.comprehensive), videoUrl),
   };
 
-  const coverageInfo = chunkInfo?.mode === 'chunked' && coverageChunks ? calculateCoverage(coverageChunks, coverageVideoDuration) : null;
-  const warnings: string[] = [];
+  const warnings: string[] = [...(additionalWarnings || [])];
   if (coverageInfo?.videoDuration && coverageInfo.finalTimestamp !== undefined) {
     const gap = coverageInfo.videoDuration - coverageInfo.finalTimestamp;
     if (gap > Math.max(120, coverageInfo.videoDuration * 0.05)) {

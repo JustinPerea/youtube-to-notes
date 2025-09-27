@@ -9,6 +9,7 @@ import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
 import { enforceNonConversationalOpening, sanitizeTutorialGuideOutput } from '@/lib/output/sanitizers';
 import { NotesService } from '@/lib/services/notes';
 import { geminiClient } from '@/lib/gemini/client';
+import { fetchVideoMetadata } from '@/lib/services/youtube-api';
 
 // Async processing route for long videos with streaming response
 export const dynamic = 'force-dynamic';
@@ -680,15 +681,20 @@ async function processWithSynchronousFallback({
 
 // Estimate video duration from URL (placeholder - would integrate with YouTube API)
 async function estimateVideoDuration(videoUrl: string): Promise<number> {
-  // This would typically use YouTube Data API to get actual duration
-  // For now, return a conservative estimate based on URL patterns or assume long
-  
-  // Check if URL suggests a long video (playlist, livestream, etc.)
+  try {
+    const metadata = await fetchVideoMetadata(videoUrl);
+    if (metadata?.durationSeconds && metadata.durationSeconds > 0) {
+      return metadata.durationSeconds;
+    }
+  } catch (error) {
+    console.warn('⚠️ Unable to fetch video metadata for duration estimate', error);
+  }
+
+  // Fallback: infer from URL heuristics if metadata unavailable
   if (videoUrl.includes('list=') || videoUrl.includes('live')) {
     return DURATION_THRESHOLDS.VERY_LONG;
   }
-  
-  // Default to medium length for unknown videos
+
   return DURATION_THRESHOLDS.MEDIUM;
 }
 

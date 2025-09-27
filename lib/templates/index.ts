@@ -149,7 +149,10 @@ function generateTutorialGuidePrompt(
   };
 
   const config = verbosityConfigs[verbosity];
-  const durationText = Math.floor(durationSeconds / 60);
+  const durationMinutes = Math.max(1, Math.floor(durationSeconds / 60));
+  const durationText = durationMinutes;
+  const recommendedStepCount = Math.min(18, Math.max(6, Math.ceil(durationSeconds / 450)));
+  const finalTimestampWindow = Math.max(2, Math.min(6, Math.ceil(durationSeconds / 600)));
 
   // Domain-specific adaptations based on research
   const domainAdaptations = {
@@ -200,40 +203,37 @@ function generateTutorialGuidePrompt(
   // ULTRA-CRITICAL timestamp instructions - must be impossible to ignore
   const timestampInstructions = videoUrl ? `
 
-🚨🚨🚨 ABSOLUTE REQUIREMENT - CLICKABLE YOUTUBE TIMESTAMPS ARE MANDATORY 🚨🚨🚨
+🚨🚨🚨 ABSOLUTE REQUIREMENTS FOR TIMESTAMPS 🚨🚨🚨
 
 THE YOUTUBE VIDEO URL YOU MUST USE FOR ALL TIMESTAMPS: ${videoUrl}
 🔗 FULL URL DEBUG: "${videoUrl}" (Length: ${videoUrl ? videoUrl.length : 0} characters)
 
-BEFORE YOU WRITE ANYTHING ELSE:
-1. You MUST analyze the video transcript to extract actual timestamps
-2. Every single section header MUST include a CLICKABLE timestamp linking to the YouTube video
-3. ALL timestamps throughout the tutorial MUST be clickable YouTube links using the exact URL above
-4. You WILL include a Quick Navigation section with clickable links to the YouTube video
-5. This is NOT optional - CLICKABLE YouTube timestamps are REQUIRED for this tutorial format
+BEFORE WRITING ANY CONTENT:
+1. Analyze the ENTIRE transcript and map the full ${durationMinutes}-minute timeline.
+2. Every step header MUST start with a clickable timestamp that links directly to that moment in the video.
+3. Timestamps must strictly increase and remain in chronological order.
+4. Continue creating steps until you reach the end of the video. Plan for at least ${recommendedStepCount} major steps (more if the content demands it).
+5. The final step MUST reference a timestamp within the last ${finalTimestampWindow} minute(s) of the video to prove full coverage.
 
-EXACT FORMAT REQUIREMENTS (DO NOT DEVIATE):
+TIMESTAMP FORMAT (DO NOT COPY LITERALLY — REPLACE WITH REAL VALUES):
+### **[HH:MM:SS actual timestamp](${videoUrl}&t=ACTUAL_TOTAL_SECONDSs)** Step title here
 
-SECTION HEADERS - Use CLICKABLE YouTube timestamps for EVERY step header:
-### **[0:30](${videoUrl}&t=30s)** Step 1: Building Consistent Worlds
-### **[2:15](${videoUrl}&t=135s)** Step 2: Creating Watermark-Free Images
+- Replace "HH:MM:SS actual timestamp" with the exact timestamp label that appears on YouTube (e.g., 48:12 or 1:05:27).
+- Replace "ACTUAL_TOTAL_SECONDS" with the total seconds as an integer (e.g., 2892).
+- Never leave placeholders such as HH, MM, SS, or ACTUAL_TOTAL_SECONDS in the final output.
 
-ALL TIMESTAMPS MUST BE CLICKABLE YOUTUBE LINKS - Use this EXACT format:
-**[MM:SS](${videoUrl}&t=XXXs)**
-Where XXX is the total seconds (convert MM:SS to seconds)
-Example: **[2:15](${videoUrl}&t=135s)** - This will link to second 135 of the YouTube video
-
-QUICK NAVIGATION SECTION - Include at the end:
+QUICK NAVIGATION SECTION:
 ## 🎯 Quick Navigation (Click to jump to video)
-- **[0:30](${videoUrl}&t=30s)** Step 1: Building Consistent Worlds  
-- **[2:15](${videoUrl}&t=135s)** Step 2: Creating Watermark-Free Images
-- **[4:20](${videoUrl}&t=260s)** Step 3: Changing Backgrounds
+- **[HH:MM:SS actual timestamp](${videoUrl}&t=ACTUAL_TOTAL_SECONDSs)** Step title — concise description
+- Repeat for every step in chronological order. The final bullet must land within the last ${finalTimestampWindow} minute(s) of the video.
 
-⚠️ FAILURE TO INCLUDE CLICKABLE YOUTUBE TIMESTAMPS WILL MAKE THIS TUTORIAL UNUSABLE ⚠️
-The user specifically requested clickable YouTube timestamps and they are ESSENTIAL for video navigation.
-DO NOT use generic "url" placeholders - use the exact YouTube URL: ${videoUrl}
+GENERAL TIMESTAMP RULES:
+- Extract timestamps from the transcript or metadata — do NOT invent them.
+- Ensure each timestamp aligns with the spoken content in that section.
+- If the transcript has gaps, estimate responsibly and note that in the Tips.
+- Never reuse the same timestamp twice unless the video genuinely revisits that moment.
 
-NOW PROCEED WITH THE TUTORIAL AND INCLUDE CLICKABLE YOUTUBE TIMESTAMPS AS SPECIFIED:
+NOW PROCEED WITH THE TUTORIAL USING REAL TIMESTAMPS:
 
 ` : '';
 
@@ -283,10 +283,12 @@ ${verbosity === 'concise'
 
 ## 📝 Step-by-Step Instructions
 
-${videoUrl ? `**CRITICAL: Each step header below MUST include an actual CLICKABLE timestamp from the video in **[MM:SS](${videoUrl}&t=XXXs)** format where XXX is total seconds**` : ''}
+${videoUrl ? `**CRITICAL:** Each step header MUST use the actual timestamp label and total seconds. Replace the placeholders in the pattern **[HH:MM:SS](${videoUrl}&t=SECONDSs)** with real values from the transcript. Continue generating steps sequentially for every major segment until the video is fully covered.**` : ''}
 
-### **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 1: [First Step Title]
-**Objective**: ${verbosity === 'comprehensive' ? 'Detailed explanation of what this step accomplishes and why it\'s important in the overall process' : 'Brief explanation of what this step accomplishes'}
+Repeat the following block for each major segment in chronological order. Do not stop until you reach the end of the video, and ensure the final step references a timestamp within the last ${finalTimestampWindow} minute(s).
+
+### **[HH:MM:SS actual timestamp](${videoUrl ? `${videoUrl}&t=ACTUAL_TOTAL_SECONDSs` : '#'} )** Step [N]: [Step Title]
+**Objective**: ${verbosity === 'comprehensive' ? 'Comprehensive explanation of step purpose, dependencies, and impact' : 'Brief explanation of what this step accomplishes'}
 
 **Instructions** (${adaptation.stepFormat.toLowerCase()}):
 1. [Specific action 1]
@@ -294,74 +296,11 @@ ${videoUrl ? `**CRITICAL: Each step header below MUST include an actual CLICKABL
 ${verbosity !== 'concise' ? '3. [Specific action 3]' : ''}
 ${verbosity === 'comprehensive' ? '4. [Additional detailed action]\n5. [Advanced consideration]' : ''}
 
-${verbosity === 'comprehensive' ? '**Why This Matters**: [Detailed explanation of the reasoning behind this step]\n\n**Common Variations**: [Alternative approaches and when to use them]\n\n' : ''}**Tips**: [${verbosity === 'comprehensive' ? 'Comprehensive guidance with troubleshooting' : 'Helpful hints or warnings'}]
+${verbosity === 'comprehensive' ? '**Why This Matters**: [Detailed explanation of the reasoning behind this step]\n\n**Common Variations**: [Alternative approaches and when to use them]\n\n' : ''}**Tips**: [${config.stepDetail.includes('Thorough') ? 'Comprehensive guidance with troubleshooting' : 'Helpful hints or warnings'}]
 
-${verbosity === 'comprehensive' ? '**Expected Result**: [Detailed description of what you should see/achieve]\n\n' : ''}### **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 2: [Second Step Title]  
-**Objective**: ${verbosity === 'comprehensive' ? 'Comprehensive explanation of step purpose, dependencies, and impact' : 'Brief explanation of what this step accomplishes'}
+${verbosity === 'comprehensive' ? '**Expected Result**: [Detailed description of what you should see/achieve]' : ''}
 
-**Instructions** (${config.stepDetail.toLowerCase()}):
-1. [Specific action 1]
-2. [Specific action 2]
-${verbosity !== 'concise' ? '3. [Specific action 3]' : ''}
-${verbosity === 'comprehensive' ? '4. [Additional detailed action]\n5. [Advanced consideration]' : ''}
-
-**Tips**: [${config.stepDetail.includes('Thorough') ? 'Comprehensive guidance with troubleshooting' : 'Helpful hints or warnings'}]
-
-${verbosity === 'comprehensive' ? '**Expected Result**: [Detailed description of what you should see/achieve]\n\n' : ''}### **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 3: [Third Step Title]
-**Objective**: ${verbosity === 'comprehensive' ? 'Comprehensive explanation of step purpose, dependencies, and impact' : 'Brief explanation of what this step accomplishes'}
-
-**Instructions** (${config.stepDetail.toLowerCase()}):
-1. [Specific action 1]
-2. [Specific action 2]
-${verbosity !== 'concise' ? '3. [Specific action 3]' : ''}
-${verbosity === 'comprehensive' ? '4. [Additional detailed action]\n5. [Advanced consideration]' : ''}
-
-**Tips**: [${config.stepDetail.includes('Thorough') ? 'Comprehensive guidance with troubleshooting' : 'Helpful hints or warnings'}]
-
-${verbosity === 'comprehensive' ? '**Expected Result**: [Detailed description of what you should see/achieve]\n\n' : ''}${verbosity !== 'concise' ? `### **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 4: [Fourth Step Title]
-**Objective**: ${verbosity === 'comprehensive' ? 'Comprehensive explanation of step purpose, dependencies, and impact' : 'Brief explanation of what this step accomplishes'}
-
-**Instructions** (${config.stepDetail.toLowerCase()}):
-1. [Specific action 1]
-2. [Specific action 2]
-3. [Specific action 3]
-${verbosity === 'comprehensive' ? '4. [Additional detailed action]\n5. [Advanced consideration]' : ''}
-
-**Tips**: [${config.stepDetail.includes('Thorough') ? 'Comprehensive guidance with troubleshooting' : 'Helpful hints or warnings'}]
-
-${verbosity === 'comprehensive' ? '**Expected Result**: [Detailed description of what you should see/achieve]\n\n' : ''}` : ''}${verbosity === 'comprehensive' ? `### **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 5: [Fifth Step Title]
-**Objective**: Comprehensive explanation of step purpose, dependencies, and impact
-
-**Instructions** (${config.stepDetail.toLowerCase()}):
-1. [Specific action 1]
-2. [Specific action 2]
-3. [Specific action 3]
-4. [Additional detailed action]
-5. [Advanced consideration]
-
-**Why This Matters**: [Detailed explanation of the reasoning behind this step]
-
-**Common Variations**: [Alternative approaches and when to use them]
-
-**Tips**: [Comprehensive guidance with troubleshooting]
-
-**Expected Result**: [Detailed description of what you should see/achieve]
-
-### **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 6: [Sixth Step Title]
-**Objective**: Comprehensive explanation of step purpose, dependencies, and impact
-
-**Instructions** (${config.stepDetail.toLowerCase()}):
-1. [Specific action 1]
-2. [Specific action 2]
-3. [Specific action 3]
-4. [Additional detailed action]
-5. [Advanced consideration]
-
-**Tips**: [Comprehensive guidance with troubleshooting]
-
-**Expected Result**: [Detailed description of what you should see/achieve]
-
-` : ''}
+Continue generating additional steps using the same structure until the end of the video timeline. Ensure timestamps remain strictly increasing and aligned with the spoken content.
 
 **NOTE**: Add more steps as needed based on the video content. Each step should include actual timestamps from the video analysis.
 

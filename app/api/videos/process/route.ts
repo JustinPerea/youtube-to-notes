@@ -10,6 +10,7 @@ import { geminiClient } from '@/lib/gemini/client';
 import { db } from '@/lib/db/drizzle';
 import { videos, users } from '@/lib/db/schema';
 import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
+import { enforceNonConversationalOpening, sanitizeTutorialGuideOutput } from '@/lib/output/sanitizers';
 import { eq, and } from 'drizzle-orm';
 import { extractVideoId } from '@/lib/utils/youtube';
 import { getUserSubscription, reserveUsage } from '@/lib/subscription/service';
@@ -655,40 +656,6 @@ TECHNICAL WRITING REQUIREMENTS:
 - Maintain professional, non-conversational tone
 
 ${startInstruction}`;
-}
-
-function enforceNonConversationalOpening(content: string, requiredPrefix: string): string {
-  if (!content) return content;
-
-  const normalized = content.replace(/\r\n/g, '\n').trimStart();
-  const exactIndex = normalized.indexOf(requiredPrefix);
-
-  if (exactIndex === 0) {
-    return normalized;
-  }
-
-  if (exactIndex > 0) {
-    return normalized.slice(exactIndex);
-  }
-
-  const tutorialGuideRegex = /#?\s*Tutorial Guide:/i;
-  const match = normalized.match(tutorialGuideRegex);
-
-  if (match) {
-    const index = normalized.indexOf(match[0]);
-    const remainder = normalized.slice(index + match[0].length).trimStart();
-    return `${requiredPrefix} ${remainder}`.trimEnd();
-  }
-
-  return `${requiredPrefix}\n${normalized}`;
-}
-
-function sanitizeTutorialGuideOutput(content: string, templateId: string, requiredPrefix: string): string {
-  if (templateId !== 'tutorial-guide' || !content) {
-    return content;
-  }
-
-  return enforceNonConversationalOpening(content, requiredPrefix).trimStart();
 }
 
 // Chunked processing function to reduce token usage

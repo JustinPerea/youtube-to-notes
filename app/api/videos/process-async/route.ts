@@ -6,6 +6,8 @@ import { validateVideoUrl } from '@/lib/validation';
 import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { reserveUsage } from '@/lib/subscription/service';
 import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
+import { enforceNonConversationalOpening, sanitizeTutorialGuideOutput } from '@/lib/output/sanitizers';
+import { enforceNonConversationalOpening, sanitizeTutorialGuideOutput } from '@/lib/output/sanitizers';
 import { NotesService } from '@/lib/services/notes';
 import { geminiClient } from '@/lib/gemini/client';
 

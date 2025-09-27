@@ -300,11 +300,17 @@ async function combineChunks(chunks: any[], template: any): Promise<string> {
     .map(chunk => chunk.content)
     .join('\n\n---\n\n');
   
-  return `${header}${combinedParts}
+  let combined = `${header}${combinedParts}
 
 ---
 
 *Note: This content was processed in ${chunks.length} parts for optimal performance with long-form video content.*`;
+
+  if (template.id === 'tutorial-guide') {
+    combined = enforceNonConversationalOpening(combined, '# Tutorial Guide:');
+  }
+
+  return combined;
 }
 
 function buildStreamResultPayload({
@@ -341,14 +347,22 @@ function buildStreamResultPayload({
     comprehensive: content,
   };
 
+  const sanitize = (value: string) => sanitizeTutorialGuideOutput(value, templateId, '# Tutorial Guide:');
+
+  const sanitizedVerbosityLevels = {
+    brief: convertTimestampsToLinks(sanitize(allVerbosityLevels.brief), videoUrl),
+    standard: convertTimestampsToLinks(sanitize(allVerbosityLevels.standard), videoUrl),
+    comprehensive: convertTimestampsToLinks(sanitize(allVerbosityLevels.comprehensive), videoUrl),
+  };
+
   return {
     title: `Notes from ${videoUrl}`,
     template: templateId,
-    content,
+    content: sanitizedVerbosityLevels.standard,
     processingMethod: processingMethod || 'async-stream',
     dataSourcesUsed: dataSourcesUsed || ['Gemini Streaming'],
     tokensUsed: tokenUsage,
-    allVerbosityLevels,
+    allVerbosityLevels: sanitizedVerbosityLevels,
     selectedVerbosity: 'standard',
     noteId,
     metadata: {

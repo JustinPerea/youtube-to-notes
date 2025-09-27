@@ -657,6 +657,40 @@ TECHNICAL WRITING REQUIREMENTS:
 ${startInstruction}`;
 }
 
+function enforceNonConversationalOpening(content: string, requiredPrefix: string): string {
+  if (!content) return content;
+
+  const normalized = content.replace(/\r\n/g, '\n').trimStart();
+  const exactIndex = normalized.indexOf(requiredPrefix);
+
+  if (exactIndex === 0) {
+    return normalized;
+  }
+
+  if (exactIndex > 0) {
+    return normalized.slice(exactIndex);
+  }
+
+  const tutorialGuideRegex = /#?\s*Tutorial Guide:/i;
+  const match = normalized.match(tutorialGuideRegex);
+
+  if (match) {
+    const index = normalized.indexOf(match[0]);
+    const remainder = normalized.slice(index + match[0].length).trimStart();
+    return `${requiredPrefix} ${remainder}`.trimEnd();
+  }
+
+  return `${requiredPrefix}\n${normalized}`;
+}
+
+function sanitizeTutorialGuideOutput(content: string, templateId: string, requiredPrefix: string): string {
+  if (templateId !== 'tutorial-guide' || !content) {
+    return content;
+  }
+
+  return enforceNonConversationalOpening(content, requiredPrefix).trimStart();
+}
+
 // Chunked processing function to reduce token usage
 async function processVideoInChunks(videoUrl: string, prompt: string, template: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
@@ -695,7 +729,11 @@ async function processVideoInChunks(videoUrl: string, prompt: string, template: 
       }
     ]);
 
-    const text = await result.response.text();
+    let text = await result.response.text();
+
+    if (template === 'tutorial-guide') {
+      text = enforceNonConversationalOpening(text, '# Tutorial Guide:');
+    }
     
     // Validate content
     if (!text || text.trim().length === 0) {
@@ -725,7 +763,11 @@ async function processVideoInChunks(videoUrl: string, prompt: string, template: 
       }
     ]);
     
-    return await result.response.text();
+    let fallbackText = await result.response.text();
+    if (template === 'tutorial-guide') {
+      fallbackText = enforceNonConversationalOpening(fallbackText, '# Tutorial Guide:');
+    }
+    return fallbackText;
   }
 }
 
@@ -1042,9 +1084,18 @@ export async function POST(request: NextRequest) {
     // 🔗 POST-PROCESS: Convert plain text timestamps to clickable YouTube links
     logger.debug('🔗 POST-PROCESS: Converting timestamps to clickable YouTube links...', { videoUrl });
     const processedVerbosityVersions = {
-      brief: convertTimestampsToLinks(verbosityVersions.brief, videoUrl),
-      standard: convertTimestampsToLinks(verbosityVersions.standard, videoUrl),
-      comprehensive: convertTimestampsToLinks(verbosityVersions.comprehensive, videoUrl)
+      brief: convertTimestampsToLinks(
+        sanitizeTutorialGuideOutput(verbosityVersions.brief, selectedTemplate, '# Tutorial Guide:'),
+        videoUrl
+      ),
+      standard: convertTimestampsToLinks(
+        sanitizeTutorialGuideOutput(verbosityVersions.standard, selectedTemplate, '# Tutorial Guide:'),
+        videoUrl
+      ),
+      comprehensive: convertTimestampsToLinks(
+        sanitizeTutorialGuideOutput(verbosityVersions.comprehensive, selectedTemplate, '# Tutorial Guide:'),
+        videoUrl
+      )
     };
     logger.debug('✅ Timestamp conversion completed for all verbosity levels');
     

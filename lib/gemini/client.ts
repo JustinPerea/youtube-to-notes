@@ -7,6 +7,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { logger } from '@/lib/logging';
 import { Template, TEMPLATES, detectTutorialDomain } from '@/lib/templates';
+import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
+import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
 import { 
   EnhancedVideoAnalysis, 
   EnhancedProcessingRequest, 

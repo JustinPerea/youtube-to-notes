@@ -893,3 +893,38 @@ export function getRecommendedTemplate(videoDuration: number, category?: 'educat
     return getTemplateById('study-notes')!;
   }
 }
+
+export function getAllTemplates(): Template[] {
+  return TEMPLATES;
+}
+
+export function getActiveTemplates(): Template[] {
+  return TEMPLATES.filter(template => (template as { isActive?: boolean }).isActive !== false);
+}
+
+export function estimateTokenUsage(templateId: string, contentLength: number): number {
+  const template = getTemplateById(templateId);
+  if (!template) return 0;
+
+  const baseTokens = typeof template.estimatedTokens === 'number' ? template.estimatedTokens : 0;
+  const contentTokens = Math.ceil(contentLength / 4); // Rough estimate: 4 characters per token
+
+  return baseTokens + contentTokens;
+}
+
+export function validateTemplate(template: Partial<Template>): string[] {
+  const errors: string[] = [];
+
+  if (!template.id) errors.push('Template ID is required');
+  if (!template.name) errors.push('Template name is required');
+  if (!template.prompt) errors.push('Template prompt is required');
+  if (!template.category) errors.push('Template category is required');
+
+  if (typeof template.estimatedTokens === 'number' && template.estimatedTokens < 0) {
+    errors.push('Estimated tokens must be positive');
+  }
+
+  return errors;
+}
+
+export default TEMPLATES;

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TEMPLATES } from '../../lib/templates/index';
+import { TEMPLATES } from '@/lib/templates';
 import { useSubscription } from '../../hooks/useSubscription';
 
 interface FormatCardsProps {

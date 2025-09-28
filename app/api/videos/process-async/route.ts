@@ -363,6 +363,14 @@ function normalizeCombinedContent(rawContent: string): string {
   normalized = normalized.replace(/\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\(https:\/\/www\.youtube\.com\/watch[^)]*\)\*\*/g, (_match, timestamp) => `**[${timestamp}]**`);
   normalized = normalized.replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]\(https:\/\/www\.youtube\.com\/watch[^)]*\)/g, (_match, timestamp) => `[${timestamp}]`);
 
+  // Collapse patterns like [MM:SS] (MM:SS) or (**[MM:SS]**) to a single timestamp reference
+  normalized = normalized.replace(/\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\*\*\s*\(\s*\1\s*\)/g, (_match, timestamp) => `**[${timestamp}]**`);
+  normalized = normalized.replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*\(\s*\1\s*\)/g, (_match, timestamp) => `[${timestamp}]`);
+  normalized = normalized.replace(/\(\s*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*\)/g, (_match, timestamp) => `[${timestamp}]`);
+
+  // Remove plain duplicate timestamp in parentheses immediately following another timestamp
+  normalized = normalized.replace(/(\d{1,2}:\d{2}(?::\d{2})?)\s*\(\s*\1\s*\)/g, (_match, timestamp) => timestamp);
+
   // Remove any stray YouTube URL parentheses left behind (e.g. (https://www.youtube.com/...))
   normalized = normalized.replace(/\(https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+(?:&t=\d+s)?\)/g, '');
 

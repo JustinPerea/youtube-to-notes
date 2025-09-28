@@ -532,6 +532,13 @@ VERBOSITY RULES:
 ${verbosityInstructions[verbosity]}
 
 FORMATTING: Maintain markdown structure, headings, and organization.
+MANDATORY STRUCTURE PRESERVATION RULES:
+- Preserve every heading, subheading, list item, timestamp link, bold/italic marker, and section order exactly as provided.
+- Do not delete, rename, reorder, merge, or add headings/sections.
+- Keep every step/timestamp present in the original text. If you must shorten content, only edit the sentences underneath each heading.
+- Retain all markdown links and URLs exactly.
+- If the target verbosity cannot be met without removing structure, return the original content unchanged.
+
 OUTPUT: Return only the adjusted content, no explanations.`;
 
   try {

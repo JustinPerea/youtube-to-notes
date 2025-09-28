@@ -357,13 +357,17 @@ function normalizeCombinedContent(rawContent: string): string {
     return rawContent;
   }
 
-  let normalized = rawContent.replace(/\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)/g, (_match, url) => `(${url})`);
+  let normalized = rawContent;
 
-  normalized = normalized.replace(/\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)(\([^)]+\)){2,}/g, (_match, url) => `(${url})`);
+  // Collapse markdown links back to plain timestamps so we can re-link once later
+  normalized = normalized.replace(/\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\(https:\/\/www\.youtube\.com\/watch[^)]*\)\*\*/g, (_match, timestamp) => `**[${timestamp}]**`);
+  normalized = normalized.replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]\(https:\/\/www\.youtube\.com\/watch[^)]*\)/g, (_match, timestamp) => `[${timestamp}]`);
 
-  normalized = normalized.replace(/\]\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)/g, (_match, url) => `](${url})`);
+  // Remove any stray YouTube URL parentheses left behind (e.g. (https://www.youtube.com/...))
+  normalized = normalized.replace(/\(https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+(?:&t=\d+s)?\)/g, '');
 
-  normalized = normalized.replace(/\s*\(approx\.\)\s*\(approx\.\)/gi, ' (approx.)');
+  // Collapse repeated "(approx.)" markers into a single instance
+  normalized = normalized.replace(/\s*\(approx\.\)(?:\s*\(approx\.\))+?/gi, ' (approx.)');
 
   return normalized;
 }

@@ -13,7 +13,8 @@ import { fetchVideoMetadata } from '@/lib/services/youtube-api';
 
 // Async processing route for long videos with streaming response
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300;
+export const runtime = 'nodejs';
+export const maxDuration = 800;
 
 // Video duration thresholds (in seconds)
 const DURATION_THRESHOLDS = {

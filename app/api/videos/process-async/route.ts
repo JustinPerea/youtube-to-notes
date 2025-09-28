@@ -145,7 +145,8 @@ async function processSingleChunk(
   const response = await generation.response;
   const tokenUsage = response.usageMetadata?.totalTokenCount;
   const rawContent = await response.text();
-  const verbosityLevels = await createVerbosityLevels(rawContent, videoUrl);
+  const canonicalContent = normalizeCombinedContent(rawContent);
+  const verbosityLevels = await createVerbosityLevels(canonicalContent, videoUrl);
   const content = verbosityLevels.standard;
 
   const noteId = await autoSaveGeneratedNote({
@@ -250,7 +251,8 @@ async function processMultipleChunks(
   ));
 
   const combinedRawContent = await combineChunks(chunks, template);
-  const verbosityLevels = await createVerbosityLevels(combinedRawContent, videoUrl);
+  const canonicalCombinedContent = normalizeCombinedContent(combinedRawContent);
+  const verbosityLevels = await createVerbosityLevels(canonicalCombinedContent, videoUrl);
   const combinedContent = verbosityLevels.standard;
 
   const coverageInfo = calculateCoverage(chunks, estimatedDuration);
@@ -348,6 +350,22 @@ async function combineChunks(chunks: any[], template: any): Promise<string> {
   }
 
   return combined;
+}
+
+function normalizeCombinedContent(rawContent: string): string {
+  if (!rawContent) {
+    return rawContent;
+  }
+
+  let normalized = rawContent.replace(/\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)/g, (_match, url) => `(${url})`);
+
+  normalized = normalized.replace(/\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)(\([^)]+\)){2,}/g, (_match, url) => `(${url})`);
+
+  normalized = normalized.replace(/\]\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)\((https:\/\/www\.youtube\.com\/watch\?v=[^\s)]+)\)/g, (_match, url) => `](${url})`);
+
+  normalized = normalized.replace(/\s*\(approx\.\)\s*\(approx\.\)/gi, ' (approx.)');
+
+  return normalized;
 }
 
 function buildStreamResultPayload({
@@ -691,7 +709,8 @@ async function processWithSynchronousFallback({
       throw new Error(processingResult.error || 'Fallback processing failed');
     }
 
-    const verbosityLevels = await createVerbosityLevels(processingResult.result, videoUrl);
+    const canonicalContent = normalizeCombinedContent(processingResult.result);
+    const verbosityLevels = await createVerbosityLevels(canonicalContent, videoUrl);
     const noteContent = verbosityLevels.standard;
     const dataSourcesUsed = processingResult.metadata?.dataSourcesUsed || ['Gemini Hybrid'];
     const processingMethod = processingResult.metadata?.processingMethod || 'sync-fallback';

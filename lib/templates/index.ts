@@ -118,10 +118,11 @@ export function detectTutorialDomain(metadata: VideoMetadata): TutorialDomain {
  * Implements research-backed 3-level system for enhanced engagement with clickable timestamps
  */
 function generateTutorialGuidePrompt(
-  durationSeconds: number = 600, 
+  durationSeconds: number = 600,
   verbosity: VerbosityLevel = 'standard',
   domain: TutorialDomain = 'general',
-  videoUrl?: string
+  videoUrl?: string,
+  transcriptAvailable: boolean = true
 ): string {
   // Verbosity configurations based on research
   const verbosityConfigs = {
@@ -209,14 +210,16 @@ THE YOUTUBE VIDEO URL YOU MUST USE FOR ALL TIMESTAMPS: ${videoUrl}
 🔗 FULL URL DEBUG: "${videoUrl}" (Length: ${videoUrl ? videoUrl.length : 0} characters)
 
 BEFORE WRITING ANY CONTENT:
-1. Analyze the ENTIRE transcript and map the full ${durationMinutes}-minute timeline.
+1. ${transcriptAvailable
+    ? `Analyze the ENTIRE transcript and map the full ${durationMinutes}-minute timeline.`
+    : `No official transcript is available. Scrub the video manually to map the full ${durationMinutes}-minute timeline. Mark any timestamp you estimate with "(approximate)" in the Tips section.`}
 2. Every step header MUST start with a clickable timestamp that links directly to that moment in the video.
 3. Timestamps must strictly increase and remain in chronological order.
 4. Continue creating steps until you reach the end of the video. Plan for at least ${recommendedStepCount} major steps (more if the content demands it).
 5. The final step MUST reference a timestamp within the last ${finalTimestampWindow} minute(s) of the video to prove full coverage.
 
 TIMESTAMP FORMAT (DO NOT COPY LITERALLY — REPLACE WITH REAL VALUES):
-### **[HH:MM:SS actual timestamp](${videoUrl}&t=ACTUAL_TOTAL_SECONDSs)** Step title here
+### **[${transcriptAvailable ? 'HH:MM:SS actual timestamp' : 'HH:MM:SS approx. timestamp'}](${videoUrl}&t=ACTUAL_TOTAL_SECONDSs)** Step title here
 
 - Replace "HH:MM:SS actual timestamp" with the exact timestamp label that appears on YouTube (e.g., 48:12 or 1:05:27).
 - Replace "ACTUAL_TOTAL_SECONDS" with the total seconds as an integer (e.g., 2892).
@@ -224,11 +227,13 @@ TIMESTAMP FORMAT (DO NOT COPY LITERALLY — REPLACE WITH REAL VALUES):
 
 QUICK NAVIGATION SECTION:
 ## 🎯 Quick Navigation (Click to jump to video)
-- **[HH:MM:SS actual timestamp](${videoUrl}&t=ACTUAL_TOTAL_SECONDSs)** Step title — concise description
+- **[${transcriptAvailable ? 'HH:MM:SS actual timestamp' : 'HH:MM:SS approx.'}](${videoUrl}&t=ACTUAL_TOTAL_SECONDSs)** Step title — concise description${transcriptAvailable ? '' : ' (mark approximate timestamps)'}
 - Repeat for every step in chronological order. The final bullet must land within the last ${finalTimestampWindow} minute(s) of the video.
 
 GENERAL TIMESTAMP RULES:
-- Extract timestamps from the transcript or metadata — do NOT invent them.
+- ${transcriptAvailable
+    ? 'Extract timestamps from the transcript or metadata — do NOT invent them.'
+    : 'If no transcript exists, derive timestamps from manual playback. Call out approximations in the Tips section and Quick Navigation.'}
 - Ensure each timestamp aligns with the spoken content in that section.
 - If the transcript has gaps, estimate responsibly and note that in the Tips.
 - Never reuse the same timestamp twice unless the video genuinely revisits that moment.
@@ -287,7 +292,7 @@ ${videoUrl ? `**CRITICAL:** Each step header MUST use the actual timestamp label
 
 Repeat the following block for each major segment in chronological order. Do not stop until you reach the end of the video, and ensure the final step references a timestamp within the last ${finalTimestampWindow} minute(s).
 
-### **[HH:MM:SS actual timestamp](${videoUrl ? `${videoUrl}&t=ACTUAL_TOTAL_SECONDSs` : '#'} )** Step [N]: [Step Title]
+### **[${transcriptAvailable ? 'HH:MM:SS actual timestamp' : 'HH:MM:SS approx. timestamp'}](${videoUrl ? `${videoUrl}&t=ACTUAL_TOTAL_SECONDSs` : '#'} )** Step [N]: [Step Title]
 **Objective**: ${verbosity === 'comprehensive' ? 'Comprehensive explanation of step purpose, dependencies, and impact' : 'Brief explanation of what this step accomplishes'}
 
 **Instructions** (${adaptation.stepFormat.toLowerCase()}):
@@ -296,13 +301,13 @@ Repeat the following block for each major segment in chronological order. Do not
 ${verbosity !== 'concise' ? '3. [Specific action 3]' : ''}
 ${verbosity === 'comprehensive' ? '4. [Additional detailed action]\n5. [Advanced consideration]' : ''}
 
-${verbosity === 'comprehensive' ? '**Why This Matters**: [Detailed explanation of the reasoning behind this step]\n\n**Common Variations**: [Alternative approaches and when to use them]\n\n' : ''}**Tips**: [${config.stepDetail.includes('Thorough') ? 'Comprehensive guidance with troubleshooting' : 'Helpful hints or warnings'}]
+${verbosity === 'comprehensive' ? '**Why This Matters**: [Detailed explanation of the reasoning behind this step]\n\n**Common Variations**: [Alternative approaches and when to use them]\n\n' : ''}**Tips**: [${transcriptAvailable ? (config.stepDetail.includes('Thorough') ? 'Comprehensive guidance with troubleshooting' : 'Helpful hints or warnings') : 'Note if timestamp is approximate and provide context for double-checking'}]
 
 ${verbosity === 'comprehensive' ? '**Expected Result**: [Detailed description of what you should see/achieve]' : ''}
 
 Continue generating additional steps using the same structure until the end of the video timeline. Ensure timestamps remain strictly increasing and aligned with the spoken content.
 
-**NOTE**: Add more steps as needed based on the video content. Each step should include actual timestamps from the video analysis.
+**NOTE**: Add more steps as needed based on the video content. Each step should include ${transcriptAvailable ? 'actual timestamps from the transcript or verified playback' : 'timestamps derived from careful playback (tag approximate times in Tips)'}.
 
 ## ✅ Verification & Testing
 ${verbosity === 'comprehensive' ? `Comprehensive success validation (${adaptation.verification}):` : `${adaptation.verification}:`}
@@ -343,14 +348,14 @@ ${verbosity !== 'concise' ? `- **Intermediate**: [More challenging ${adaptation.
 ${verbosity === 'comprehensive' ? `- **Advanced**: [Complex ${adaptation.practiceType} with multiple components]` : ''}
 
 ## 🎯 Quick Navigation${videoUrl ? ' (Clickable Timestamps)' : ''}
-${videoUrl ? 'Click any timestamp below to jump directly to that part of the video:' : 'Key sections identified in the tutorial:'}
+${videoUrl ? `Click any timestamp below to jump directly to that part of the video.${transcriptAvailable ? '' : ' Label any approximate entries with "(approx.)" and encourage viewers to verify.'}` : 'Key sections identified in the tutorial:'}
 
-- **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 1: [First Step Title] - [Brief description]
-- **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 2: [Second Step Title] - [Brief description] 
-- **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 3: [Third Step Title] - [Brief description]
-${verbosity !== 'concise' ? `- **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 4: [Fourth Step Title] - [Brief description]` : ''}
-${verbosity === 'comprehensive' ? `- **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 5: [Fifth Step Title] - [Brief description]
-- **[MM:SS](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 6: [Sixth Step Title] - [Brief description]` : ''}
+- **[MM:SS${transcriptAvailable ? '' : ' approx.'}](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 1: [First Step Title] - [Brief description${transcriptAvailable ? '' : ' (approx.)'}]
+- **[MM:SS${transcriptAvailable ? '' : ' approx.'}](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 2: [Second Step Title] - [Brief description${transcriptAvailable ? '' : ' (approx.)'}]
+- **[MM:SS${transcriptAvailable ? '' : ' approx.'}](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 3: [Third Step Title] - [Brief description${transcriptAvailable ? '' : ' (approx.)'}]
+${verbosity !== 'concise' ? `- **[MM:SS${transcriptAvailable ? '' : ' approx.'}](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 4: [Fourth Step Title] - [Brief description${transcriptAvailable ? '' : ' (approx.)'}]` : ''}
+${verbosity === 'comprehensive' ? `- **[MM:SS${transcriptAvailable ? '' : ' approx.'}](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 5: [Fifth Step Title] - [Brief description${transcriptAvailable ? '' : ' (approx.)'}]
+- **[MM:SS${transcriptAvailable ? '' : ' approx.'}](${videoUrl ? videoUrl + '&t=' : '#'}XXXs)** Step 6: [Sixth Step Title] - [Brief description${transcriptAvailable ? '' : ' (approx.)'}]` : ''}
 
 **GENERATION GUIDELINES:**
 - Content Level: ${config.contentReduction}
@@ -430,7 +435,7 @@ export interface Template {
   category: 'summary' | 'educational' | 'professional' | 'creative';
   icon: string;
   color: string;
-  prompt: string | ((durationSeconds?: number) => string) | ((durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string);
+  prompt: string | ((durationSeconds?: number) => string) | ((durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string, transcriptAvailable?: boolean) => string);
   outputFormat: 'markdown' | 'html' | 'json' | 'text';
   features: string[];
   limitations: string[];

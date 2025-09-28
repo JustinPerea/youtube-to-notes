@@ -340,9 +340,20 @@ export class GeminiClient {
       tags: metadata.youtubeMetadata?.tags || [],
       channelName: metadata.youtubeMetadata?.channelTitle || ''
     });
-    
+
+    const transcriptAvailable = metadata.youtubeMetadata?.transcriptConfidence
+      ? metadata.youtubeMetadata.transcriptConfidence > 0.5
+      : true;
+
     // Use enhanced template processing with timestamp support
-    let prompt = this.getTemplatePrompt(template, metadata.videoDuration, 'standard', detectedDomain, youtubeUrl);
+    let prompt = this.getTemplatePrompt(
+      template,
+      metadata.videoDuration,
+      'standard',
+      detectedDomain,
+      youtubeUrl,
+      transcriptAvailable
+    );
     
     // DEBUG: Log timestamp instructions for tutorial-guide template
     if (template.id === 'tutorial-guide') {
@@ -380,14 +391,27 @@ export class GeminiClient {
   }
 
   // Enhanced template processing with timestamp support (copied from API route)
-  private getTemplatePrompt(template: Template, durationSeconds?: number, verbosity?: 'concise' | 'standard' | 'comprehensive', domain?: 'programming' | 'diy' | 'academic' | 'fitness' | 'general', videoUrl?: string): string {
+  private getTemplatePrompt(
+    template: Template,
+    durationSeconds?: number,
+    verbosity?: 'concise' | 'standard' | 'comprehensive',
+    domain?: 'programming' | 'diy' | 'academic' | 'fitness' | 'general',
+    videoUrl?: string,
+    transcriptAvailable: boolean = true
+  ): string {
     if (typeof template.prompt === 'function') {
       // Check if the function supports domain detection and try to call with all parameters
       if ((template as any).supportsDomainDetection) {
         try {
           // For tutorial-guide template, always try with videoUrl first
           if (template.id === 'tutorial-guide') {
-            return (template.prompt as (duration?: number, verbosity?: any, domain?: any, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
+            return (template.prompt as (duration?: number, verbosity?: any, domain?: any, videoUrl?: string, transcriptAvailable?: boolean) => string)(
+              durationSeconds,
+              verbosity,
+              domain,
+              videoUrl,
+              transcriptAvailable
+            );
           }
           // For other templates, use 3-parameter version
           return (template.prompt as (duration?: number, verbosity?: any, domain?: any) => string)(durationSeconds, verbosity, domain);

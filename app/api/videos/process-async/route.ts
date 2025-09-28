@@ -28,9 +28,12 @@ async function processVideoInChunks(
   videoUrl: string,
   template: Template,
   estimatedDuration: number,
-  userId: string
+  userId: string,
+  metadata?: Awaited<ReturnType<typeof fetchVideoMetadata>>
 ): Promise<ReadableStream> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
+  const effectiveMetadata = metadata || await fetchVideoMetadata(videoUrl);
+  const transcriptAvailable = effectiveMetadata?.caption === true;
   
   // Determine chunk strategy based on video length
   let chunkStrategy;
@@ -69,9 +72,9 @@ async function processVideoInChunks(
         ));
 
         if (chunkStrategy.chunks === 1) {
-          await processSingleChunk(controller, model, videoUrl, template, estimatedDuration, userId);
+          await processSingleChunk(controller, model, videoUrl, template, estimatedDuration, userId, transcriptAvailable);
         } else {
-          await processMultipleChunks(controller, model, videoUrl, template, chunkStrategy.chunks, estimatedDuration, userId);
+          await processMultipleChunks(controller, model, videoUrl, template, chunkStrategy.chunks, estimatedDuration, userId, transcriptAvailable);
         }
 
         // Usage already tracked via atomic reservation system
@@ -119,13 +122,14 @@ async function processSingleChunk(
   videoUrl: string,
   template: Template,
   estimatedDuration: number,
-  userId: string
+  userId: string,
+  transcriptAvailable: boolean
 ) {
   controller.enqueue(new TextEncoder().encode(
     `data: ${JSON.stringify({ type: 'status', message: 'Analyzing video content...', progress: 30 })}\n\n`
   ));
 
-  const prompt = buildTemplatePrompt(template, estimatedDuration, videoUrl);
+  const prompt = buildTemplatePrompt(template, estimatedDuration, videoUrl, transcriptAvailable);
 
   const generation = await model.generateContent([
     prompt,
@@ -181,7 +185,8 @@ async function processMultipleChunks(
   template: Template,
   chunkCount: number,
   estimatedDuration: number,
-  userId: string
+  userId: string,
+  transcriptAvailable: boolean
 ) {
   const chunks: Array<{ index: number; content: string; timestamp: number; chunkStartSeconds: number; chunkEndSeconds: number }> = [];
   const chunkDuration = estimatedDuration / chunkCount;
@@ -197,7 +202,7 @@ async function processMultipleChunks(
     ));
 
     // Create chunk-specific prompts
-    const chunkPrompt = createChunkPrompt(template, i, chunkCount, estimatedDuration, videoUrl);
+    const chunkPrompt = createChunkPrompt(template, i, chunkCount, estimatedDuration, videoUrl, transcriptAvailable);
     const chunkStartSeconds = Math.floor(chunkDuration * i);
     const chunkEndSeconds = Math.min(estimatedDuration, Math.floor(chunkDuration * (i + 1)));
     
@@ -300,9 +305,10 @@ function createChunkPrompt(
   chunkIndex: number,
   totalChunks: number,
   estimatedDuration: number,
-  videoUrl?: string
+  videoUrl?: string,
+  transcriptAvailable: boolean = true
 ): string {
-  const basePrompt = buildTemplatePrompt(template, estimatedDuration, videoUrl);
+  const basePrompt = buildTemplatePrompt(template, estimatedDuration, videoUrl, transcriptAvailable);
   const chunkInstructions = {
     0: `Focus on the introduction and first major section. ${basePrompt}`,
     1: `Focus on the middle content and main concepts. ${basePrompt}`,
@@ -434,7 +440,8 @@ function calculateCoverage(
 function buildTemplatePrompt(
   template: Template,
   durationSeconds?: number,
-  videoUrl?: string
+  videoUrl?: string,
+  transcriptAvailable: boolean = true
 ): string {
   const defaultVerbosity: 'standard' = 'standard';
   const defaultDomain: 'general' = 'general';
@@ -442,11 +449,12 @@ function buildTemplatePrompt(
   if (typeof template.prompt === 'function') {
     try {
       if ((template as any).supportsDomainDetection) {
-        return (template.prompt as (duration?: number, verbosity?: any, domain?: any, videoUrl?: string) => string)(
+        return (template.prompt as (duration?: number, verbosity?: any, domain?: any, videoUrl?: string, transcriptAvailable?: boolean) => string)(
           durationSeconds,
           defaultVerbosity,
           defaultDomain,
-          videoUrl
+          videoUrl,
+          transcriptAvailable
         );
       }
 
@@ -652,21 +660,25 @@ async function processWithSynchronousFallback({
   videoUrl,
   template,
   userId,
+  metadata,
 }: {
   controller: ReadableStreamDefaultController;
   videoUrl: string;
   template: Template;
   userId: string;
+  metadata?: Awaited<ReturnType<typeof fetchVideoMetadata>>;
 }) {
   controller.enqueue(new TextEncoder().encode(
     `data: ${JSON.stringify({
       type: 'status',
       message: 'Switching to reliability mode — generating transcript-backed notes...',
-      progress: 35,
+      progress: 70,
     })}\n\n`
   ));
 
   try {
+    const transcriptAvailable = metadata?.caption === true;
+
     const processingResult = await geminiClient.processVideo({
       youtubeUrl: videoUrl,
       template,
@@ -805,7 +817,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create streaming response for long videos
-    const stream = await processVideoInChunks(videoUrl, template, estimatedDuration, userId);
+    const metadata = await fetchVideoMetadata(videoUrl);
+    const stream = await processVideoInChunks(videoUrl, template, estimatedDuration, userId, metadata);
 
     return new Response(stream, {
       headers: {

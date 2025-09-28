@@ -26,7 +26,14 @@ type VerbosityLevel = 'concise' | 'standard' | 'comprehensive';
 type TutorialDomain = 'programming' | 'diy' | 'academic' | 'fitness' | 'general';
 
 // Enhanced local implementation with verbosity and domain support
-function getTemplatePrompt(template: Template, durationSeconds?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string): string {
+function getTemplatePrompt(
+  template: Template,
+  durationSeconds?: number,
+  verbosity?: VerbosityLevel,
+  domain?: TutorialDomain,
+  videoUrl?: string,
+  transcriptAvailable: boolean = true
+): string {
   logger.debug(`🔍 DEBUG getTemplatePrompt: template.id=${template.id}, videoUrl="${videoUrl}", supportsDomainDetection=${(template as any).supportsDomainDetection}`);
   
   if (typeof template.prompt === 'function') {
@@ -36,7 +43,13 @@ function getTemplatePrompt(template: Template, durationSeconds?: number, verbosi
         // For tutorial-guide template, always try with videoUrl first
         if (template.id === 'tutorial-guide') {
           logger.debug(`✅ DEBUG: Calling tutorial-guide template with videoUrl: "${videoUrl}"`);
-          return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string) => string)(durationSeconds, verbosity, domain, videoUrl);
+          return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain, videoUrl?: string, transcriptAvailable?: boolean) => string)(
+            durationSeconds,
+            verbosity,
+            domain,
+            videoUrl,
+            transcriptAvailable
+          );
         }
         // For other templates, use 3-parameter version
         return (template.prompt as (duration?: number, verbosity?: VerbosityLevel, domain?: TutorialDomain) => string)(durationSeconds, verbosity, domain);
@@ -170,7 +183,7 @@ How can this knowledge be applied in real-world scenarios?`;
 
       case 'basic-summary':
         // Use the dynamic template prompt that scales with video duration
-        const dynamicPrompt = getTemplatePrompt(template, durationSeconds, undefined, undefined, videoUrl);
+        const dynamicPrompt = getTemplatePrompt(template, durationSeconds, undefined, undefined, videoUrl, true);
         return `
 REQUIRED BASIC SUMMARY STRUCTURE (Dynamic scaling based on video length):
 ${dynamicPrompt}`;
@@ -187,7 +200,7 @@ ${dynamicPrompt}`;
           supportsVerbosity: true
         };
         
-        const tutorialPrompt = getTemplatePrompt(enhancedTemplate, durationSeconds, 'standard', 'general', videoUrl);
+        const tutorialPrompt = getTemplatePrompt(enhancedTemplate, durationSeconds, 'standard', 'general', videoUrl, true);
         logger.debug(`🎯 DEBUG: Generated tutorial prompt includes videoUrl: ${tutorialPrompt.includes(videoUrl || 'NONE')}`);
         return `
 REQUIRED TUTORIAL GUIDE STRUCTURE with MANDATORY CLICKABLE TIMESTAMPS:
@@ -633,7 +646,16 @@ function generateEnhancedPrompt(template: any, contentAnalysis: any, verbosityLe
     }
 
     // Get the template prompt with verbosity and domain support (dynamic if supported, static otherwise)
-    const templatePrompt = getTemplatePrompt(template, durationSeconds, verbosityLevel as VerbosityLevel, detectedDomain, videoUrl);
+    const transcriptAvailable = !!(videoMetadata?.transcriptConfidence && videoMetadata.transcriptConfidence > 0.5);
+
+    const templatePrompt = getTemplatePrompt(
+      template,
+      durationSeconds,
+      verbosityLevel as VerbosityLevel,
+      detectedDomain,
+      videoUrl,
+      transcriptAvailable
+    );
 
     return `${templatePrompt}
 

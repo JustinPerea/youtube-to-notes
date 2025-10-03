@@ -30,7 +30,30 @@ export function sanitizeTutorialGuideOutput(
     return enforceNonConversationalOpening(content, requiredPrefix).trimStart();
   }
 
-  const normalized = content.replace(/\r\n/g, '\n').trimStart();
+  const stripIntroductoryLines = (text: string): string => {
+    const lines = text.split('\n');
+    const shouldRemoveLine = (line: string): boolean => {
+      const trimmed = line.trim();
+      if (!trimmed) return true;
+
+      const conversationalLead = /^(okay|ok|alright|all right|sure|absolutely|right|well|so)\b[\s,.!:-]*/i;
+      const structuralLead = /^(here'?s|here\s+(?:is|are|we go|you go)|this\s+is|please\s+find|below\s+is|let['’]?s)\b/i;
+      const summaryKeywords = /(requested|summary|overview|content|notes|breakdown|guide)/i;
+
+      if (conversationalLead.test(trimmed)) return true;
+      if (structuralLead.test(trimmed) && summaryKeywords.test(trimmed)) return true;
+      if (/requested/i.test(trimmed)) return true;
+      return false;
+    };
+
+    while (lines.length > 0 && shouldRemoveLine(lines[0])) {
+      lines.shift();
+    }
+
+    return lines.join('\n').trimStart();
+  };
+
+  const normalized = stripIntroductoryLines(content.replace(/\r\n/g, '\n').trimStart());
   const conversationalPrefixes = [
     /^okay\b/i,
     /^all right\b/i,

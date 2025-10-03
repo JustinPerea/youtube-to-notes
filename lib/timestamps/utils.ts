@@ -224,8 +224,8 @@ export function convertTimestampsToLinks(content: string, videoUrl: string): str
 
   // Regex patterns to match different timestamp formats
   const timestampPatterns = [
-    // Match timestamps in brackets like [MM:SS] or [H:MM:SS]
-    /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
+    // Match timestamps in brackets like [MM:SS] or [H:MM:SS] that are NOT already part of a markdown link
+    /\[(\d{1,2}:\d{2}(?::\d{2})?)\](?!\()/g,
     // Match timestamps with bold formatting like **[MM:SS]**
     /\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\*\*/g,
     // Match timestamps in section headers like ### **[MM:SS]** Title

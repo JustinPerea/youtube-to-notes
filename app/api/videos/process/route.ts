@@ -9,7 +9,7 @@ import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { geminiClient } from '@/lib/gemini/client';
 import { db } from '@/lib/db/drizzle';
 import { videos, users } from '@/lib/db/schema';
-import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
+import { convertTimestampsToLinks, formatTimestamp } from '@/lib/timestamps/utils';
 import { enforceNonConversationalOpening, sanitizeTutorialGuideOutput } from '@/lib/output/sanitizers';
 import { normalizeMarkdownContent } from '@/lib/output/markdown';
 import { fetchVideoMetadata } from '@/lib/services/youtube-api';
@@ -465,6 +465,148 @@ OUTPUT: Return only the adjusted content, no explanations.`;
       standard: originalContent,
       comprehensive: originalContent + '\n\n## Additional Context\n\n' + lines.slice(-3).join('\n')
     };
+  }
+}
+
+function extractMaxTimestampInSeconds(content: string): number | null {
+  const matches = content.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/g);
+  if (!matches) return null;
+
+  let maxSeconds = 0;
+  for (const match of matches) {
+    const parts = match.split(':').map(Number);
+    if (parts.some(isNaN)) continue;
+    const seconds = parts.length === 3
+      ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+      : parts[0] * 60 + parts[1];
+    if (seconds > maxSeconds) {
+      maxSeconds = seconds;
+    }
+  }
+
+  return maxSeconds || null;
+}
+
+async function ensureStudyNotesCoverage(content: string, videoUrl: string, durationSeconds: number): Promise<string> {
+  if (!durationSeconds || durationSeconds < 60) {
+    return content;
+  }
+
+  const maxTimestamp = extractMaxTimestampInSeconds(content);
+  if (!maxTimestamp) {
+    return content;
+  }
+
+  const remaining = durationSeconds - maxTimestamp;
+  if (remaining <= 120) {
+    return content;
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 4096,
+      },
+    });
+
+    const prompt = `You are extending structured study notes for a video tutorial. The existing notes currently stop around ${formatTimestamp(maxTimestamp)}, but the video continues through ${formatTimestamp(durationSeconds)}.
+
+Existing notes:
+${content}
+
+TASK: Append a new section titled "## Continued Coverage" that only contains timestamps strictly greater than ${formatTimestamp(maxTimestamp)} and continues through the end of the video. Preserve the same style, tone, and level of detail as the existing notes. Do not repeat any earlier sections or timestamps. If the remaining portion introduces new segments or a conclusion, capture them with accurate timestamps and descriptive bullets.`;
+
+    const response = await model.generateContent(prompt);
+    const addition = (await response.response.text()).trim();
+
+    if (addition) {
+      const combined = `${content.trim()}\n\n${addition}`;
+      const updatedMax = extractMaxTimestampInSeconds(combined) || maxTimestamp;
+      if (updatedMax > maxTimestamp + 60) {
+        logger.debug('🧩 Study notes coverage addendum generated', {
+          videoUrl,
+          previousEnd: maxTimestamp,
+          newEnd: updatedMax,
+          durationSeconds,
+        });
+        return combined;
+      }
+      logger.warn('Study notes coverage addendum did not extend timestamps', {
+        videoUrl,
+        previousEnd: maxTimestamp,
+        attemptedEnd: updatedMax,
+      });
+    }
+  } catch (error: any) {
+    logger.warn('Study notes coverage extension failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return content;
+}
+
+async function generateStudyNotesBriefFromStandard(standardContent: string): Promise<string> {
+  try {
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 3000,
+      },
+    });
+
+    const prompt = `Condense the following study notes while keeping the exact headings and order. For each section, keep only the most critical bullets (roughly half the length) and preserve timestamps. Return only the condensed markdown.
+
+${standardContent}`;
+
+    const response = await model.generateContent(prompt);
+    const brief = (await response.response.text()).trim();
+    if (brief) {
+      return brief;
+    }
+  } catch (error: any) {
+    logger.warn('Study notes brief generation failed, falling back to heuristic', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  const lines = standardContent.split('\n').filter(Boolean);
+  return lines.slice(0, Math.ceil(lines.length * 0.5)).join('\n');
+}
+
+async function generateStudyNotesComprehensiveAddendum(
+  standardContent: string,
+  videoDurationSeconds: number
+): Promise<string> {
+  try {
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 4096,
+      },
+    });
+
+    const lastTimestamp = extractMaxTimestampInSeconds(standardContent);
+    const prompt = `You are enriching study notes for a video tutorial. Below are the base notes. Create an "Expanded Insights" addendum that adds deeper explanations, examples, or practical tips for each major section. Maintain the existing order and headings, adding new sub-bullets or paragraphs clearly labeled (for example, "Additional Detail" or "Deep Dive") under the relevant sections. Do not repeat existing bullets. If timestamps are available, continue using them where appropriate. The full video runs ${videoDurationSeconds ? formatTimestamp(videoDurationSeconds) : 'over 50 minutes'}, and the current notes end around ${lastTimestamp ? formatTimestamp(lastTimestamp) : 'midway'}.
+Return only the Markdown for the new addendum. Begin with a heading "## Expanded Insights" and use bullets or subheadings under it. Do not restate the original content.
+
+Base notes:
+${standardContent}`;
+
+    const response = await model.generateContent(prompt);
+    return (await response.response.text()).trim();
+  } catch (error: any) {
+    logger.warn('Study notes comprehensive addendum generation failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return '';
   }
 }
 
@@ -1076,9 +1218,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result, userId, durationSeconds);
+    let verbosityVersions = await generateAllVerbosityLevels(videoUrl, template, result, userId, durationSeconds);
     logger.info('✅ All verbosity levels generated successfully');
-    
+
+    if (selectedTemplate === 'study-notes') {
+      const standardWithCoverage = await ensureStudyNotesCoverage(
+        verbosityVersions.standard,
+        videoUrl,
+        durationSeconds || processingResult.metadata?.videoDuration || 0
+      );
+
+      const briefFromStandard = await generateStudyNotesBriefFromStandard(standardWithCoverage);
+      const comprehensiveAddendum = await generateStudyNotesComprehensiveAddendum(
+        standardWithCoverage,
+        durationSeconds || processingResult.metadata?.videoDuration || 0
+      );
+      const comprehensiveCombined = comprehensiveAddendum.trim()
+        ? `${standardWithCoverage.trim()}
+
+${comprehensiveAddendum.trim()}`
+        : standardWithCoverage;
+
+      verbosityVersions = {
+        brief: briefFromStandard,
+        standard: standardWithCoverage,
+        comprehensive: comprehensiveCombined,
+      };
+    }
+
     // 🔗 POST-PROCESS: Convert plain text timestamps to clickable YouTube links
     logger.debug('🔗 POST-PROCESS: Converting timestamps to clickable YouTube links...', { videoUrl });
     const processedVerbosityVersions = {

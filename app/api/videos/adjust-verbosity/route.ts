@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 function getModel(useAlternative: boolean = false) {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
   return genAI.getGenerativeModel({ 
-    model: useAlternative ? 'gemini-2.0-flash-exp' : 'gemini-2.0-flash-latest',
+    model: useAlternative ? 'gemini-2.0-flash-exp' : 'gemini-2.0-flash',
     generationConfig: {
       temperature: 0.1,
       maxOutputTokens: 4000,

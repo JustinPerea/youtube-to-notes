@@ -91,21 +91,21 @@ async function getModelForUser(userId: string): Promise<{
     switch (tier) {
       case 'free':
         return {
-          primaryModel: 'gemini-2.0-flash-latest',
+          primaryModel: 'gemini-2.0-flash',
           fallbackModel: 'gemini-2.0-flash-exp',
           tierMessage: 'Using our full-quality flash model tuned for efficiency'
         };
       
       case 'basic':
         return {
-          primaryModel: 'gemini-2.0-flash-latest',
+          primaryModel: 'gemini-2.0-flash',
           fallbackModel: 'gemini-2.0-flash-exp',
           tierMessage: 'Priority access to powerful video understanding with experimental fallback'
         };
       
       case 'pro':
         return {
-          primaryModel: 'gemini-2.0-flash-latest',
+          primaryModel: 'gemini-2.0-flash',
           fallbackModel: 'gemini-2.0-flash-exp',
           tierMessage: 'Premium access to cutting-edge AI models with enhanced video understanding'
         };
@@ -113,7 +113,7 @@ async function getModelForUser(userId: string): Promise<{
       default:
         // Default to free tier behavior
         return {
-          primaryModel: 'gemini-2.0-flash-latest',
+          primaryModel: 'gemini-2.0-flash',
           fallbackModel: 'gemini-2.0-flash-exp',
           tierMessage: 'Using standard processing model'
         };
@@ -122,7 +122,7 @@ async function getModelForUser(userId: string): Promise<{
     logger.warn('Error determining user model preference', { error: error instanceof Error ? error.message : String(error) });
     // Safe fallback to free tier
     return {
-      primaryModel: 'gemini-2.0-flash-latest',
+      primaryModel: 'gemini-2.0-flash',
       fallbackModel: 'gemini-2.0-flash-exp',
       tierMessage: 'Using reliable foundation model'
     };
@@ -686,7 +686,7 @@ ${startInstruction}`;
 async function processVideoInChunks(videoUrl: string, prompt: string, template: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
   const model = genAI.getGenerativeModel({ 
-    model: 'gemini-2.0-flash-latest',
+    model: 'gemini-2.0-flash',
     generationConfig: {
       temperature: 0.1,
       maxOutputTokens: 6000, // Smaller chunks for 2.0 flash
@@ -767,7 +767,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
 
 // Try alternative model if quota exceeded
 const getModel = (useAlternative = false) => {
-  const modelName = useAlternative ? 'gemini-2.0-flash-exp' : 'gemini-2.0-flash-latest';
+  const modelName = useAlternative ? 'gemini-2.0-flash-exp' : 'gemini-2.0-flash';
   return genAI.getGenerativeModel({ 
     model: modelName,
     generationConfig: {

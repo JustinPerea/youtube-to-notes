@@ -55,7 +55,7 @@ export class GeminiClient {
   private genAI: GoogleGenerativeAI | null = null;
   private initialized = false;
   private modelHierarchy: string[] = [
-    "gemini-2.0-flash-latest",     // Primary: Full-quality video model
+    "gemini-2.0-flash",            // Primary: Full-quality video model
     "gemini-2.0-flash-exp",        // Fallback: Experimental flash variant
     "gemini-1.5-pro"               // Final fallback: text-only but reliable
   ];

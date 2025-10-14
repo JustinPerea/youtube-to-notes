@@ -25,6 +25,49 @@ const DURATION_THRESHOLDS = {
   VERY_LONG: 7200 // 2 hours
 };
 
+const VIDEO_MODEL_PRIORITIES = ['gemini-2.0-flash', 'gemini-2.0-flash-exp'];
+
+function wait(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function generateVideoContentWithFallback({
+  genAI,
+  promptParts,
+  generationConfig,
+  label,
+}: {
+  genAI: GoogleGenerativeAI;
+  promptParts: any[];
+  generationConfig: { temperature: number; maxOutputTokens: number };
+  label: string;
+}) {
+  for (let i = 0; i < VIDEO_MODEL_PRIORITIES.length; i++) {
+    const modelName = VIDEO_MODEL_PRIORITIES[i];
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig,
+      });
+      const generation = await model.generateContent(promptParts);
+      if (modelName !== 'gemini-2.0-flash') {
+        console.warn(`ℹ️ ${label}: used fallback model ${modelName}`);
+      }
+      return { generation, modelName };
+    } catch (error: any) {
+      if (isQuotaError(error) && i < VIDEO_MODEL_PRIORITIES.length - 1) {
+        const delayMs = 2000 * (i + 1);
+        console.warn(`⚠️ ${label}: quota hit on ${modelName}. Retrying with fallback after ${delayMs}ms...`);
+        await wait(delayMs);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error('All video-capable models failed to generate content.');
+}
+
 // Chunk processing for long videos
 async function processVideoInChunks(
   videoUrl: string,
@@ -40,27 +83,18 @@ async function processVideoInChunks(
   // Determine chunk strategy based on video length
   let chunkStrategy;
   if (estimatedDuration <= DURATION_THRESHOLDS.MEDIUM) {
-    chunkStrategy = { chunks: 1, model: 'gemini-2.0-flash-latest', maxTokens: 32768 };
+    chunkStrategy = { chunks: 1, maxTokens: 32768 };
   } else if (estimatedDuration <= DURATION_THRESHOLDS.LONG) {
-    chunkStrategy = { chunks: 2, model: 'gemini-2.0-flash-exp', maxTokens: 32768 };
+    chunkStrategy = { chunks: 2, maxTokens: 32768 };
   } else {
-    chunkStrategy = { chunks: 4, model: 'gemini-2.0-flash-exp', maxTokens: 20000 };
+    chunkStrategy = { chunks: 4, maxTokens: 20000 };
   }
 
   const needsRichVideo = template.id === 'tutorial-guide' || template.id === 'presentation-slides';
-  const primaryModel = needsRichVideo ? 'gemini-2.0-flash-latest' : 'gemini-2.0-flash-exp';
-  chunkStrategy.model = primaryModel;
-  chunkStrategy.maxTokens = primaryModel.includes('flash-exp')
-    ? Math.min(chunkStrategy.maxTokens, 32768)
-    : 32768;
-
-  const model = genAI.getGenerativeModel({ 
-    model: chunkStrategy.model,
-    generationConfig: {
-      temperature: 0.1,
-      maxOutputTokens: chunkStrategy.maxTokens,
-    }
-  });
+  const generationConfig = {
+    temperature: 0.1,
+    maxOutputTokens: needsRichVideo ? 32768 : chunkStrategy.maxTokens,
+  };
 
   return new ReadableStream({
     async start(controller) {
@@ -74,9 +108,28 @@ async function processVideoInChunks(
         ));
 
         if (chunkStrategy.chunks === 1) {
-          await processSingleChunk(controller, model, videoUrl, template, estimatedDuration, userId, transcriptAvailable);
+          await processSingleChunk(
+            controller,
+            genAI,
+            videoUrl,
+            template,
+            estimatedDuration,
+            userId,
+            transcriptAvailable,
+            generationConfig
+          );
         } else {
-          await processMultipleChunks(controller, model, videoUrl, template, chunkStrategy.chunks, estimatedDuration, userId, transcriptAvailable);
+          await processMultipleChunks(
+            controller,
+            genAI,
+            videoUrl,
+            template,
+            chunkStrategy.chunks,
+            estimatedDuration,
+            userId,
+            transcriptAvailable,
+            generationConfig
+          );
         }
 
         // Usage already tracked via atomic reservation system
@@ -120,12 +173,13 @@ async function processVideoInChunks(
 
 async function processSingleChunk(
   controller: ReadableStreamDefaultController,
-  model: any,
+  genAI: GoogleGenerativeAI,
   videoUrl: string,
   template: Template,
   estimatedDuration: number,
   userId: string,
-  transcriptAvailable: boolean
+  transcriptAvailable: boolean,
+  generationConfig: { temperature: number; maxOutputTokens: number }
 ) {
   controller.enqueue(new TextEncoder().encode(
     `data: ${JSON.stringify({ type: 'status', message: 'Analyzing video content...', progress: 30 })}\n\n`
@@ -133,15 +187,21 @@ async function processSingleChunk(
 
   const prompt = buildTemplatePrompt(template, estimatedDuration, videoUrl, transcriptAvailable);
 
-  const generation = await model.generateContent([
-    prompt,
-    {
-      fileData: {
-        mimeType: 'video/*',
-        fileUri: videoUrl
-      }
-    }
-  ]);
+  const { generation, modelName } = await generateVideoContentWithFallback({
+    genAI,
+    promptParts: [
+      prompt,
+      {
+        fileData: {
+          mimeType: 'video/*',
+          fileUri: videoUrl,
+        },
+      },
+    ],
+    generationConfig,
+    label: `Single chunk generation (${template.id})`,
+  });
+  console.log(`✅ Single chunk generated with ${modelName}`);
 
   const response = await generation.response;
   const tokenUsage = response.usageMetadata?.totalTokenCount;
@@ -183,13 +243,14 @@ async function processSingleChunk(
 
 async function processMultipleChunks(
   controller: ReadableStreamDefaultController,
-  model: any,
+  genAI: GoogleGenerativeAI,
   videoUrl: string,
   template: Template,
   chunkCount: number,
   estimatedDuration: number,
   userId: string,
-  transcriptAvailable: boolean
+  transcriptAvailable: boolean,
+  generationConfig: { temperature: number; maxOutputTokens: number }
 ) {
   const chunks: Array<{ index: number; content: string; timestamp: number; chunkStartSeconds: number; chunkEndSeconds: number }> = [];
   const chunkDuration = estimatedDuration / chunkCount;
@@ -210,29 +271,35 @@ async function processMultipleChunks(
     const chunkEndSeconds = Math.min(estimatedDuration, Math.floor(chunkDuration * (i + 1)));
     
     try {
-      const generation = await model.generateContent([
-        chunkPrompt,
-        {
-          fileData: {
-            mimeType: 'video/*',
-            fileUri: videoUrl
-          }
-        }
-      ]);
+      const { generation, modelName } = await generateVideoContentWithFallback({
+        genAI,
+        promptParts: [
+          chunkPrompt,
+          {
+            fileData: {
+              mimeType: 'video/*',
+              fileUri: videoUrl,
+            },
+          },
+        ],
+        generationConfig,
+        label: `Chunk ${i + 1}/${chunkCount} (${template.id})`,
+      });
+      console.log(`✅ Chunk ${i + 1}/${chunkCount} generated with ${modelName}`);
 
       const response = await generation.response;
       const chunkContent = await response.text();
-    chunks.push({
-      index: i,
-      content: chunkContent,
-      timestamp: Date.now(),
-      chunkStartSeconds,
-      chunkEndSeconds
-    });
+      chunks.push({
+        index: i,
+        content: chunkContent,
+        timestamp: Date.now(),
+        chunkStartSeconds,
+        chunkEndSeconds,
+      });
 
       // Add delay between chunks to avoid rate limiting
       if (i < chunkCount - 1) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await wait(2000);
       }
     } catch (error: any) {
       console.error(`Chunk ${i + 1} processing failed:`, error);
@@ -579,11 +646,7 @@ async function createVerbosityLevels(originalContent: string, videoUrl: string) 
 }
 
 async function generateWithFallback(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
-  const models = [
-    'gemini-2.0-flash-latest',
-    'gemini-2.0-flash-exp',
-    'gemini-1.5-pro'
-  ];
+  const models = ['gemini-2.0-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro'];
 
   for (const modelName of models) {
     try {

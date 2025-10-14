@@ -31,6 +31,13 @@ function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function isModelNotFoundError(error: any): boolean {
+  if (!error) return false;
+  const message = typeof error.message === 'string' ? error.message : '';
+  const status = typeof error.status === 'number' ? error.status : undefined;
+  return status === 404 || message.includes('not found') || message.includes('is not supported');
+}
+
 async function generateVideoContentWithFallback({
   genAI,
   promptParts,
@@ -55,11 +62,18 @@ async function generateVideoContentWithFallback({
       }
       return { generation, modelName };
     } catch (error: any) {
-      if (isQuotaError(error) && i < VIDEO_MODEL_PRIORITIES.length - 1) {
-        const delayMs = 2000 * (i + 1);
-        console.warn(`⚠️ ${label}: quota hit on ${modelName}. Retrying with fallback after ${delayMs}ms...`);
-        await wait(delayMs);
-        continue;
+      const hasAnotherModel = i < VIDEO_MODEL_PRIORITIES.length - 1;
+      if (hasAnotherModel) {
+        if (isQuotaError(error)) {
+          const delayMs = 2000 * (i + 1);
+          console.warn(`⚠️ ${label}: quota hit on ${modelName}. Retrying with fallback after ${delayMs}ms...`);
+          await wait(delayMs);
+          continue;
+        }
+        if (isModelNotFoundError(error)) {
+          console.warn(`⚠️ ${label}: model ${modelName} unavailable. Trying fallback model...`);
+          continue;
+        }
       }
       throw error;
     }
@@ -128,7 +142,8 @@ async function processVideoInChunks(
             estimatedDuration,
             userId,
             transcriptAvailable,
-            generationConfig
+            generationConfig,
+            effectiveMetadata
           );
         }
 
@@ -250,7 +265,8 @@ async function processMultipleChunks(
   estimatedDuration: number,
   userId: string,
   transcriptAvailable: boolean,
-  generationConfig: { temperature: number; maxOutputTokens: number }
+  generationConfig: { temperature: number; maxOutputTokens: number },
+  metadata?: Awaited<ReturnType<typeof fetchVideoMetadata>>
 ) {
   const chunks: Array<{ index: number; content: string; timestamp: number; chunkStartSeconds: number; chunkEndSeconds: number }> = [];
   const chunkDuration = estimatedDuration / chunkCount;
@@ -303,6 +319,21 @@ async function processMultipleChunks(
       }
     } catch (error: any) {
       console.error(`Chunk ${i + 1} processing failed:`, error);
+
+      if (isQuotaError(error) || isCredentialError(error) || isModelNotFoundError(error)) {
+        console.warn(
+          `⚠️ Critical error during chunk ${i + 1}. Switching entire request to synchronous fallback path.`
+        );
+        await processWithSynchronousFallback({
+          controller,
+          videoUrl,
+          template,
+          userId,
+          metadata,
+        });
+        return;
+      }
+
       chunks.push({
         index: i,
         content: `[Chunk ${i + 1} processing failed: ${error.message}]`,
@@ -916,11 +947,16 @@ export async function POST(request: NextRequest) {
 
     console.log(`Processing ${isLongVideo ? 'long' : 'standard'} video (est. ${estimatedDuration}s) with template:`, selectedTemplate);
 
-    if (!isLongVideo) {
-      // For short videos, redirect to standard processing
+    const requiresSynchronousProcessing = selectedTemplate === 'study-notes';
+
+    if (!isLongVideo || requiresSynchronousProcessing) {
+      // For short videos or templates that are more reliable via synchronous pipeline,
+      // redirect the caller to the standard processing route.
       return NextResponse.json({ 
         redirect: '/api/videos/process',
-        message: 'Video is suitable for standard processing'
+        message: requiresSynchronousProcessing
+          ? 'Study Notes template uses the reliable transcript pipeline for long videos'
+          : 'Video is suitable for standard processing'
       });
     }
 

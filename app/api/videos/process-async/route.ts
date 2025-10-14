@@ -7,6 +7,7 @@ import { getApiSessionWithDatabase } from '@/lib/auth-utils';
 import { reserveUsage } from '@/lib/subscription/service';
 import { convertTimestampsToLinks, formatTimestamp } from '@/lib/timestamps/utils';
 import { enforceNonConversationalOpening, sanitizeTutorialGuideOutput } from '@/lib/output/sanitizers';
+import { normalizeMarkdownContent } from '@/lib/output/markdown';
 import { NotesService } from '@/lib/services/notes';
 import { geminiClient } from '@/lib/gemini/client';
 import { fetchVideoMetadata } from '@/lib/services/youtube-api';
@@ -418,7 +419,12 @@ function buildStreamResultPayload({
     comprehensive: content,
   };
 
-  const sanitize = (value: string) => sanitizeTutorialGuideOutput(value, templateId, '# Tutorial Guide:');
+  const sanitize = (value: string) =>
+    sanitizeTutorialGuideOutput(
+      normalizeMarkdownContent(value),
+      templateId,
+      '# Tutorial Guide:'
+    );
 
   const sanitizedVerbosityLevels = {
     brief: convertTimestampsToLinks(sanitize(allVerbosityLevels.brief), videoUrl),
@@ -557,17 +563,17 @@ async function createVerbosityLevels(originalContent: string, videoUrl: string) 
   try {
     const levels = await generateVerbosityFromText(originalContent);
     return {
-      brief: convertTimestampsToLinks(levels.brief, videoUrl),
-      standard: convertTimestampsToLinks(levels.standard, videoUrl),
-      comprehensive: convertTimestampsToLinks(levels.comprehensive, videoUrl),
+      brief: convertTimestampsToLinks(normalizeMarkdownContent(levels.brief), videoUrl),
+      standard: convertTimestampsToLinks(normalizeMarkdownContent(levels.standard), videoUrl),
+      comprehensive: convertTimestampsToLinks(normalizeMarkdownContent(levels.comprehensive), videoUrl),
     };
   } catch (error) {
     console.warn('Verbosity level generation failed, falling back to heuristic content', error);
     const fallbackLevels = createHeuristicVerbosityLevels(originalContent);
     return {
-      brief: convertTimestampsToLinks(fallbackLevels.brief, videoUrl),
-      standard: convertTimestampsToLinks(fallbackLevels.standard, videoUrl),
-      comprehensive: convertTimestampsToLinks(fallbackLevels.comprehensive, videoUrl),
+      brief: convertTimestampsToLinks(normalizeMarkdownContent(fallbackLevels.brief), videoUrl),
+      standard: convertTimestampsToLinks(normalizeMarkdownContent(fallbackLevels.standard), videoUrl),
+      comprehensive: convertTimestampsToLinks(normalizeMarkdownContent(fallbackLevels.comprehensive), videoUrl),
     };
   }
 }

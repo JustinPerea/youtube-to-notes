@@ -11,6 +11,7 @@ import { db } from '@/lib/db/drizzle';
 import { videos, users } from '@/lib/db/schema';
 import { convertTimestampsToLinks } from '@/lib/timestamps/utils';
 import { enforceNonConversationalOpening, sanitizeTutorialGuideOutput } from '@/lib/output/sanitizers';
+import { normalizeMarkdownContent } from '@/lib/output/markdown';
 import { fetchVideoMetadata } from '@/lib/services/youtube-api';
 import { eq, and } from 'drizzle-orm';
 import { extractVideoId } from '@/lib/utils/youtube';
@@ -1082,15 +1083,27 @@ export async function POST(request: NextRequest) {
     logger.debug('🔗 POST-PROCESS: Converting timestamps to clickable YouTube links...', { videoUrl });
     const processedVerbosityVersions = {
       brief: convertTimestampsToLinks(
-        sanitizeTutorialGuideOutput(verbosityVersions.brief, selectedTemplate, '# Tutorial Guide:'),
+        sanitizeTutorialGuideOutput(
+          normalizeMarkdownContent(verbosityVersions.brief),
+          selectedTemplate,
+          '# Tutorial Guide:'
+        ),
         videoUrl
       ),
       standard: convertTimestampsToLinks(
-        sanitizeTutorialGuideOutput(verbosityVersions.standard, selectedTemplate, '# Tutorial Guide:'),
+        sanitizeTutorialGuideOutput(
+          normalizeMarkdownContent(verbosityVersions.standard),
+          selectedTemplate,
+          '# Tutorial Guide:'
+        ),
         videoUrl
       ),
       comprehensive: convertTimestampsToLinks(
-        sanitizeTutorialGuideOutput(verbosityVersions.comprehensive, selectedTemplate, '# Tutorial Guide:'),
+        sanitizeTutorialGuideOutput(
+          normalizeMarkdownContent(verbosityVersions.comprehensive),
+          selectedTemplate,
+          '# Tutorial Guide:'
+        ),
         videoUrl
       )
     };

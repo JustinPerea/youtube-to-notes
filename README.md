@@ -276,9 +276,3 @@ v0.2.0  Latest Sep 13, 2025
 * Do not share my personal information
 
  You can't perform that action at this time.
-
----
-
-**URGENT: Force redeploy to fix Vercel connection issue - October 20, 2025**
-
-This commit is being made to trigger a redeploy of the correct youtube-to-notes repository to fix the Vercel deployment that is currently showing the wrong website (EmojiGen instead of YouTube-to-Notes).

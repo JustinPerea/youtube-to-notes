@@ -9,16 +9,18 @@ YouTube-to-Notes is an AI-powered web application that converts YouTube videos i
 This project uses a sophisticated multi-agent workflow for development:
 
 ### Agent Types
-- **Coordinator Agent**: Task delegation and orchestration
-- **Coding Agent**: Primary code generation and implementation
-- **Frontend Agent**: UI/UX implementation and user experience
-- **Backend Agent**: API development and server-side logic
-- **Research Agent**: Technology exploration and solution research
-- **QA Agent**: Code quality assessment and testing
-- **Debugging Agent**: Error analysis and fixing
-- **Memory Context Agent**: Project state tracking and documentation
+
+* **Coordinator Agent**: Task delegation and orchestration
+* **Coding Agent**: Primary code generation and implementation
+* **Frontend Agent**: UI/UX implementation and user experience
+* **Backend Agent**: API development and server-side logic
+* **Research Agent**: Technology exploration and solution research
+* **QA Agent**: Code quality assessment and testing
+* **Debugging Agent**: Error analysis and fixing
+* **Memory Context Agent**: Project state tracking and documentation
 
 ### Workflow Process
+
 1. **Task Delegation**: Coordinator analyzes tasks and delegates to appropriate agents
 2. **Parallel Execution**: Multiple agents work simultaneously when needed
 3. **Quality Assurance**: All code goes through QA evaluation
@@ -28,14 +30,16 @@ This project uses a sophisticated multi-agent workflow for development:
 ## Phase 1 MVP Features
 
 ### Core Functionality
-- ✅ YouTube URL processing with Gemini AI models
-- ✅ Template-based content generation (no AI chat)
-- ✅ Basic summary generation
-- ✅ Simple web interface
-- ✅ User authentication (basic)
-- ✅ Freemium tier system (5 notes/month free)
+
+* ✅ YouTube URL processing with Gemini AI models
+* ✅ Template-based content generation (no AI chat)
+* ✅ Basic summary generation
+* ✅ Simple web interface
+* ✅ User authentication (basic)
+* ✅ Freemium tier system (5 notes/month free)
 
 ### Templates Available
+
 1. **Basic Summary**: Concise video overview
 2. **Study Notes**: Structured learning content
 3. **Presentation Slides**: Key points for slides
@@ -45,26 +49,29 @@ This project uses a sophisticated multi-agent workflow for development:
 ## Technical Stack
 
 ### Frontend
-- **Framework**: Next.js 14 with App Router
-- **Styling**: Tailwind CSS + Shadcn/ui
-- **State Management**: Zustand
-- **Authentication**: NextAuth.js
-- **Deployment**: Vercel
+
+* **Framework**: Next.js 14 with App Router
+* **Styling**: Tailwind CSS + Shadcn/ui
+* **State Management**: Zustand
+* **Authentication**: NextAuth.js
+* **Deployment**: Vercel
 
 ### Backend
-- **Runtime**: Node.js 18+
-- **Framework**: Next.js API routes
-- **Database**: Supabase (PostgreSQL)
-- **AI Integration**: Google Gemini AI models (2.0 Flash, 1.5 Flash)
-- **Queue System**: Bull/BullMQ (Redis)
-- **File Storage**: Supabase Storage
+
+* **Runtime**: Node.js 18+
+* **Framework**: Next.js API routes
+* **Database**: Supabase (PostgreSQL)
+* **AI Integration**: Google Gemini AI models (2.0 Flash, 1.5 Flash)
+* **Queue System**: Bull/BullMQ (Redis)
+* **File Storage**: Supabase Storage
 
 ### DevOps
-- **Version Control**: Git
-- **Testing**: Playwright (E2E) + Jest (Unit)
-- **Linting**: ESLint + Prettier
-- **Type Safety**: TypeScript
-- **Monitoring**: Vercel Analytics
+
+* **Version Control**: Git
+* **Testing**: Playwright (E2E) + Jest (Unit)
+* **Linting**: ESLint + Prettier
+* **Type Safety**: TypeScript
+* **Monitoring**: Vercel Analytics
 
 ## Project Structure
 
@@ -97,24 +104,27 @@ youtube-to-notes/
 └── tests/                # Test files
     ├── e2e/             # End-to-end tests
     └── unit/            # Unit tests
+
 ```
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- npm or yarn
-- Google Cloud account (for Gemini API)
-- Supabase account
+
+* Node.js 18+
+* npm or yarn
+* Google Cloud account (for Gemini API)
+* Supabase account
 
 ### Installation
+
 1. Clone the repository
 2. Install dependencies: `npm install`
 3. Set up environment variables
 4. Run development server: `npm run dev`
 
 ### Environment Variables
-```env
+
 # Gemini API
 GOOGLE_GEMINI_API_KEY=your_gemini_api_key
 
@@ -150,27 +160,29 @@ API_ENCRYPTION_KEY=
 NEXT_PUBLIC_ADSENSE_ENABLED=false
 # Publisher ID without the `ca-pub-` prefix
 NEXT_PUBLIC_ADSENSE_PUBLISHER_ID=
-```
 
 ### Vercel Deployment Notes (v0.2.0)
-- Vercel sets `NODE_ENV` and `VERCEL_ENV` automatically; you do not need to define them.
-- Set `DEBUG_ENDPOINTS_ENABLED=false` in both Production and Preview to gate `/api/debug/*`.
-- See `VERCEL_ENV_SETUP.md` for the complete list and guidance.
+
+* Vercel sets `NODE_ENV` and `VERCEL_ENV` automatically; you do not need to define them.
+* Set `DEBUG_ENDPOINTS_ENABLED=false` in both Production and Preview to gate `/api/debug/*`.
+* See `VERCEL_ENV_SETUP.md` for the complete list and guidance.
 
 ## Agent Workflow Commands
 
 ### Development Commands
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run test` - Run all tests
-- `npm run test:e2e` - Run E2E tests
-- `npm run lint` - Run linting
+
+* `npm run dev` \- Start development server
+* `npm run build` \- Build for production
+* `npm run start` \- Start production server
+* `npm run test` \- Run all tests
+* `npm run test:e2e` \- Run E2E tests
+* `npm run lint` \- Run linting
 
 ### Agent-Specific Commands
-- `npm run agent:research` - Start research agent
-- `npm run agent:qa` - Run QA checks
-- `npm run agent:memory` - Update memory context
+
+* `npm run agent:research` \- Start research agent
+* `npm run agent:qa` \- Run QA checks
+* `npm run agent:memory` \- Update memory context
 
 ## Development Workflow
 
@@ -183,6 +195,7 @@ NEXT_PUBLIC_ADSENSE_PUBLISHER_ID=
 ## Contributing
 
 This project uses an agent-based development workflow. All contributions go through:
+
 1. Agent delegation and orchestration
 2. Parallel development execution
 3. Quality assurance evaluation
@@ -192,8 +205,80 @@ This project uses an agent-based development workflow. All contributions go thro
 ## License
 
 MIT License - see LICENSE file for details
+
 # Force Vercel redeploy - Fri Aug 29 12:27:40 EDT 2025
 
 ## Changelog
 
 See `CHANGELOG.md` for a summary of recent changes, security hardening, and behavioral updates.
+
+## About
+
+youtube-to-notes.vercel.app 
+
+### Resources
+
+ Readme 
+
+###  Uh oh!
+
+There was an error while loading. Please reload this page.
+
+Activity 
+
+### Stars
+
+**0** stars 
+
+### Watchers
+
+**0** watching 
+
+### Forks
+
+**0** forks 
+
+ Report repository 
+
+## Releases1
+
+v0.2.0  Latest Sep 13, 2025 
+
+## Packages0
+
+ No packages published   
+
+## Contributors2
+
+* @JustinPerea **JustinPerea** Justin Perea
+* @claude **claude** Claude
+
+## Languages
+
+* TypeScript 94.4%
+* JavaScript 4.5%
+* Other 1.1%
+
+## Footer
+
+ © 2025 GitHub, Inc. 
+
+### Footer navigation
+
+* Terms
+* Privacy
+* Security
+* Status
+* Community
+* Docs
+* Contact
+* Manage cookies
+* Do not share my personal information
+
+ You can't perform that action at this time.
+
+---
+
+**URGENT: Force redeploy to fix Vercel connection issue - October 20, 2025**
+
+This commit is being made to trigger a redeploy of the correct youtube-to-notes repository to fix the Vercel deployment that is currently showing the wrong website (EmojiGen instead of YouTube-to-Notes).

@@ -68,6 +68,7 @@
     "lib/mcp/playwright-controller.ts",
     "lib/mcp/playwright-agent.ts",
     "scripts/demo-playwright.ts",
-    "google-cloud-mcp/**/*"
+    "google-cloud-mcp/**/*",
+    "drizzle.config.ts"
   ]
 }

@@ -926,160 +926,6 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, just the JSON st
     }
   }
 
-  /**
-   * ENHANCED: Generate transcript from video using Gemini's direct video processing
-   * This now attempts to process the video content directly for audio transcription
-   */
-  async generateTranscriptFromVideo(videoUrl: string): Promise<{
-    success: boolean;
-    transcript?: string;
-    segments?: Array<{
-      startTime: number;
-      endTime: number;
-      text: string;
-      confidence: number;
-    }>;
-    error?: string;
-  }> {
-    try {
-      logger.debug('🎤 Attempting ENHANCED transcript generation with audio-focused analysis...');
-      
-      // Extract video ID and analyze URL patterns
-      const videoIdMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-      const videoId = videoIdMatch ? videoIdMatch[1] : 'unknown';
-      
-      // ENHANCED: Create audio-focused prompt for better transcript generation
-      const audioTranscriptPrompt = `You are an expert audio transcription specialist. Process this video with EXCLUSIVE FOCUS on extracting the spoken audio content.
-
-Video URL: ${videoUrl} (ID: ${videoId})
-
-PRIMARY OBJECTIVE: Generate a high-quality transcript by focusing solely on the audio/speech content.
-
-AUDIO ANALYSIS INSTRUCTIONS:
-1. IGNORE visual elements completely - focus only on spoken words
-2. Listen carefully to dialogue, narration, commentary, and all spoken content
-3. Identify speaker changes and different voices when possible
-4. Capture technical terminology, proper nouns, and specialized language accurately
-5. Note audio quality indicators (clear speech vs background noise)
-6. Extract timing information when speech occurs
-7. Identify pauses, emphasis, and natural speech patterns
-
-TRANSCRIPT FORMAT REQUIREMENTS:
-[MM:SS] Speaker: [Exact spoken content]
-[MM:SS] Speaker: [Continue with actual dialogue]
-[MM:SS] [New Speaker/Voice]: [Different speaker content]
-
-QUALITY STANDARDS:
-- Prioritize ACCURACY of spoken words over visual content
-- Use natural speech patterns and conversational flow
-- Include "um," "uh," and other verbal fillers if they're frequent
-- Mark unclear speech as [inaudible] rather than guessing
-- Use proper punctuation based on speech patterns and tone
-
-AUDIO CONTEXT AWARENESS:
-- Educational/lecture content: Focus on key concepts and explanations
-- Conversational content: Capture dialogue and discussion flow
-- Technical content: Preserve technical terms and acronyms accurately
-- Narrative content: Follow storytelling structure
-
-Generate a comprehensive transcript that captures ALL spoken content with high accuracy. This transcript will be used for hybrid processing with video analysis.`;
-
-      // Try to process the video directly for better transcript generation
-      let result;
-      try {
-        console.log('🎯 Attempting direct video processing for audio extraction...');
-        
-        // Use Gemini's video processing capabilities with audio focus and fallback
-        const videoResult = await this.generateContentWithFallback([
-          audioTranscriptPrompt,
-          {
-            fileData: {
-              mimeType: 'video/*',
-              fileUri: videoUrl
-            }
-          }
-        ], true);
-        result = { response: { text: () => videoResult.text } };
-      } catch (directError) {
-        console.log('⚠️ Direct video processing failed, using enhanced text-based approach...');
-        
-        // Enhanced fallback: Use more sophisticated prompt
-        const enhancedFallbackPrompt = `${audioTranscriptPrompt}
-
-Since direct video access failed, generate a high-quality estimated transcript based on:
-1. Video URL patterns and metadata
-2. Common content structures for this type of video
-3. Typical speaking patterns and educational flow
-
-Create a realistic, well-structured transcript that would be suitable for educational note-taking.
-Mark clearly as [GENERATED TRANSCRIPT] and maintain professional quality.`;
-
-        const fallbackResult = await this.generateContentWithFallback(enhancedFallbackPrompt, false);
-        result = { response: { text: () => fallbackResult.text } };
-      }
-
-      const response = await result.response;
-      const transcript = response.text();
-
-      if (!transcript || transcript.trim().length === 0) {
-        return {
-          success: false,
-          error: 'Failed to generate enhanced transcript'
-        };
-      }
-
-      // Parse segments from enhanced transcript
-      const segments = this.parseTranscriptSegments(transcript);
-
-      console.log(`✅ ENHANCED transcript generated: ${transcript.length} characters, ${segments.length} segments`);
-      console.log('🎯 Audio-focused processing completed - ready for hybrid analysis');
-
-      return {
-        success: true,
-        transcript: transcript.trim(),
-        segments
-      };
-
-    } catch (error) {
-      console.error('❌ Enhanced transcript generation failed:', error);
-      
-      // Final fallback to basic pattern-based generation
-      console.log('🔄 Falling back to basic pattern-based generation...');
-      
-      try {
-        const basicPrompt = `Generate a basic transcript structure for YouTube video: ${videoUrl}
-
-Create a simple transcript with:
-[00:00] Speaker: Introduction and welcome
-[00:30] Speaker: Main topic introduction
-[01:00] Speaker: Key concepts explanation
-[02:00] Speaker: Examples and demonstration
-[03:00] Speaker: Summary and conclusion
-
-Keep it realistic and educational. Mark as [BASIC GENERATED TRANSCRIPT].`;
-
-        const basicResult = await this.generateContentWithFallback(basicPrompt, false);
-        const basicTranscript = basicResult.text;
-        
-        if (basicTranscript && basicTranscript.trim().length > 0) {
-          const basicSegments = this.parseTranscriptSegments(basicTranscript);
-          
-          return {
-            success: true,
-            transcript: `[BASIC GENERATED TRANSCRIPT - Audio analysis unavailable]\n\n${basicTranscript.trim()}`,
-            segments: basicSegments
-          };
-        }
-      } catch (basicError) {
-        console.error('❌ Even basic fallback failed:', basicError);
-      }
-      
-      return {
-        success: false,
-        error: `Enhanced transcript generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      };
-    }
-  }
 
   /**
    * Parse transcript segments from Gemini-generated transcript
@@ -1221,6 +1067,7 @@ Please provide the best possible analysis you can given the limitations, and cle
   /**
    * Enhanced hybrid processing that combines transcript AND video analysis
    * This provides superior note generation by leveraging multiple data sources
+   * Implements smart chunking for long videos to handle token limits
    */
   private async generateContentHybrid(prompt: string, videoUrl: string, metadata: any): Promise<{
     text: string;
@@ -1229,18 +1076,19 @@ Please provide the best possible analysis you can given the limitations, and cle
     dataSourcesUsed: string[];
   }> {
     try {
-      console.log('🚀 Starting HYBRID processing: Transcript + Video Analysis + Rich Metadata');
-      
+      console.log('🚀 Starting HYBRID processing with smart chunking');
+
       const dataSourcesUsed: string[] = [];
       let totalTokenUsage = 0;
-      
-      // Step 1: Extract official transcript with enhanced fallback
-      console.log('📝 Step 1/3: Extracting official YouTube transcript...');
+      const videoDuration = metadata.videoDuration || 0;
+
+      // Step 1: Extract transcript with fallback
+      console.log('📝 Step 1/4: Extracting transcript...');
       const transcriptResult = await extractTranscript(videoUrl);
-      
+
       let transcriptContent = '';
       let transcriptSource = 'none';
-      
+
       if (transcriptResult.success && transcriptResult.fullText) {
         transcriptContent = cleanTranscriptText(transcriptResult.fullText);
         dataSourcesUsed.push('YouTube Official Captions');
@@ -1248,165 +1096,257 @@ Please provide the best possible analysis you can given the limitations, and cle
         console.log(`✅ Official transcript extracted: ${transcriptResult.metadata?.wordCount} words`);
       } else {
         console.log(`⚠️ Official transcript extraction failed: ${transcriptResult.error}`);
-        console.log('🎤 Attempting enhanced audio-focused transcript generation...');
-        
-        // ENHANCED: Generate high-quality transcript for videos without captions
+        console.log('🎤 Attempting Gemini transcript generation...');
+
         const fallbackResult = await this.generateTranscriptFromVideo(videoUrl);
         if (fallbackResult.success && fallbackResult.transcript) {
           transcriptContent = fallbackResult.transcript;
           dataSourcesUsed.push('Gemini Audio-Focused Transcript');
           transcriptSource = 'gemini-audio';
-          console.log(`✅ Enhanced audio transcript generated: ${transcriptContent.length} characters`);
+          console.log(`✅ Gemini transcript generated: ${transcriptContent.length} characters`);
         } else {
-          console.log(`❌ Enhanced transcript generation also failed: ${fallbackResult.error}`);
-          // Continue with video-only analysis - still can do hybrid with metadata
+          console.log(`❌ Transcript generation failed: ${fallbackResult.error}`);
           transcriptSource = 'unavailable';
         }
       }
-      
-      // Step 2: Generate video analysis (visual context)
-      console.log('🎥 Step 2/3: Analyzing video for visual context...');
-      let videoAnalysis = '';
-      try {
-        // Create an intelligent video analysis prompt based on metadata
-        const videoType = metadata.youtubeMetadata?.tags?.find((tag: string) => 
-          ['tutorial', 'lecture', 'demo', 'presentation', 'webinar'].includes(tag.toLowerCase())
-        ) || 'educational';
-        
-        const videoAnalysisPrompt = `Analyze this ${videoType} video for VISUAL and AUDIO context that complements the transcript. 
 
-TARGET ANALYSIS DEPTH: Focus on elements that are NOT captured in the transcript text but are crucial for understanding.
+      // Step 2: Determine if chunking is needed based on duration
+      console.log('📊 Step 2/4: Analyzing video duration for chunking strategy...');
+      const needsChunking = videoDuration > 2400; // 40+ minutes
 
-PRIORITY AREAS:
-1. Visual Elements: slides, charts, diagrams, code snippets, demonstrations, screen recordings, text overlays
-2. Audio Context: tone changes, emphasis, pacing shifts, background sounds that indicate transitions
-3. Presentation Style: teaching methodology, audience interaction cues, content organization patterns
-4. Visual Information: any text, numbers, graphics, or visual demonstrations that supplement spoken content
+      if (needsChunking) {
+        console.log(`⚡ Long video detected (${Math.round(videoDuration / 60)} minutes) - using smart chunking`);
 
-Video URL: ${videoUrl}
-Video Type: ${videoType}
-Duration: ${Math.floor(metadata.videoDuration / 60)}:${(metadata.videoDuration % 60).toString().padStart(2, '0')}
-Has Rich Metadata: ${metadata.youtubeMetadata?.contentRichness || 'unknown'}
+        // Step 3: Process in chunks for long videos
+        const chunkResults = await this.processVideoInChunks(
+          videoUrl,
+          prompt,
+          transcriptContent,
+          metadata
+        );
 
-STRUCTURED OUTPUT FORMAT:
-=== VISUAL ELEMENTS ===
-[Specific visual components that add information beyond the transcript]
+        totalTokenUsage = chunkResults.totalTokenUsage;
+        dataSourcesUsed.push(...chunkResults.dataSourcesUsed);
 
-=== AUDIO DELIVERY ===
-[Tone, pacing, emphasis patterns that affect meaning]
-
-=== PRESENTATION METHODOLOGY ===
-[Teaching/presentation approach and organizational structure]
-
-=== SUPPLEMENTARY VISUAL INFORMATION ===
-[Text, data, graphics visible on screen that aren't in transcript]
-
-=== HYBRID SYNTHESIS NOTES ===
-[How visual and transcript elements combine for fuller understanding]
-
-Keep each section focused and actionable - this will be synthesized with transcript for superior note quality.`;
-        
-        const videoResult = await this.generateContentWithFallback(videoAnalysisPrompt, true);
-        videoAnalysis = videoResult.text;
-        
-        if (videoAnalysis && videoAnalysis.trim().length > 100) {
-          totalTokenUsage += videoResult.tokenUsage;
-          dataSourcesUsed.push('Gemini Video Analysis');
-          console.log(`✅ Enhanced video analysis completed: ${videoAnalysis.length} characters`);
-        } else {
-          console.log('⚠️ Video analysis produced minimal results');
-          videoAnalysis = `[Visual analysis unavailable for ${videoType} video - processing with transcript and metadata only]`;
-        }
-      } catch (error) {
-        console.error('⚠️ Video analysis failed:', error);
-        videoAnalysis = '[Video analysis unavailable - processing with transcript and metadata only]';
+        return {
+          text: chunkResults.mergedContent,
+          tokenUsage: totalTokenUsage,
+          processingMethod: 'hybrid',
+          dataSourcesUsed: [...new Set(dataSourcesUsed)] // Remove duplicates
+        };
       }
-      
-      // Step 3: Combine all data sources for comprehensive analysis
-      console.log('🧬 Step 3/3: Synthesizing multi-modal content...');
-      
-      // Add rich metadata context
-      const metadataContext = metadata.youtubeMetadata ? generateEnhancedContext(metadata.youtubeMetadata) : '';
-      if (metadataContext) {
-        dataSourcesUsed.push('YouTube Rich Metadata');
+
+      // Step 3: For shorter videos, process normally with combined context
+      console.log('🎥 Step 3/4: Processing standard-length video...');
+
+      // Combine transcript with video analysis
+      let enhancedPrompt = prompt;
+
+      if (transcriptContent) {
+        // Add transcript to prompt but limit size to avoid token issues
+        const maxTranscriptChars = 15000; // Roughly 3750 tokens
+        const truncatedTranscript = transcriptContent.length > maxTranscriptChars
+          ? transcriptContent.substring(0, maxTranscriptChars) + '\n[Transcript truncated for processing]'
+          : transcriptContent;
+
+        enhancedPrompt = `${prompt}\n\nVIDEO TRANSCRIPT:\n${truncatedTranscript}`;
       }
-      
-      // Build comprehensive prompt with all data sources
-      const hybridPrompt = `${prompt}
 
-=== HYBRID MULTI-MODAL PROCESSING ===
+      // Step 4: Generate content with enhanced context
+      console.log('🤖 Step 4/4: Generating final content...');
+      const result = await this.generateContentWithFallback(enhancedPrompt, !transcriptContent);
 
-You are processing a video using HYBRID INTELLIGENCE - combining transcript, visual analysis, and rich metadata. This approach provides superior note quality by leveraging multiple data sources simultaneously.
-
-=== DATA SOURCE 1: TRANSCRIPT (${transcriptSource.toUpperCase()}) ===
-${transcriptContent || '[Transcript unavailable - proceeding with video analysis and metadata only]'}
-
-=== DATA SOURCE 2: VISUAL & AUDIO ANALYSIS (Contextual Enhancement) ===
-${videoAnalysis}
-
-=== DATA SOURCE 3: YOUTUBE METADATA INTELLIGENCE (Content Authority & Context) ===
-${metadataContext}
-
-=== HYBRID SYNTHESIS PROCESSING INSTRUCTIONS ===
-
-**CONTENT AUTHORITY HIERARCHY:**
-${transcriptSource === 'youtube' 
-  ? '1. OFFICIAL TRANSCRIPT = Authoritative for all dialogue, quotes, specific statements' 
-  : transcriptSource === 'gemini-audio'
-  ? '1. AUDIO-FOCUSED TRANSCRIPT = High confidence for dialogue and spoken content (AI-generated)'
-  : '1. NO TRANSCRIPT AVAILABLE = Rely on visual analysis and metadata for content authority'
-}
-2. VISUAL ANALYSIS = Authoritative for visual elements, presentation style, non-verbal information
-3. METADATA = Authoritative for context, credibility assessment, topic categorization
-
-**SYNTHESIS METHODOLOGY:**
-${transcriptSource !== 'unavailable' 
-  ? '• **Dialogue Accuracy**: Use transcript as the primary source for all spoken content - preserve exact terminology and explanations' 
-  : '• **Visual-First Analysis**: Focus on visual elements and contextual clues since no transcript is available'
-}
-• **Visual Integration**: Enhance ${transcriptSource !== 'unavailable' ? 'transcript' : 'analysis'} with visual context - explain references to "this chart," "as you can see," "here on screen"
-• **Audio Context Enhancement**: Incorporate delivery style, emphasis patterns, and tonal shifts that affect meaning
-• **Comprehensive Understanding**: Create notes that capture the COMPLETE learning experience - both auditory and visual information
-• **Authority Assessment**: Use engagement metrics, channel credibility, and content tags to gauge information reliability
-• **Educational Optimization**: Structure content based on identified teaching methodology and presentation style
-
-**QUALITY ASSURANCE:**
-• Verify that visual elements complement rather than duplicate transcript information
-• Ensure all specific data, numbers, and technical terms come from authoritative sources
-• Maintain clear attribution when combining information from multiple sources
-• Prioritize information that enhances comprehension and learning outcomes
-
-**OUTPUT EXPECTATION:**
-Generate content that represents a synthesis of all data sources, creating notes that are demonstrably superior to single-source processing. The result should feel comprehensive, authoritative, and educationally optimized.
-
-This hybrid approach leverages the best of each data source to create premium-quality notes.`;
-      
-      // Process with Gemini using comprehensive prompt with fallback
-      const result = await this.generateContentWithFallback(hybridPrompt, false);
-      const text = result.text;
-      
-      totalTokenUsage += result.tokenUsage;
-      
-      logger.info(`🎆 HYBRID processing completed successfully!`);
-      console.log(`📋 Data sources used: ${dataSourcesUsed.join(', ')}`);
-      console.log(`📊 Generated content: ${text.length} characters, ${totalTokenUsage} total tokens`);
-      
       return {
-        text,
-        tokenUsage: totalTokenUsage,
+        text: result.text,
+        tokenUsage: result.tokenUsage,
         processingMethod: 'hybrid',
-        dataSourcesUsed
+        dataSourcesUsed: dataSourcesUsed.length > 0 ? dataSourcesUsed : ['Video Analysis']
       };
-      
+
     } catch (error) {
-      logger.warn('❌ HYBRID processing failed, falling back to standard processing', { error: error instanceof Error ? error.message : String(error) });
-      
-      // Fallback to standard processing
-      const fallbackResult = await this.generateContent(prompt, videoUrl);
+      console.error('❌ Hybrid processing failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process long videos in intelligent chunks to handle token limits
+   */
+  private async processVideoInChunks(
+    videoUrl: string,
+    prompt: string,
+    transcript: string,
+    metadata: any
+  ): Promise<{
+    mergedContent: string;
+    totalTokenUsage: number;
+    dataSourcesUsed: string[];
+  }> {
+    const CHUNK_DURATION = 1200; // 20-minute chunks
+    const videoDuration = metadata.videoDuration || 3600;
+    const numChunks = Math.ceil(videoDuration / CHUNK_DURATION);
+
+    console.log(`📦 Splitting ${Math.round(videoDuration / 60)}-minute video into ${numChunks} chunks`);
+
+    const chunkResults: string[] = [];
+    let totalTokenUsage = 0;
+    const dataSourcesUsed: string[] = [];
+
+    // Split transcript proportionally if available
+    const transcriptChunks = transcript ? this.splitTranscriptIntoChunks(transcript, numChunks) : [];
+
+    for (let i = 0; i < numChunks; i++) {
+      const startTime = i * CHUNK_DURATION;
+      const endTime = Math.min((i + 1) * CHUNK_DURATION, videoDuration);
+      const chunkTranscript = transcriptChunks[i] || '';
+
+      console.log(`🔄 Processing chunk ${i + 1}/${numChunks} (${this.formatTime(startTime)} - ${this.formatTime(endTime)})`);
+
+      // Update progress (will be sent to client via WebSocket/SSE)
+      const progress = Math.round(((i + 1) / numChunks) * 100);
+      this.notifyProgress(progress, `Processing segment ${i + 1} of ${numChunks}`);
+
+      const chunkPrompt = `
+${prompt}
+
+IMPORTANT: Focus on content from ${this.formatTime(startTime)} to ${this.formatTime(endTime)} of the video.
+Include timestamps for all key points.
+
+${chunkTranscript ? `TRANSCRIPT SEGMENT:\n${chunkTranscript}` : 'Process video segment directly.'}
+      `;
+
+      try {
+        const result = await this.generateContentWithFallback(chunkPrompt, !chunkTranscript);
+        chunkResults.push(result.text);
+        totalTokenUsage += result.tokenUsage;
+        dataSourcesUsed.push(`Chunk ${i + 1}`);
+      } catch (error) {
+        console.error(`❌ Failed to process chunk ${i + 1}:`, error);
+        // Continue with other chunks even if one fails
+        chunkResults.push(`[Chunk ${i + 1} processing failed]`);
+      }
+    }
+
+    // Intelligently merge chunks based on template type
+    const mergedContent = this.mergeChunkedContent(chunkResults, metadata);
+
+    return {
+      mergedContent,
+      totalTokenUsage,
+      dataSourcesUsed
+    };
+  }
+
+  /**
+   * Split transcript into roughly equal chunks
+   */
+  private splitTranscriptIntoChunks(transcript: string, numChunks: number): string[] {
+    const words = transcript.split(/\s+/);
+    const wordsPerChunk = Math.ceil(words.length / numChunks);
+    const chunks: string[] = [];
+
+    for (let i = 0; i < numChunks; i++) {
+      const start = i * wordsPerChunk;
+      const end = Math.min((i + 1) * wordsPerChunk, words.length);
+      chunks.push(words.slice(start, end).join(' '));
+    }
+
+    return chunks;
+  }
+
+  /**
+   * Merge chunked content intelligently based on content type
+   */
+  private mergeChunkedContent(chunks: string[], metadata: any): string {
+    // Remove any duplicate headers or footers
+    const cleanedChunks = chunks.map((chunk, index) => {
+      if (index > 0) {
+        // Remove repeated headers from subsequent chunks
+        chunk = chunk.replace(/^#\s+.+\n+/, '');
+      }
+      return chunk.trim();
+    });
+
+    // Join with clear section breaks
+    const merged = cleanedChunks.join('\n\n---\n\n');
+
+    // Add overall header
+    const title = metadata.videoTitle || 'Video Notes';
+    return `# ${title}\n\n*Processed in ${chunks.length} segments due to video length*\n\n${merged}`;
+  }
+
+  /**
+   * Format time in MM:SS or HH:MM:SS format
+   */
+  private formatTime(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Notify progress to client (to be implemented with WebSocket/SSE)
+   */
+  private notifyProgress(percentage: number, message: string): void {
+    // This will be connected to your progress tracking system
+    console.log(`📊 Progress: ${percentage}% - ${message}`);
+    // TODO: Send to WebSocket or SSE endpoint
+  }
+
+  /**
+   * Generate transcript from video using Gemini's video processing capabilities
+   */
+  async generateTranscriptFromVideo(videoUrl: string): Promise<{
+    success: boolean;
+    transcript?: string;
+    segments?: Array<{
+      startTime: number;
+      endTime: number;
+      text: string;
+      confidence: number;
+    }>;
+    error?: string;
+  }> {
+    try {
+      this.ensureInitialized();
+
+      const model = this.genAI!.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 8192,
+        },
+      });
+
+      const prompt = `Generate a detailed transcript of the spoken content in this video.
+                     Include all dialogue, narration, and important audio elements.
+                     Format with timestamps where major topic changes occur.`;
+
+      const result = await model.generateContent([
+        prompt,
+        {
+          fileData: {
+            mimeType: 'video/*',
+            fileUri: videoUrl
+          }
+        }
+      ]);
+
+      const transcript = result.response.text();
       return {
-        ...fallbackResult,
-        processingMethod: 'hybrid', // Still mark as hybrid attempt
-        dataSourcesUsed: [...(fallbackResult.dataSourcesUsed || []), 'Hybrid Fallback']
+        success: true,
+        transcript,
+        segments: [] // Gemini doesn't provide timestamp segments for audio-only processing
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to generate transcript'
       };
     }
   }
